@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+	http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+	http://www.springframework.org/schema/tx
+	http://www.springframework.org/schema/tx/spring-tx-3.2.xsd
+	http://www.springframework.org/schema/context
+	http://www.springframework.org/schema/context/spring-context-3.2.xsd
+	http://www.springframework.org/schema/task
+	http://www.springframework.org/schema/task/spring-task-3.2.xsd"> 
+
+	<!--Configures Hibernate Config -->
+	<!-- <import resource="applicationContext-hibernate.xml" /> -->
+
+	<!-- Scan classpath for annotations (eg: @Service, @Repository etc) /META-INF/database.properties-->
+	<context:component-scan base-package="com.revolution.rest" /> 
+	<context:annotation-config />
+	 <context:property-placeholder location="/META-INF/database.properties" />
+	<!--Spring 的配置文件中一定要配置这一项 -->  
+    <task:annotation-driven/> 
+	<!--<bean id="annotationPropertyConfigurer"  
+        class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">  
+        <property name="locations">  
+            <list>  
+                <value>/META-INF/database.properties</value>  
+                <value>/META-INF/redis.properties</value>    
+            </list>  
+        </property>  
+    </bean>-->
+	
+	<!-- Access  /META-INF/database.properties  file:E:\\workspace\\tella-webservice\\WebContent\\META-INF\\database.properties-->
+	<bean id="clientRequestFilter" class="com.revolution.rest.filter.ClientRequestFilter"
+		lazy-init="false">
+	</bean>
+	
+	<!-- JDBC Data Source -->
+	<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource"
+		destroy-method="close">
+		<property name="driverClassName" value="${jdbc.driverClassName}" />
+		<property name="url" value="${jdbc.url}" />
+		<property name="username" value="${jdbc.username}" />
+		<property name="password" value="${jdbc.password}" />
+		<property name="maxIdle"  value="${jdbc.maxIdle}"/>
+		<property name="minIdle"  value="${jdbc.minIdle}"/>
+		<property name="maxWait" value="${jdbc.maxWait}"/>
+		<property name="maxActive" value="${jdbc.maxActive}"/>
+		<property name="minEvictableIdleTimeMillis" value="${jdbc.minEvictableIdleTimeMillis}"/>
+		<property name="timeBetweenEvictionRunsMillis" value="${jdbc.timeBetweenEvictionRunsMillis}"/>
+		<property name="testWhileIdle" value="true" /> 
+    	<property name="validationQuery" value="SELECT 1"/>
+    	<property name="testOnBorrow" value="true"/>
+		<property name="testOnReturn" value="true"/> 
+	</bean>
+
+	<!-- Hibernate Session Factory -->
+	<bean id="sessionFactory"
+		class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
+		<property name="packagesToScan" value="com.revolution.rest.model" />
+		<property name="dataSource" ref="dataSource" />
+		<property name="hibernateProperties">
+			<props>
+				<prop key="hibernate.dialect">${hibernate.dialect}</prop>
+				<prop key="hibernate.hbm2ddl.auto">${hibernate.hbm2ddl.auto}</prop>
+				<!-- <prop key="hibernate.connection.release_mode">${kidapt.hibernate.release.mode}</prop> -->
+				<prop key="hibernate.show_sql">${hibernate.show_sql}</prop>
+				<prop key="hibernate.temp.use_jdbc_metadata_defaults">false</prop>
+				<prop key="javax.persistence.validation.mode">none</prop>
+				<prop key="hibernate.jdbc.batch_size">${hibernate.jdbc.batch_size}</prop>
+				<prop key="hibernate.jdbc.fetch_size">${hibernate.jdbc.fetch_size}</prop>
+				<prop key="hibernate.cache.use_second_level_cache">true</prop>
+				<prop key="hibernate.cache.region.factory_class">
+					org.hibernate.cache.ehcache.EhCacheRegionFactory
+				</prop>
+		
+				<prop key="hibernate.net.sf.ehcache.configurationResourceName">/META-INF/ehcache.xml</prop>
+				<!--<prop key="hibernate.current_session_context_class">thread</prop>
+				 C3P0 
+				<prop key="hibernate.connection.provider_class">${hibernate.connection.provider_class}</prop>-->
+				<prop key="hibernate.c3p0.max_size">${hibernate.c3p0.max_size}</prop>
+				<prop key="hibernate.c3p0.min_size">${hibernate.c3p0.min_size}</prop>
+				<prop key="hibernate.c3p0.timeout">${hibernate.c3p0.timeout}</prop>
+				<prop key="hibernate.c3p0.max_statements">${hibernate.c3p0.max_statements}</prop>
+				<prop key="hibernate.c3p0.idle_test_period">${hibernate.c3p0.idle_test_period}</prop>
+				<prop key="hibernate.c3p0.acquire_increment">${hibernate.c3p0.acquire_increment}</prop>
+				<!-- <prop key='hibernate.cache.provider_class'>org.hibernate.cache.EHCacheProvider</prop>
+				<prop key="hibernate.cache.region.factory_class">net.sf.ehcache.hibernate.EhCacheRegionFactory</prop> -->
+			</props>
+		</property>
+	</bean>
+
+	<bean id="transactionManagerHibernate"
+		class="org.springframework.orm.hibernate4.HibernateTransactionManager">
+		<property name="sessionFactory" ref="sessionFactory" />
+	</bean>
+	<tx:annotation-driven transaction-manager="transactionManagerHibernate" />
+
+     <!--<bean id="poolConfig" class="redis.clients.jedis.JedisPoolConfig">  
+        <property name="maxIdle" value="${redis.pool.maxIdle}" /> <property   
+            name="maxActive" value="${redis.pool.maxActive}" /> <property name="maxWait"   
+            value="${redis.pool.maxWait}" />  
+        <property name="testOnBorrow" value="${redis.pool.testOnBorrow}" />  
+    </bean>  
+    <bean id="connectionFactory"  
+        class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory"  
+        p:host-name="${redis.host}" p:port="${redis.port}" p:password="${redis.password}"  
+        p:pool-config-ref="poolConfig">  
+    </bean>
+    
+    <bean id="redisTemplate" class="org.springframework.data.redis.core.StringRedisTemplate">  
+        <property name="connectionFactory" ref="connectionFactory" />  
+    </bean>-->
+	<!--bean id="userServiceImpl" class="com.tella.rest.service.UserServiceImpl" />
+	<bean id="storyServiceImpl" class="com.tella.rest.service.StoryServiceImpl" />
+	<bean id="storyServiceImpl" class="com.tella.rest.service.CDNAccessServiceImpl" /> -->
+</beans>

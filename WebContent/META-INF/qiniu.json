@@ -1,0 +1,25 @@
+{
+	"ak" : "OmcuoDCtkOt-oQxMFoCStqG45a819322YPhM9bFs",
+	"sk" : "gC48M-srldT4liCd31NEPrI0iumVqV5MtQCw6mUx",
+	"bucket" : "onepage",
+	"meta": 
+	{
+		"version" : "0.1",
+		"resource_key_rule" : "{user_id}/{image_md5}",
+		"post_img_key_rule" : "client_uploads/images/{resource_key}",
+		"get_img_url" : "http://7xjfyf.com2.z0.glb.qiniucdn.com/client_uploads/images/{resource_key}",
+		"post_video_url" :  "http://7xjfyf.com2.z0.glb.qiniucdn.com/client_uploads/video/{resource_key}",
+		"get_video_url" :  "http://7xjfyf.com2.z0.glb.qiniucdn.com/client_uploads/video/{resource_key}",
+		"img_params_fit" : "imageView2/0/w/{param_w}/h/{param_h}",
+		"img_params_fill": "imageView2/3/w/{param_w}/h/{param_h}",
+		"video_params": "",
+	}
+}
+
+
+
+
+
+
+
+
