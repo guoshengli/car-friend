@@ -36,8 +36,6 @@ import com.revolution.rest.service.model.CoverMedia;
    @Column(name="title")
    private String title;
  
-   @Column(name="subtitle")
-   private String subtitle;
  
    @Temporal(TemporalType.TIMESTAMP)
    @Generated(GenerationTime.ALWAYS)
@@ -79,6 +77,10 @@ import com.revolution.rest.service.model.CoverMedia;
    
    @Column(name="resource")
    private String resource;
+   
+   @Column(name="last_comment_date")
+   private Date last_comment_date;
+   
  
    @OneToMany(mappedBy="storyinfo", cascade={javax.persistence.CascadeType.ALL}, fetch=FetchType.LAZY)
    private List<StoryElement> elements = new ArrayList<StoryElement>();
@@ -99,6 +101,11 @@ import com.revolution.rest.service.model.CoverMedia;
    @ManyToMany(fetch=FetchType.LAZY)
    @JoinTable(name="collection_story", joinColumns={@JoinColumn(name="story_id")}, inverseJoinColumns={@JoinColumn(name="collection_id")})
    private Set<Collection> collections;
+   
+   @XmlTransient
+   @ManyToMany(fetch=FetchType.LAZY)
+   @JoinTable(name="columns_story", joinColumns={@JoinColumn(name="story_id")}, inverseJoinColumns={@JoinColumn(name="columns_id")})
+   private Set<Columns> columns;
    
    @XmlTransient
    @ManyToMany(mappedBy="repost_story", fetch=FetchType.LAZY)
@@ -126,14 +133,6 @@ import com.revolution.rest.service.model.CoverMedia;
  
    public void setTitle(String title) {
      this.title = title;
-   }
- 
-   public String getSubtitle() {
-     return this.subtitle;
-   }
- 
-   public void setSubtitle(String subtitle) {
-     this.subtitle = subtitle;
    }
  
    public Long getCreated_time() {
@@ -303,7 +302,23 @@ import com.revolution.rest.service.model.CoverMedia;
 	public void setLike_users(Set<User> like_users) {
 		this.like_users = like_users;
 	}
-   
+
+	public Date getLast_comment_date() {
+		return last_comment_date;
+	}
+
+	public void setLast_comment_date(Date last_comment_date) {
+		this.last_comment_date = last_comment_date;
+	}
+
+	public Set<Columns> getColumns() {
+		return columns;
+	}
+
+	public void setColumns(Set<Columns> columns) {
+		this.columns = columns;
+	}
+
 	
    
  }

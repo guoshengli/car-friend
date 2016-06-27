@@ -792,11 +792,6 @@ import net.sf.json.util.CycleDetectionStrategy;
  
      storyModel.setView_count(story.getViewTimes());
      storyModel.setTitle(story.getTitle());
-     if (!Strings.isNullOrEmpty(story.getSubtitle()))
-       storyModel.setSubtitle(story.getSubtitle());
-     else {
-       storyModel.setSubtitle(null);
-     }
  
      int count = this.commentDao.getCommentCountById((Long)story.getId());
      storyModel.setComment_count(count);
@@ -978,11 +973,6 @@ import net.sf.json.util.CycleDetectionStrategy;
  
      storyModel.setView_count(story.getViewTimes());
      storyModel.setTitle(story.getTitle());
-     if (!Strings.isNullOrEmpty(story.getSubtitle()))
-       storyModel.setSubtitle(story.getSubtitle());
-     else {
-       storyModel.setSubtitle(null);
-     }
  
      int count = this.commentDao.getCommentCountById((Long)story.getId());
      storyModel.setComment_count(count);
@@ -1323,7 +1313,6 @@ import net.sf.json.util.CycleDetectionStrategy;
          si.setId((Long)story.getId());
          si.setCollectionId(Long.valueOf(1L));
          si.setTitle(story.getTitle());
-         si.setSubtitle(story.getSubtitle());
          if (!Strings.isNullOrEmpty(story.getCover_page()))
            si.setCover_media(JSONObject.fromObject(story
              .getCover_page()));
@@ -1337,7 +1326,6 @@ import net.sf.json.util.CycleDetectionStrategy;
          si.setId((Long)story.getId());
          si.setCollectionId(Long.valueOf(1L));
          si.setTitle(story.getTitle());
-         si.setSubtitle(story.getSubtitle());
          if (!Strings.isNullOrEmpty(story.getCover_page()))
            si.setCover_media(JSONObject.fromObject(story
              .getCover_page()));
@@ -2235,7 +2223,6 @@ import net.sf.json.util.CycleDetectionStrategy;
 				JSONObject storyJson = new JSONObject();
 				storyJson.put("id",story.getId());
 				storyJson.put("title",story.getTitle());
-				storyJson.put("subtitle",story.getSubtitle());
 				storyJson.put("summary",story.getSummary());
 				User user = story.getUser();
 				 JSONObject avatarImageJson = null;

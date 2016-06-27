@@ -547,7 +547,6 @@ import net.sf.json.util.CycleDetectionStrategy;
      storyModel.setUrl(story.getTinyURL());
      storyModel.setView_count(story.getViewTimes());
      storyModel.setTitle(story.getTitle());
-     storyModel.setSubtitle(story.getSubtitle());
      storyModel.setComment_count(count);
      Likes likes = this.likesDao.getLikeByUserIdAndStoryId(loginUserid, 
        (Long)story.getId());
@@ -741,11 +740,6 @@ import net.sf.json.util.CycleDetectionStrategy;
        storyModel.setTitle(null);
      }
  
-     if (!Strings.isNullOrEmpty(story.getSubtitle()))
-       storyModel.setSubtitle(story.getSubtitle());
-     else {
-       storyModel.setSubtitle(null);
-     }
      
      if(!Strings.isNullOrEmpty(story.getSummary())){
     	 storyModel.setSummary(story.getSummary());
@@ -757,9 +751,6 @@ import net.sf.json.util.CycleDetectionStrategy;
      
  	JsonConfig configs = new JsonConfig();
 	List<String> delArray = new ArrayList<String>();
-	if (Strings.isNullOrEmpty(story.getSubtitle())) {
-		delArray.add("subtitle");
-	}
 	if (Strings.isNullOrEmpty(story.getTitle())) {
 		delArray.add("title");
 	}
@@ -859,11 +850,6 @@ import net.sf.json.util.CycleDetectionStrategy;
        storyModel.setTitle(null);
      }
  
-     if (!Strings.isNullOrEmpty(story.getSubtitle()))
-       storyModel.setSubtitle(story.getSubtitle());
-     else {
-       storyModel.setSubtitle(null);
-     }
      
      if(!Strings.isNullOrEmpty(story.getSummary())){
     	 storyModel.setSummary(story.getSummary());
@@ -874,6 +860,80 @@ import net.sf.json.util.CycleDetectionStrategy;
      storyModel.setRecommend_date(story.getRecommend_date());
  
      return storyModel;
+   }
+   @Override
+   public List<JSONObject> getHotStoriesByCollection_id(Long collectionId, HttpServletRequest request, Long loginUserid)
+   {
+
+	     String countStr = request.getParameter("count");
+	     String sinceIdStr = request.getParameter("since_id");
+	     String maxIdStr = request.getParameter("max_id");
+	     List<JSONObject> storyModelList = new ArrayList<JSONObject>();
+	     int count = 20;
+	     String type = "publish";
+	     JSONObject storyModel = null;
+	     User loginUser = userDao.get(loginUserid);
+	     if ((Strings.isNullOrEmpty(countStr)) && 
+	       (Strings.isNullOrEmpty(sinceIdStr)) && 
+	       (Strings.isNullOrEmpty(maxIdStr)))
+	     {
+	       List<Story> storyList = this.collectionStoryDao.getStoriesByCollectionIdAndHot(
+	         collectionId, count, type);
+	       if ((storyList != null) && (storyList.size() > 0))
+	         for (Story story : storyList) {
+	           storyModel = getStoryEventByStoryLoginUser(
+	             story, loginUserid,loginUser);
+	           storyModelList.add(storyModel);
+	         }
+	     }
+	     else if ((!Strings.isNullOrEmpty(countStr)) && 
+	       (Strings.isNullOrEmpty(sinceIdStr)) && 
+	       (Strings.isNullOrEmpty(maxIdStr))) {
+	       count = Integer.parseInt(countStr);
+	       List<Story> storyList = this.collectionStoryDao.getStoriesByCollectionIdAndHot(
+	         collectionId, count, type);
+	       if ((storyList != null) && (storyList.size() > 0))
+	         for (Story story : storyList) {
+	           storyModel = getStoryEventByStoryLoginUser(
+	             story, loginUserid,loginUser);
+	           storyModelList.add(storyModel);
+	         }
+	     }
+	     else if ((!Strings.isNullOrEmpty(countStr)) && 
+	       (!Strings.isNullOrEmpty(sinceIdStr)) && 
+	       (Strings.isNullOrEmpty(maxIdStr))) {
+	       count = Integer.parseInt(countStr);
+	       Long since_id = Long.valueOf(Long.parseLong(sinceIdStr));
+	       List<Story> storyList = this.collectionStoryDao
+	         .getStoriesByCollectionIdAndHot(collectionId, since_id,count, 
+	          1, type);
+	       if ((storyList != null) && (storyList.size() > 0))
+	         for (Story story : storyList) {
+	           storyModel = getStoryEventByStoryLoginUser(
+	             story, loginUserid,loginUser);
+	           storyModelList.add(storyModel);
+	         }
+	     }
+	     else if ((!Strings.isNullOrEmpty(countStr)) && 
+	       (Strings.isNullOrEmpty(sinceIdStr)) && 
+	       (!Strings.isNullOrEmpty(maxIdStr))) {
+	       count = Integer.parseInt(countStr);
+	  Long max_id = Long.valueOf(Long.parseLong(maxIdStr));
+	      List<Story> storyList = this.collectionStoryDao
+	         .getStoriesByCollectionIdAndHot(collectionId, max_id, count, 
+	        2, type);
+	       if ((storyList != null) && (storyList.size() > 0)) {
+	         for (Story story : storyList) {
+	           storyModel = getStoryEventByStoryLoginUser(
+	             story, loginUserid,loginUser);
+	           storyModelList.add(storyModel);
+	         }
+	       }
+	     }
+	     this.log.debug("*** get stories list***" + 
+	       JSONArray.fromObject(storyModelList));
+	     return storyModelList;
+	    
    }
  
    public List<JSONObject> getFeaturedStoriesByCollection_id(Long collectionId, HttpServletRequest request, Long loginUserid)
@@ -890,7 +950,7 @@ import net.sf.json.util.CycleDetectionStrategy;
        (Strings.isNullOrEmpty(sinceIdStr)) && 
        (Strings.isNullOrEmpty(maxIdStr)))
      {
-       List<Story> storyList = this.collectionStoryDao.getFeturedStoriesPage(
+       List<Story> storyList = this.collectionStoryDao.getStoriesByCollectionIdAndRecommand(
          collectionId, count, type);
        if ((storyList != null) && (storyList.size() > 0))
          for (Story story : storyList) {
@@ -903,7 +963,7 @@ import net.sf.json.util.CycleDetectionStrategy;
        (Strings.isNullOrEmpty(sinceIdStr)) && 
        (Strings.isNullOrEmpty(maxIdStr))) {
        count = Integer.parseInt(countStr);
-       List<Story> storyList = this.collectionStoryDao.getFeturedStoriesPage(
+       List<Story> storyList = this.collectionStoryDao.getStoriesByCollectionIdAndRecommand(
          collectionId, count, type);
        if ((storyList != null) && (storyList.size() > 0))
          for (Story story : storyList) {
@@ -918,8 +978,8 @@ import net.sf.json.util.CycleDetectionStrategy;
        count = Integer.parseInt(countStr);
        Long since_id = Long.valueOf(Long.parseLong(sinceIdStr));
        List<Story> storyList = this.collectionStoryDao
-         .getFeturedStoriesPageByCollectionId(collectionId, count, 
-         since_id, 1, type);
+         .getStoriesByCollectionIdAndRecommand(collectionId, since_id,count, 
+          1, type);
        if ((storyList != null) && (storyList.size() > 0))
          for (Story story : storyList) {
            storyModel = getStoryEventByStoryLoginUser(
@@ -933,7 +993,7 @@ import net.sf.json.util.CycleDetectionStrategy;
        count = Integer.parseInt(countStr);
   Long max_id = Long.valueOf(Long.parseLong(maxIdStr));
       List<Story> storyList = this.collectionStoryDao
-         .getFeturedStoriesPageByCollectionId(collectionId, count, max_id, 
+         .getStoriesByCollectionIdAndRecommand(collectionId, max_id, count, 
         2, type);
        if ((storyList != null) && (storyList.size() > 0)) {
          for (Story story : storyList) {

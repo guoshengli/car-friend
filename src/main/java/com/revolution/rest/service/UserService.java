@@ -45,8 +45,8 @@ public abstract interface UserService
 
   @Path("/login")
   @POST
-  @Consumes({"application/x-www-form-urlencoded"})
-  public abstract Response userLogin(@Context HttpServletRequest paramHttpServletRequest);
+  @Consumes({"application/json"})
+  public abstract Response userLogin(JSONObject userJson);
 
   @Path("/{userId}")
   @PUT

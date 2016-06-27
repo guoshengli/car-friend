@@ -8,6 +8,7 @@ import com.revolution.rest.service.BasicParamServiceImpl;
 import com.revolution.rest.service.CDNAccessServiceImpl;
 import com.revolution.rest.service.CollectionServiceImpl;
 import com.revolution.rest.service.CollectionStoryServiceImpl;
+import com.revolution.rest.service.ColumnsServiceImpl;
 import com.revolution.rest.service.CommentServiceImpl;
 import com.revolution.rest.service.ConfigurationServiceImpl;
 import com.revolution.rest.service.DiscoverServiceImpl;
@@ -27,7 +28,7 @@ import com.revolution.rest.service.UserServiceImpl;
    {
      register(JacksonJsonProvider.class);
      register(PingServiceImpl.class);
- 
+     register(ColumnsServiceImpl.class);
      register(CollectionServiceImpl.class);
      register(CollectionStoryServiceImpl.class);
      register(CommentServiceImpl.class);
@@ -44,6 +45,7 @@ import com.revolution.rest.service.UserServiceImpl;
      register(DiscoverServiceImpl.class);
      register(ShareServiceImpl.class);
      register(BasicParamServiceImpl.class);
+     
    }
  }
 

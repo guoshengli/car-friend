@@ -70,10 +70,10 @@ import com.revolution.rest.service.model.LocationModel;
 import com.revolution.rest.service.model.PublisherInfoModel;
 import com.revolution.rest.service.model.ReplyComment;
 import com.revolution.rest.service.model.ReplyCommentModel;
-import com.revolution.rest.service.model.StoryCommentModel;
 import com.revolution.rest.service.model.StoryElementModel;
 import com.revolution.rest.service.model.StoryEvent;
 import com.revolution.rest.service.model.StoryIntro;
+import com.revolution.rest.service.model.StoryLastModel;
 import com.revolution.rest.service.model.StoryModel;
 import com.revolution.rest.service.model.StoryPageModel;
 import com.revolution.rest.service.model.TextCover;
@@ -170,14 +170,6 @@ public class StoryServiceImpl implements StoryService {
 				log.debug("start add story$$$$$$$$$$$$$$$$$$$$$$$$$$$" + storyModel);
 				if (storyModel.containsKey("title"))
 					story.setTitle(storyModel.getString("title"));
-				else {
-					story.setSubtitle(null);
-				}
-				if (storyModel.containsKey("subtitle"))
-					story.setSubtitle(storyModel.getString("subtitle"));
-				else {
-					story.setSubtitle(null);
-				}
 
 				if (storyModel.containsKey("cover_media"))
 					story.setCover_page(storyModel.getString("cover_media"));
@@ -197,6 +189,7 @@ public class StoryServiceImpl implements StoryService {
 				}
 				story.setStatus("publish");
 				story.setUpdate_time(new Date());
+				story.setLast_comment_date(new Date());
 				User user = this.userDao.get(loginUserid);
 				if (user != null) {
 					story.setUser(user);
@@ -408,7 +401,7 @@ public class StoryServiceImpl implements StoryService {
 		log.debug("***get story begin *****");
 		Story story = this.storyDao.getStoryByIdAndStatus(storyId, "publish");
 
-		StoryCommentModel storyModel = new StoryCommentModel();
+		StoryLastModel storyModel = new StoryLastModel();
 
 		if (story != null) {
 			storyModel.setId(storyId);
@@ -601,65 +594,57 @@ public class StoryServiceImpl implements StoryService {
 			}
 			storyModel.setView_count(story.getViewTimes());
 			storyModel.setTitle(story.getTitle());
-			if (!Strings.isNullOrEmpty(story.getSubtitle()))
-				storyModel.setSubtitle(story.getSubtitle());
-			else {
-				storyModel.setSubtitle(null);
-			}
 
-			Collection collection = null;
 			//Set<Collection> cSet = story.getCollections();
-			collection = collectionStoryDao.getCollectionByStoryId(story.getId());
-			if (collection != null) {
-				CollectionIntro ci = new CollectionIntro();
-				ci.setId((Long) collection.getId());
-				ci.setCollection_name(collection.getCollectionName());
-				ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
-				ci.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
-				ci.setInfo(collection.getInfo());
-				ci.setCollection_type(collection.getCollection_type());
-				User u = userDao.get(collection.getUser().getId());
-				JSONObject author = new JSONObject();
-				author.put("id", u.getId());
-				author.put("username", u.getUsername());
-				if(!Strings.isNullOrEmpty(u.getAvatarImage())){
-					author.put("avatar_image",JSONObject.fromObject(u.getAvatarImage()));
-				}
-				ci.setAuthor(author);
-				JsonConfig configs = new JsonConfig();
-				List<String> delArray = new ArrayList<String>();
-				if (!Strings.isNullOrEmpty(collection.getActivity_description())) {
-					ci.setActivity_description(collection.getActivity_description());
-				} else {
-					if (Strings.isNullOrEmpty(story.getSubtitle())) {
-						delArray.add("activity_description");
+			List<Collection> cList = collectionStoryDao.getCollectionListByStoryId(story.getId());
+			List<JSONObject> collectionListJson = new ArrayList<JSONObject>();
+			if (cList != null && cList.size() > 0) {
+				for(Collection collection:cList){
+					CollectionIntro ci = new CollectionIntro();
+					ci.setId((Long) collection.getId());
+					ci.setCollection_name(collection.getCollectionName());
+					ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
+					ci.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
+					ci.setInfo(collection.getInfo());
+					ci.setCollection_type(collection.getCollection_type());
+					User u = userDao.get(collection.getUser().getId());
+					JSONObject author = new JSONObject();
+					author.put("id", u.getId());
+					author.put("username", u.getUsername());
+					if(!Strings.isNullOrEmpty(u.getAvatarImage())){
+						author.put("avatar_image",JSONObject.fromObject(u.getAvatarImage()));
 					}
+					ci.setAuthor(author);
+					JsonConfig configs = new JsonConfig();
+					List<String> delArray = new ArrayList<String>();
+					if (!Strings.isNullOrEmpty(collection.getActivity_description())) {
+						ci.setActivity_description(collection.getActivity_description());
+					} 
+					
+					int follow_collection_count = userCollectionDao.getCollectionByCount(collection.getId());
+					ci.setFollowers_count(follow_collection_count);
+					/*Set<User> uSet = collection.getUsers();
+					if(uSet != null && uSet.size() > 0){
+						ci.setFollowers_count(uSet.size());
+					}else{
+						ci.setFollowers_count(0);
+					}*/
+
+					JSONObject collectionJson = null;
+					if ((delArray != null) && (delArray.size() > 0)) {
+						configs.setExcludes((String[]) delArray.toArray(new String[delArray.size()]));
+						configs.setIgnoreDefaultExcludes(false);
+						configs.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
+
+						collectionJson = JSONObject.fromObject(ci, configs);
+					} else {
+						collectionJson = JSONObject.fromObject(ci);
+					}
+
+					collectionListJson.add(collectionJson);
 				}
 				
-				int follow_collection_count = userCollectionDao.getCollectionByCount(collection.getId());
-				ci.setFollowers_count(follow_collection_count);
-				/*Set<User> uSet = collection.getUsers();
-				if(uSet != null && uSet.size() > 0){
-					ci.setFollowers_count(uSet.size());
-				}else{
-					ci.setFollowers_count(0);
-				}*/
-
-				JSONObject collectionJson = null;
-				if ((delArray != null) && (delArray.size() > 0)) {
-					configs.setExcludes((String[]) delArray.toArray(new String[delArray.size()]));
-					configs.setIgnoreDefaultExcludes(false);
-					configs.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
-
-					collectionJson = JSONObject.fromObject(ci, configs);
-				} else {
-					collectionJson = JSONObject.fromObject(ci);
-				}
-
-				storyModel.setCollection(collectionJson);
-			
-			}else {
-				collection = null;
+				storyModel.setCollection(collectionListJson);
 			}
 
 			int count = 0;
@@ -752,7 +737,6 @@ public class StoryServiceImpl implements StoryService {
 					intro = new StoryIntro();
 					intro.setId((Long) s.getId());
 					intro.setTitle(s.getTitle());
-					intro.setSubtitle(s.getSubtitle());
 					if (!Strings.isNullOrEmpty(s.getCover_page()))
 						intro.setCover_media(JSONObject.fromObject(s.getCover_page()));
 					else {
@@ -779,11 +763,8 @@ public class StoryServiceImpl implements StoryService {
 				delArray.add("resource");
 			}
 
-			if (Strings.isNullOrEmpty(story.getSubtitle())) {
-				delArray.add("subtitle");
-			}
 
-			if (collection == null) {
+			if (cList == null || cList.size() <= 0) {
 				delArray.add("collection");
 			}
 			JSONObject storyJson = null;
@@ -834,11 +815,6 @@ public class StoryServiceImpl implements StoryService {
 							story.setTitle(storyModel.getString("title"));
 						else {
 							story.setTitle(null);
-						}
-						if (storyModel.containsKey("subtitle"))
-							story.setSubtitle(storyModel.getString("subtitle"));
-						else {
-							story.setSubtitle(null);
 						}
 
 						if (storyModel.containsKey("image_count"))
@@ -1060,6 +1036,8 @@ public class StoryServiceImpl implements StoryService {
 				}
 				
 				this.commentDao.save(comment);
+				story.setLast_comment_date(new Date());
+				storyDao.update(story);
 				if (!loginUserid.equals(story.getUser().getId())) {
 					Notification notification = new Notification();
 					notification.setSenderId(loginUserid);
@@ -1140,7 +1118,8 @@ public class StoryServiceImpl implements StoryService {
 					}
 
 					this.commentDao.save(comment);
-
+					story.setLast_comment_date(new Date());
+					storyDao.update(story);
 					Notification notification = new Notification();
 					notification.setSenderId(loginUserid);
 					if (comment.getTarget_user_id() != null) {
@@ -1900,11 +1879,6 @@ public class StoryServiceImpl implements StoryService {
 		}
 		storyModel.setView_count(story.getViewTimes());
 		storyModel.setTitle(story.getTitle());
-		if (!Strings.isNullOrEmpty(story.getSubtitle()))
-			storyModel.setSubtitle(story.getSubtitle());
-		else {
-			storyModel.setSubtitle(null);
-		}
 
 		storyModel.setImage_count(story.getImage_count());
 		storyModel.setComment_count(commentList.size());
@@ -2060,11 +2034,7 @@ public class StoryServiceImpl implements StoryService {
 							List<String> delArray = new ArrayList<String>();
 							if (!Strings.isNullOrEmpty(collect.getActivity_description())) {
 								ci.setActivity_description(collect.getActivity_description());
-							} else {
-								if (Strings.isNullOrEmpty(story.getSubtitle())) {
-									delArray.add("activity_description");
-								}
-							}
+							} 
 
 							JSONObject collectionJson = null;
 							if ((delArray != null) && (delArray.size() > 0)) {
@@ -2151,9 +2121,6 @@ public class StoryServiceImpl implements StoryService {
 					}
 					storyModel.setView_count(story.getViewTimes());
 					storyModel.setTitle(story.getTitle());
-					if (!Strings.isNullOrEmpty(story.getSubtitle())) {
-						storyModel.setSubtitle(story.getSubtitle());
-					}
 
 					int count = 0;
 					Set<Comment> cSet = story.getComments();
@@ -2197,7 +2164,6 @@ public class StoryServiceImpl implements StoryService {
 							intro = new StoryIntro();
 							intro.setId((Long) s.getId());
 							intro.setTitle(s.getTitle());
-							intro.setSubtitle(s.getSubtitle());
 							if (!Strings.isNullOrEmpty(s.getCover_page()))
 								intro.setCover_media(JSONObject.fromObject(s.getCover_page()));
 							else {
@@ -2216,9 +2182,6 @@ public class StoryServiceImpl implements StoryService {
 					}
 					if (Strings.isNullOrEmpty(story.getTinyURL())) {
 						delArray.add("url");
-					}
-					if (Strings.isNullOrEmpty(story.getSubtitle())) {
-						delArray.add("subtitle");
 					}
 					if (collection_id == null) {
 						delArray.add("collection");
@@ -2393,11 +2356,6 @@ public class StoryServiceImpl implements StoryService {
 					}
 					storyModel.setView_count(story.getViewTimes());
 					storyModel.setTitle(story.getTitle());
-					if (!Strings.isNullOrEmpty(story.getSubtitle()))
-						storyModel.setSubtitle(story.getSubtitle());
-					else {
-						storyModel.setSubtitle(null);
-					}
 
 					int count = 0;
 					Set<Comment> cSet = story.getComments();
@@ -2440,7 +2398,6 @@ public class StoryServiceImpl implements StoryService {
 							intro = new StoryIntro();
 							intro.setId((Long) s.getId());
 							intro.setTitle(s.getTitle());
-							intro.setSubtitle(s.getSubtitle());
 							if (!Strings.isNullOrEmpty(s.getCover_page()))
 								intro.setCover_media(JSONObject.fromObject(s.getCover_page()));
 							else {
@@ -2459,9 +2416,6 @@ public class StoryServiceImpl implements StoryService {
 					}
 					if (Strings.isNullOrEmpty(story.getTinyURL())) {
 						delArray.add("url");
-					}
-					if (Strings.isNullOrEmpty(story.getSubtitle())) {
-						delArray.add("subtitle");
 					}
 					if (Strings.isNullOrEmpty(story.getTitle())) {
 						delArray.add("title");
@@ -2597,10 +2551,6 @@ public class StoryServiceImpl implements StoryService {
 						List<String> delArray = new ArrayList<String>();
 						if (!Strings.isNullOrEmpty(collection.getActivity_description())) {
 							ci.setActivity_description(collection.getActivity_description());
-						} else {
-							if (Strings.isNullOrEmpty(story.getSubtitle())) {
-								delArray.add("activity_description");
-							}
 						}
 
 						JSONObject collectionJson = null;
@@ -2632,9 +2582,6 @@ public class StoryServiceImpl implements StoryService {
 					}
 
 					storyModel.setTitle(story.getTitle());
-					if (!Strings.isNullOrEmpty(story.getSubtitle())) {
-						storyModel.setSubtitle(story.getSubtitle());
-					}
 
 					storyModel.setAuthor(authorJson);
 					storyModel.setSummary(story.getSummary());
@@ -2646,9 +2593,6 @@ public class StoryServiceImpl implements StoryService {
 					}
 					JsonConfig configs = new JsonConfig();
 					List<String> delArray = new ArrayList<String>();
-					if (Strings.isNullOrEmpty(story.getSubtitle())) {
-						delArray.add("subtitle");
-					}
 
 					if (Strings.isNullOrEmpty(story.getTitle())) {
 						delArray.add("title");
@@ -2744,11 +2688,7 @@ public class StoryServiceImpl implements StoryService {
 						List<String> delArray = new ArrayList<String>();
 						if (!Strings.isNullOrEmpty(collection.getActivity_description())) {
 							ci.setActivity_description(collection.getActivity_description());
-						} else {
-							if (Strings.isNullOrEmpty(story.getSubtitle())) {
-								delArray.add("activity_description");
-							}
-						}
+						} 
 
 						JSONObject collectionJson = null;
 						if ((delArray != null) && (delArray.size() > 0)) {
@@ -2779,17 +2719,9 @@ public class StoryServiceImpl implements StoryService {
 					}
 
 					storyModel.setTitle(story.getTitle());
-					if (!Strings.isNullOrEmpty(story.getSubtitle()))
-						storyModel.setSubtitle(story.getSubtitle());
-					else {
-						storyModel.setSubtitle(null);
-					}
 					storyModel.setSummary(story.getSummary());
 					JsonConfig configs = new JsonConfig();
 					List<String> delArray1 = new ArrayList<String>();
-					if (Strings.isNullOrEmpty(story.getSubtitle())) {
-						delArray1.add("subtitle");
-					}
 					if (Strings.isNullOrEmpty(story.getTitle())) {
 						delArray1.add("title");
 					}
@@ -3135,7 +3067,6 @@ public class StoryServiceImpl implements StoryService {
 				intro = new StoryIntro();
 				intro.setId((Long) s.getId());
 				intro.setTitle(s.getTitle());
-				intro.setSubtitle(s.getSubtitle());
 				if (!Strings.isNullOrEmpty(s.getCover_page()))
 					intro.setCover_media(JSONObject.fromObject(s.getCover_page()));
 				else {
@@ -3145,9 +3076,6 @@ public class StoryServiceImpl implements StoryService {
 				intro.setCollectionId(Long.valueOf(1L));
 				JsonConfig configs = new JsonConfig();
 				List<String> delArray = new ArrayList<String>();
-				if (Strings.isNullOrEmpty(s.getSubtitle())) {
-					delArray.add("subtitle");
-				}
 				if (Strings.isNullOrEmpty(s.getTitle())) {
 					delArray.add("title");
 				}
@@ -3355,10 +3283,6 @@ public class StoryServiceImpl implements StoryService {
 			List<String> delArray = new ArrayList<String>();
 			if (!Strings.isNullOrEmpty(collection.getActivity_description())) {
 				ci.setActivity_description(collection.getActivity_description());
-			} else {
-				if (Strings.isNullOrEmpty(story.getSubtitle())) {
-					delArray.add("activity_description");
-				}
 			}
 
 			JSONObject collectionJson = null;
@@ -3441,11 +3365,6 @@ public class StoryServiceImpl implements StoryService {
 
 		storyModel.setView_count(story.getViewTimes());
 		storyModel.setTitle(story.getTitle());
-		if (!Strings.isNullOrEmpty(story.getSubtitle()))
-			storyModel.setSubtitle(story.getSubtitle());
-		else {
-			storyModel.setSubtitle(null);
-		}
 
 		int count = 0;
 		Set<Comment> cSet = story.getComments();
@@ -3488,7 +3407,6 @@ public class StoryServiceImpl implements StoryService {
 				intro = new StoryIntro();
 				intro.setId((Long) s.getId());
 				intro.setTitle(s.getTitle());
-				intro.setSubtitle(s.getSubtitle());
 				intro.setImage_count(s.getImage_count());
 				if (!Strings.isNullOrEmpty(s.getCover_page()))
 					intro.setCover_media(JSONObject.fromObject(s.getCover_page()));
@@ -3503,9 +3421,6 @@ public class StoryServiceImpl implements StoryService {
 
 		JsonConfig configs = new JsonConfig();
 		List<String> delArray = new ArrayList<String>();
-		if (Strings.isNullOrEmpty(story.getSubtitle())) {
-			delArray.add("subtitle");
-		}
 		if (Strings.isNullOrEmpty(story.getTitle())) {
 			delArray.add("title");
 		}

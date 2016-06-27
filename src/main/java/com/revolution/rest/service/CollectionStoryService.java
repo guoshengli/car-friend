@@ -23,7 +23,3 @@ public abstract interface CollectionStoryService
   public abstract Response delete(@PathParam("collectionId") Long paramLong1, @PathParam("storyId") Long paramLong2);
 }
 
-/* Location:           E:\project\tella-webservice\WEB-INF\classes\
- * Qualified Name:     com.tella.rest.service.CollectionStoryService
- * JD-Core Version:    0.6.2
- */

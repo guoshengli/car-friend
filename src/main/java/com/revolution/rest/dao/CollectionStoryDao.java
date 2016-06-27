@@ -23,8 +23,18 @@ public interface CollectionStoryDao extends BaseDao<CollectionStory, Long>
   public List<Story> getStoriesPageByCollectionId(Long paramLong1, int paramInt1, Long paramLong2, int paramInt2, String paramString);
 
   public List<Story> getStoriesByCollectionId(Long paramLong);
+  
+  public List<Story> getStoriesByCollectionIdAndRecommand(Long collectionId,int count,String type);
+  
+  public List<Story> getStoriesByCollectionIdAndRecommand(Long collectionId,Long storyId,int count,int identify,String type);
+  
+  public List<Story> getStoriesByCollectionIdAndHot(Long collectionId,int count,String type);
+  
+  public List<Story> getStoriesByCollectionIdAndHot(Long collectionId,Long storyId,int count,int identify,String type);
 
   public Collection getCollectionByStoryId(Long paramLong);
+  
+  public List<Collection> getCollectionListByStoryId(Long storyId);
 
   public void deleteCollectionStoryByCollectionId(Long paramLong);
 

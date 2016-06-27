@@ -39,6 +39,7 @@ public class ClientRequestFilter extends OncePerRequestFilter implements Filter 
 				|| (uri.equals("/revolution-fashion/v1/users/signup"))
 				|| (uri.equals("/revolution-fashion/v1/basic_params"))
 				||	(uri.equals("/revolution-fashion/v1/users/test"))
+				||	(uri.contains("/revolution-fashion/v1/columns"))
 				||	(uri.equals("/revolution-fashion/v1/notifications/notifications_info"))
 				|| (uri.contains("/revolution-fashion/v1/users/login"))
 				|| (uri.contains("/revolution-fashion/v1/users/forgot/email"))

@@ -1,10 +1,14 @@
 package com.revolution.rest.model;
 
 import java.io.Serializable;
+import java.util.Set;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.ManyToMany;
 import javax.persistence.Table;
+import javax.xml.bind.annotation.XmlTransient;
 @Entity
 @Table(name="columns")
 public class Columns extends BaseEntity<Long>implements Serializable {
@@ -13,6 +17,13 @@ public class Columns extends BaseEntity<Long>implements Serializable {
 	
 	@Column(name="column_name")
 	private String column_name;
+	
+	@Column(name="sequence")
+	private int sequence;
+	
+	@XmlTransient
+   @ManyToMany(mappedBy="columns", fetch=FetchType.LAZY)
+   private Set<Story> stories;
 
 	public String getColumn_name() {
 		return column_name;
@@ -20,6 +31,22 @@ public class Columns extends BaseEntity<Long>implements Serializable {
 
 	public void setColumn_name(String column_name) {
 		this.column_name = column_name;
+	}
+
+	public Set<Story> getStories() {
+		return stories;
+	}
+
+	public void setStories(Set<Story> stories) {
+		this.stories = stories;
+	}
+
+	public int getSequence() {
+		return sequence;
+	}
+
+	public void setSequence(int sequence) {
+		this.sequence = sequence;
 	}
 	
 	

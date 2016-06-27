@@ -223,11 +223,6 @@ public class ShareServiceImpl implements ShareService {
 			}
 			storyModel.setView_count(story.getViewTimes());
 			storyModel.setTitle(story.getTitle());
-			if (!Strings.isNullOrEmpty(story.getSubtitle()))
-				storyModel.setSubtitle(story.getSubtitle());
-			else {
-				storyModel.setSubtitle(null);
-			}
 
 			Collection collection = this.collectionStoryDao.getCollectionByStoryId((Long) story.getId());
 			if (collection != null) {
@@ -288,7 +283,6 @@ public class ShareServiceImpl implements ShareService {
 					intro = new StoryShare();
 					intro.setId((Long) s.getId());
 					intro.setTitle(s.getTitle());
-					intro.setSubtitle(s.getSubtitle());
 					if (!Strings.isNullOrEmpty(s.getCover_page()))
 						intro.setCover_media(JSONObject.fromObject(s.getCover_page()));
 					else {
@@ -510,10 +504,6 @@ public class ShareServiceImpl implements ShareService {
 				List<String> delArray = new ArrayList<String>();
 				if(!Strings.isNullOrEmpty(collection.getActivity_description())){
 					ci.setActivity_description(collection.getActivity_description());
-				}else{
-					if (Strings.isNullOrEmpty(story.getSubtitle())) {
-						delArray.add("activity_description");
-					}
 				}
 				
 				
@@ -539,11 +529,6 @@ public class ShareServiceImpl implements ShareService {
 	       storyModel.setTitle(null);
 	     }
 	 
-	     if (!Strings.isNullOrEmpty(story.getSubtitle()))
-	       storyModel.setSubtitle(story.getSubtitle());
-	     else {
-	       storyModel.setSubtitle(null);
-	     }
 	     
 	     if(!Strings.isNullOrEmpty(story.getSummary())){
 	    	 storyModel.setSummary(story.getSummary());
@@ -555,9 +540,6 @@ public class ShareServiceImpl implements ShareService {
 	     
 	 	JsonConfig configs = new JsonConfig();
 		List<String> delArray = new ArrayList<String>();
-		if (Strings.isNullOrEmpty(story.getSubtitle())) {
-			delArray.add("subtitle");
-		}
 		if (Strings.isNullOrEmpty(story.getTitle())) {
 			delArray.add("title");
 		}

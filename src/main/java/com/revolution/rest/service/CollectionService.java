@@ -45,6 +45,10 @@ public abstract interface CollectionService
   @GET
   public abstract List<JSONObject> getFeaturedStoriesByCollection_id(@PathParam("collectionId") Long paramLong1, @Context HttpServletRequest paramHttpServletRequest, @HeaderParam("X-Tella-Request-Userid") Long paramLong2);
   
+  @Path("/{collectionId}/hot")
+  @GET
+  public abstract List<JSONObject> getHotStoriesByCollection_id(@PathParam("collectionId") Long paramLong1, @Context HttpServletRequest paramHttpServletRequest, @HeaderParam("X-Tella-Request-Userid") Long paramLong2);
+  
   @Path("/{collectionId}/featured_is_following")
   @GET
   public JSONObject getFeaturedStoriesByFollowing(@PathParam("collectionId") Long collectionId, @Context HttpServletRequest request, @HeaderParam("X-Tella-Request-Userid") Long loginUserid);

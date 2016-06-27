@@ -175,7 +175,6 @@ public class NotificationServiceImpl implements NotificationService {
 						if (story != null) {
 							storyIntro.setId((Long) story.getId());
 							storyIntro.setTitle(story.getTitle());
-							storyIntro.setSubtitle(story.getSubtitle());
 							storyIntro.setCollectionId(Long.valueOf(1L));
 							if (!Strings.isNullOrEmpty(story.getCover_page()))
 								storyIntro.setCover_media(JSONObject.fromObject(story.getCover_page()));
@@ -187,9 +186,6 @@ public class NotificationServiceImpl implements NotificationService {
 								delArr.add("title");
 							}
 
-							if (Strings.isNullOrEmpty(story.getSubtitle())) {
-								delArr.add("subtitle");
-							}
 
 							if (Strings.isNullOrEmpty(story.getSummary()))
 								delArr.add("summary");
@@ -230,7 +226,6 @@ public class NotificationServiceImpl implements NotificationService {
 						if (story != null) {
 							storyIntro.setId((Long) story.getId());
 							storyIntro.setTitle(story.getTitle());
-							storyIntro.setSubtitle(story.getSubtitle());
 							storyIntro.setCollectionId(Long.valueOf(1L));
 							if (!Strings.isNullOrEmpty(story.getCover_page()))
 								storyIntro.setCover_media(JSONObject.fromObject(story.getCover_page()));
@@ -242,9 +237,6 @@ public class NotificationServiceImpl implements NotificationService {
 								delArr.add("title");
 							}
 
-							if (Strings.isNullOrEmpty(story.getSubtitle())) {
-								delArr.add("subtitle");
-							}
 
 							if (Strings.isNullOrEmpty(story.getSummary()))
 								delArr.add("summary");
@@ -282,7 +274,6 @@ public class NotificationServiceImpl implements NotificationService {
 						if (story != null) {
 							storyIntro.setId((Long) story.getId());
 							storyIntro.setTitle(story.getTitle());
-							storyIntro.setSubtitle(story.getSubtitle());
 							storyIntro.setCollectionId(Long.valueOf(1L));
 
 							if (!Strings.isNullOrEmpty(story.getCover_page()))
@@ -297,9 +288,6 @@ public class NotificationServiceImpl implements NotificationService {
 								delArr.add("title");
 							}
 
-							if (Strings.isNullOrEmpty(story.getSubtitle())) {
-								delArr.add("subtitle");
-							}
 
 							if (Strings.isNullOrEmpty(story.getSummary())) {
 								delArr.add("summary");
@@ -357,7 +345,6 @@ public class NotificationServiceImpl implements NotificationService {
 
 						storyIntro.setId((Long) s.getId());
 						storyIntro.setTitle(s.getTitle());
-						storyIntro.setSubtitle(s.getSubtitle());
 						storyIntro.setCollectionId(Long.valueOf(1L));
 						storyIntro.setCover_media(JSONObject.fromObject(s.getCover_page()));
 						storyIntro.setSummary(s.getSummary());
@@ -365,9 +352,6 @@ public class NotificationServiceImpl implements NotificationService {
 							delArr.add("title");
 						}
 
-						if (Strings.isNullOrEmpty(s.getSubtitle())) {
-							delArr.add("subtitle");
-						}
 
 						if (Strings.isNullOrEmpty(s.getSummary())) {
 							delArr.add("summary");
@@ -422,17 +406,12 @@ public class NotificationServiceImpl implements NotificationService {
 
 						storyIntro.setId((Long) s.getId());
 						storyIntro.setTitle(s.getTitle());
-						storyIntro.setSubtitle(s.getSubtitle());
 						storyIntro.setCollectionId(Long.valueOf(1L));
 						storyIntro.setCover_media(JSONObject.fromObject(s.getCover_page()));
 						storyIntro.setSummary(s.getSummary());
 
 						if (Strings.isNullOrEmpty(s.getTitle())) {
 							delArr.add("title");
-						}
-
-						if (Strings.isNullOrEmpty(s.getSubtitle())) {
-							delArr.add("subtitle");
 						}
 
 						if (Strings.isNullOrEmpty(s.getSummary())) {
@@ -470,7 +449,6 @@ public class NotificationServiceImpl implements NotificationService {
 						if (story != null) {
 							storyIntro.setId((Long) story.getId());
 							storyIntro.setTitle(story.getTitle());
-							storyIntro.setSubtitle(story.getSubtitle());
 							storyIntro.setCollectionId(Long.valueOf(1L));
 							storyIntro.setCover_media(JSONObject.fromObject(story.getCover_page()));
 							storyIntro.setSummary(story.getSummary());
@@ -478,9 +456,6 @@ public class NotificationServiceImpl implements NotificationService {
 								delArr.add("title");
 							}
 
-							if (Strings.isNullOrEmpty(story.getSubtitle())) {
-								delArr.add("subtitle");
-							}
 
 							if (Strings.isNullOrEmpty(story.getSummary())) {
 								delArr.add("summary");
@@ -545,7 +520,6 @@ public class NotificationServiceImpl implements NotificationService {
 							StoryIntro storyIntro = new StoryIntro();
 							storyIntro.setId((Long) s.getId());
 							storyIntro.setTitle(s.getTitle());
-							storyIntro.setSubtitle(s.getSubtitle());
 							storyIntro.setCollectionId(Long.valueOf(1L));
 							storyIntro.setCover_media(JSONObject.fromObject(s.getCover_page()));
 							storyIntro.setSummary(s.getSummary());
@@ -553,9 +527,6 @@ public class NotificationServiceImpl implements NotificationService {
 								delArr.add("title");
 							}
 
-							if (Strings.isNullOrEmpty(s.getSubtitle())) {
-								delArr.add("subtitle");
-							}
 
 							if (Strings.isNullOrEmpty(s.getSummary())) {
 								delArr.add("summary");
@@ -814,7 +785,6 @@ public class NotificationServiceImpl implements NotificationService {
 							StoryIntro storyIntro = new StoryIntro();
 							storyIntro.setId((Long) s.getId());
 							storyIntro.setTitle(s.getTitle());
-							storyIntro.setSubtitle(s.getSubtitle());
 							storyIntro.setCollectionId(Long.valueOf(1L));
 							storyIntro.setCover_media(JSONObject.fromObject(s.getCover_page()));
 							storyIntro.setSummary(s.getSummary());
@@ -822,9 +792,6 @@ public class NotificationServiceImpl implements NotificationService {
 								delArr.add("title");
 							}
 
-							if (Strings.isNullOrEmpty(s.getSubtitle())) {
-								delArr.add("subtitle");
-							}
 
 							if (Strings.isNullOrEmpty(s.getSummary())) {
 								delArr.add("summary");
@@ -874,7 +841,6 @@ public class NotificationServiceImpl implements NotificationService {
 							StoryIntro storyIntro = new StoryIntro();
 							storyIntro.setId((Long) s.getId());
 							storyIntro.setTitle(s.getTitle());
-							storyIntro.setSubtitle(s.getSubtitle());
 							storyIntro.setCollectionId(Long.valueOf(1L));
 							storyIntro.setCover_media(JSONObject.fromObject(s.getCover_page()));
 							storyIntro.setSummary(s.getSummary());
@@ -882,9 +848,6 @@ public class NotificationServiceImpl implements NotificationService {
 								delArr.add("title");
 							}
 
-							if (Strings.isNullOrEmpty(s.getSubtitle())) {
-								delArr.add("subtitle");
-							}
 
 							if (Strings.isNullOrEmpty(s.getSummary())) {
 								delArr.add("summary");
@@ -939,7 +902,6 @@ public class NotificationServiceImpl implements NotificationService {
 							StoryIntro storyIntro = new StoryIntro();
 							storyIntro.setId((Long) s.getId());
 							storyIntro.setTitle(s.getTitle());
-							storyIntro.setSubtitle(s.getSubtitle());
 							storyIntro.setCollectionId(Long.valueOf(1L));
 							storyIntro.setCover_media(JSONObject.fromObject(s.getCover_page()));
 							storyIntro.setSummary(s.getSummary());
@@ -947,9 +909,6 @@ public class NotificationServiceImpl implements NotificationService {
 								delArr.add("title");
 							}
 
-							if (Strings.isNullOrEmpty(s.getSubtitle())) {
-								delArr.add("subtitle");
-							}
 
 							if (Strings.isNullOrEmpty(s.getSummary())) {
 								delArr.add("summary");
@@ -1008,7 +967,6 @@ public class NotificationServiceImpl implements NotificationService {
 							StoryIntro storyIntro = new StoryIntro();
 							storyIntro.setId((Long) s.getId());
 							storyIntro.setTitle(s.getTitle());
-							storyIntro.setSubtitle(s.getSubtitle());
 							storyIntro.setCollectionId(Long.valueOf(1L));
 							storyIntro.setCover_media(JSONObject.fromObject(s.getCover_page()));
 							storyIntro.setSummary(s.getSummary());
@@ -1016,9 +974,6 @@ public class NotificationServiceImpl implements NotificationService {
 								delArr.add("title");
 							}
 
-							if (Strings.isNullOrEmpty(s.getSubtitle())) {
-								delArr.add("subtitle");
-							}
 
 							if (Strings.isNullOrEmpty(s.getSummary())) {
 								delArr.add("summary");
@@ -1076,7 +1031,6 @@ public class NotificationServiceImpl implements NotificationService {
 							StoryIntro storyIntro = new StoryIntro();
 							storyIntro.setId((Long) s.getId());
 							storyIntro.setTitle(s.getTitle());
-							storyIntro.setSubtitle(s.getSubtitle());
 							storyIntro.setCollectionId(Long.valueOf(1L));
 							storyIntro.setCover_media(JSONObject.fromObject(s.getCover_page()));
 							storyIntro.setSummary(s.getSummary());
@@ -1084,9 +1038,6 @@ public class NotificationServiceImpl implements NotificationService {
 								delArr.add("title");
 							}
 
-							if (Strings.isNullOrEmpty(s.getSubtitle())) {
-								delArr.add("subtitle");
-							}
 
 							if (Strings.isNullOrEmpty(s.getSummary())) {
 								delArr.add("summary");
@@ -1257,7 +1208,6 @@ public class NotificationServiceImpl implements NotificationService {
 							if (story != null) {
 								storyIntro.setId((Long) story.getId());
 								storyIntro.setTitle(story.getTitle());
-								storyIntro.setSubtitle(story.getSubtitle());
 								Set<Collection> cSet = story.getCollections();
 								if(cSet != null && cSet.size() > 0){
 									Iterator<Collection> ite = cSet.iterator();
@@ -1275,10 +1225,6 @@ public class NotificationServiceImpl implements NotificationService {
 								storyIntro.setSummary(story.getSummary());
 								if (Strings.isNullOrEmpty(story.getTitle())) {
 									delArr.add("title");
-								}
-
-								if (Strings.isNullOrEmpty(story.getSubtitle())) {
-									delArr.add("subtitle");
 								}
 
 								if (Strings.isNullOrEmpty(story.getSummary()))
@@ -1317,7 +1263,6 @@ public class NotificationServiceImpl implements NotificationService {
 							if (story != null) {
 								storyIntro.setId((Long) story.getId());
 								storyIntro.setTitle(story.getTitle());
-								storyIntro.setSubtitle(story.getSubtitle());
 								Set<Collection> cSet = story.getCollections();
 								if(cSet != null && cSet.size() > 0){
 									Iterator<Collection> ite = cSet.iterator();
@@ -1346,9 +1291,6 @@ public class NotificationServiceImpl implements NotificationService {
 									delArr.add("title");
 								}
 
-								if (Strings.isNullOrEmpty(story.getSubtitle())) {
-									delArr.add("subtitle");
-								}
 
 								if (Strings.isNullOrEmpty(story.getSummary())) {
 									delArr.add("summary");

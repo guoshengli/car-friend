@@ -1129,13 +1129,13 @@ public class UserServiceImpl implements UserService {
 	
 	
 
-	public Response userLogin(HttpServletRequest request) {
+	public Response userLogin(JSONObject userJson) {
 		User user = null;
-		String email = request.getParameter("email");
-		String password = request.getParameter("password");
-		String timestamp = request.getParameter("timestamp");
-		String zone = request.getParameter("zone");
-		String phone = request.getParameter("phone");
+		String email = userJson.containsKey("email")?userJson.getString("email"):null;
+		String password = userJson.containsKey("password")?userJson.getString("password"):null;
+		String timestamp = userJson.containsKey("timestamp")?userJson.getString("timestamp"):null;
+		String zone = userJson.containsKey("zone")?userJson.getString("zone"):null;
+		String phone = userJson.containsKey("phone")?userJson.getString("phone"):null;
 
 		JSONObject jo = new JSONObject();
 		JSONObject auth = new JSONObject();
@@ -2495,10 +2495,6 @@ public class UserServiceImpl implements UserService {
 			List<String> delArray = new ArrayList<String>();
 			if(!Strings.isNullOrEmpty(collection.getActivity_description())){
 				ci.setActivity_description(collection.getActivity_description());
-			}else{
-				if (Strings.isNullOrEmpty(story.getSubtitle())) {
-					delArray.add("activity_description");
-				}
 			}
 			
 			
@@ -2585,11 +2581,6 @@ public class UserServiceImpl implements UserService {
 
 		storyModel.setView_count(story.getViewTimes());
 		storyModel.setTitle(story.getTitle());
-		if (!Strings.isNullOrEmpty(story.getSubtitle()))
-			storyModel.setSubtitle(story.getSubtitle());
-		else {
-			storyModel.setSubtitle(null);
-		}
 
 		int count = this.commentDao.getCommentCountById((Long) story.getId());
 		storyModel.setComment_count(count);
@@ -2629,7 +2620,6 @@ public class UserServiceImpl implements UserService {
 				intro = new StoryIntro();
 				intro.setId((Long) s.getId());
 				intro.setTitle(s.getTitle());
-				intro.setSubtitle(s.getSubtitle());
 				intro.setImage_count(s.getImage_count());
 				if (!Strings.isNullOrEmpty(s.getCover_page()))
 					intro.setCover_media(JSONObject.fromObject(s.getCover_page()));
@@ -2693,10 +2683,6 @@ public class UserServiceImpl implements UserService {
 				List<String> delArray = new ArrayList<String>();
 				if(!Strings.isNullOrEmpty(collection.getActivity_description())){
 					ci.setActivity_description(collection.getActivity_description());
-				}else{
-					if (Strings.isNullOrEmpty(story.getSubtitle())) {
-						delArray.add("activity_description");
-					}
 				}
 				
 				
@@ -2731,9 +2717,6 @@ public class UserServiceImpl implements UserService {
 			}
 
 			storyModel.setTitle(story.getTitle());
-			if (!Strings.isNullOrEmpty(story.getSubtitle())) {
-				storyModel.setSubtitle(story.getSubtitle());
-			}
 
 			storyModel.setAuthor(authorJson);
 			int count = this.commentDao.getCommentCountById((Long) story.getId());
@@ -2756,9 +2739,6 @@ public class UserServiceImpl implements UserService {
 			}
 			JsonConfig configs = new JsonConfig();
 			List<String> delArray = new ArrayList<String>();
-			if (Strings.isNullOrEmpty(story.getSubtitle())) {
-				delArray.add("subtitle");
-			}
 			if (Strings.isNullOrEmpty(story.getTitle())) {
 				delArray.add("title");
 			}
@@ -2838,10 +2818,6 @@ public class UserServiceImpl implements UserService {
 				List<String> delArray = new ArrayList<String>();
 				if(!Strings.isNullOrEmpty(collection.getActivity_description())){
 					ci.setActivity_description(collection.getActivity_description());
-				}else{
-					if (Strings.isNullOrEmpty(story.getSubtitle())) {
-						delArray.add("activity_description");
-					}
 				}
 				
 				
@@ -2877,19 +2853,11 @@ public class UserServiceImpl implements UserService {
 			}
 
 			storyModel.setTitle(story.getTitle());
-			if (!Strings.isNullOrEmpty(story.getSubtitle()))
-				storyModel.setSubtitle(story.getSubtitle());
-			else {
-				storyModel.setSubtitle(null);
-			}
 
 			storyModel.setRecommend_date(story.getRecommend_date());
 
 			JsonConfig configs = new JsonConfig();
 			List<String> delArray = new ArrayList<String>();
-			if (Strings.isNullOrEmpty(story.getSubtitle())) {
-				delArray.add("subtitle");
-			}
 			if (Strings.isNullOrEmpty(story.getTitle())) {
 				delArray.add("title");
 			}
@@ -3047,9 +3015,6 @@ public class UserServiceImpl implements UserService {
 					}
 					storyModel.setView_count(story.getViewTimes());
 					storyModel.setTitle(story.getTitle());
-					if (!Strings.isNullOrEmpty(story.getSubtitle())) {
-						storyModel.setSubtitle(story.getSubtitle());
-					}
 
 					int count = 0;
 		           Set<Comment> cSet = story.getComments();
@@ -3100,7 +3065,6 @@ public class UserServiceImpl implements UserService {
 							intro = new StoryIntro();
 							intro.setId((Long) s.getId());
 							intro.setTitle(s.getTitle());
-							intro.setSubtitle(s.getSubtitle());
 							if (!Strings.isNullOrEmpty(s.getCover_page()))
 								intro.setCover_media(JSONObject.fromObject(s.getCover_page()));
 							else {
@@ -3116,9 +3080,6 @@ public class UserServiceImpl implements UserService {
 					List<String> delArray = new ArrayList<String>();
 					if (Strings.isNullOrEmpty(story.getTinyURL())) {
 						delArray.add("url");
-					}
-					if (Strings.isNullOrEmpty(story.getSubtitle())) {
-						delArray.add("subtitle");
 					}
 					if (Strings.isNullOrEmpty(story.getTitle())) {
 						delArray.add("title");
@@ -3257,11 +3218,6 @@ public class UserServiceImpl implements UserService {
 					}
 					storyModel.setView_count(story.getViewTimes());
 					storyModel.setTitle(story.getTitle());
-					if (!Strings.isNullOrEmpty(story.getSubtitle()))
-						storyModel.setSubtitle(story.getSubtitle());
-					else {
-						storyModel.setSubtitle(null);
-					}
 
 					int count = 0;
 			           Set<Comment> cSet = story.getComments();
@@ -3320,7 +3276,6 @@ public class UserServiceImpl implements UserService {
 							intro = new StoryIntro();
 							intro.setId((Long) s.getId());
 							intro.setTitle(s.getTitle());
-							intro.setSubtitle(s.getSubtitle());
 							if (!Strings.isNullOrEmpty(s.getCover_page()))
 								intro.setCover_media(JSONObject.fromObject(s.getCover_page()));
 							else {
@@ -3336,9 +3291,6 @@ public class UserServiceImpl implements UserService {
 					List<String> delArray = new ArrayList<String>();
 					if (Strings.isNullOrEmpty(story.getTinyURL())) {
 						delArray.add("url");
-					}
-					if (Strings.isNullOrEmpty(story.getSubtitle())) {
-						delArray.add("subtitle");
 					}
 					if (Strings.isNullOrEmpty(story.getTitle())) {
 						delArray.add("title");
@@ -3499,19 +3451,11 @@ public class UserServiceImpl implements UserService {
 					}
 
 					storyModel.setTitle(story.getTitle());
-					if (!Strings.isNullOrEmpty(story.getSubtitle()))
-						storyModel.setSubtitle(story.getSubtitle());
-					else {
-						storyModel.setSubtitle(null);
-					}
 
 					storyModel.setRecommend_date(story.getRecommend_date());
 
 					JsonConfig configs = new JsonConfig();
 					List<String> delArray = new ArrayList<String>();
-					if (Strings.isNullOrEmpty(story.getSubtitle())) {
-						delArray.add("subtitle");
-					}
 					if (Strings.isNullOrEmpty(story.getTitle())) {
 						delArray.add("title");
 					}
@@ -3640,11 +3584,8 @@ public class UserServiceImpl implements UserService {
 						List<String> delArray = new ArrayList<String>();
 						if(!Strings.isNullOrEmpty(collection.getActivity_description())){
 							ci.setActivity_description(collection.getActivity_description());
-						}else{
-							if (Strings.isNullOrEmpty(story.getSubtitle())) {
-								delArray.add("activity_description");
-							}
 						}
+						
 						/*int follow_collection_count = userCollectionDao.getCollectionByCount(collection.getId());
 						ci.setFollowers_count(follow_collection_count);
 						Set<User> follow_collection = collection.getUsers();
@@ -3683,19 +3624,11 @@ public class UserServiceImpl implements UserService {
 					}
 
 					storyModel.setTitle(story.getTitle());
-					if (!Strings.isNullOrEmpty(story.getSubtitle()))
-						storyModel.setSubtitle(story.getSubtitle());
-					else {
-						storyModel.setSubtitle(null);
-					}
 
 					storyModel.setRecommend_date(story.getRecommend_date());
 
 					JsonConfig configs = new JsonConfig();
 					List<String> delArray = new ArrayList<String>();
-					if (Strings.isNullOrEmpty(story.getSubtitle())) {
-						delArray.add("subtitle");
-					}
 					if (Strings.isNullOrEmpty(story.getTitle())) {
 						delArray.add("title");
 					}
@@ -3810,19 +3743,11 @@ public class UserServiceImpl implements UserService {
 					}
 
 					storyModel.setTitle(story.getTitle());
-					if (!Strings.isNullOrEmpty(story.getSubtitle()))
-						storyModel.setSubtitle(story.getSubtitle());
-					else {
-						storyModel.setSubtitle(null);
-					}
 
 					storyModel.setRecommend_date(story.getRecommend_date());
 
 					JsonConfig configs = new JsonConfig();
 					List<String> delArray = new ArrayList<String>();
-					if (Strings.isNullOrEmpty(story.getSubtitle())) {
-						delArray.add("subtitle");
-					}
 					if (Strings.isNullOrEmpty(story.getTitle())) {
 						delArray.add("title");
 					}
@@ -3947,10 +3872,6 @@ public class UserServiceImpl implements UserService {
 					List<String> delArray = new ArrayList<String>();
 					if(!Strings.isNullOrEmpty(collection.getActivity_description())){
 						ci.setActivity_description(collection.getActivity_description());
-					}else{
-						if (Strings.isNullOrEmpty(story.getSubtitle())) {
-							delArray.add("activity_description");
-						}
 					}
 					
 					
@@ -3986,19 +3907,11 @@ public class UserServiceImpl implements UserService {
 				}
 
 				storyModel.setTitle(story.getTitle());
-				if (!Strings.isNullOrEmpty(story.getSubtitle()))
-					storyModel.setSubtitle(story.getSubtitle());
-				else {
-					storyModel.setSubtitle(null);
-				}
 
 				storyModel.setRecommend_date(story.getRecommend_date());
 
 				JsonConfig configs = new JsonConfig();
 				List<String> delArray = new ArrayList<String>();
-				if (Strings.isNullOrEmpty(story.getSubtitle())) {
-					delArray.add("subtitle");
-				}
 				if (Strings.isNullOrEmpty(story.getTitle())) {
 					delArray.add("title");
 				}
@@ -4271,10 +4184,6 @@ public class UserServiceImpl implements UserService {
 				List<String> delArray = new ArrayList<String>();
 				if(!Strings.isNullOrEmpty(collection.getActivity_description())){
 					ci.setActivity_description(collection.getActivity_description());
-				}else{
-					if (Strings.isNullOrEmpty(story.getSubtitle())) {
-						delArray.add("activity_description");
-					}
 				}
 				
 				
@@ -4310,7 +4219,6 @@ public class UserServiceImpl implements UserService {
 		}
 
 		storyModel.setTitle(story.getTitle());
-		storyModel.setSubtitle(story.getSubtitle());
 
 		return storyModel;
 	}
@@ -5091,10 +4999,6 @@ public class UserServiceImpl implements UserService {
 				List<String> delArray = new ArrayList<String>();
 				if(!Strings.isNullOrEmpty(collection.getActivity_description())){
 					ci.setActivity_description(collection.getActivity_description());
-				}else{
-					if (Strings.isNullOrEmpty(story.getSubtitle())) {
-						delArray.add("activity_description");
-					}
 				}
 				
 				
@@ -5135,17 +5039,9 @@ public class UserServiceImpl implements UserService {
         }
 
         storyModel.setTitle(story.getTitle());
-        if (!Strings.isNullOrEmpty(story.getSubtitle()))
-          storyModel.setSubtitle(story.getSubtitle());
-        else {
-          storyModel.setSubtitle(null);
-        }
         storyModel.setSummary(story.getSummary());
         JsonConfig configs = new JsonConfig();
         List<String> delArray1 = new ArrayList<String>();
-        if (Strings.isNullOrEmpty(story.getSubtitle())) {
-          delArray1.add("subtitle");
-        }
         if (Strings.isNullOrEmpty(story.getTitle())) {
           delArray1.add("title");
         }
@@ -5524,10 +5420,6 @@ public class UserServiceImpl implements UserService {
 						List<String> delArray = new ArrayList<String>();
 						if(!Strings.isNullOrEmpty(collection.getActivity_description())){
 							ci.setActivity_description(collection.getActivity_description());
-						}else{
-							if (Strings.isNullOrEmpty(story.getSubtitle())) {
-								delArray.add("activity_description");
-							}
 						}
 						
 						
@@ -5562,9 +5454,6 @@ public class UserServiceImpl implements UserService {
 					}
 
 					storyModel.setTitle(story.getTitle());
-					if (!Strings.isNullOrEmpty(story.getSubtitle())) {
-						storyModel.setSubtitle(story.getSubtitle());
-					}
 
 					storyModel.setAuthor(authorJson);
 					storyModel.setRecommend_date(story.getRecommend_date());
@@ -5580,9 +5469,6 @@ public class UserServiceImpl implements UserService {
 					
 					JsonConfig configs = new JsonConfig();
 					List<String> delArray = new ArrayList<String>();
-					if (Strings.isNullOrEmpty(story.getSubtitle())) {
-						delArray.add("subtitle");
-					}
 					if (Strings.isNullOrEmpty(story.getTitle())) {
 						delArray.add("title");
 					}
@@ -5650,10 +5536,6 @@ public class UserServiceImpl implements UserService {
 						List<String> delArray = new ArrayList<String>();
 						if(!Strings.isNullOrEmpty(collection.getActivity_description())){
 							ci.setActivity_description(collection.getActivity_description());
-						}else{
-							if (Strings.isNullOrEmpty(story.getSubtitle())) {
-								delArray.add("activity_description");
-							}
 						}
 						
 						
@@ -5689,19 +5571,11 @@ public class UserServiceImpl implements UserService {
 					}
 
 					storyModel.setTitle(story.getTitle());
-					if (!Strings.isNullOrEmpty(story.getSubtitle()))
-						storyModel.setSubtitle(story.getSubtitle());
-					else {
-						storyModel.setSubtitle(null);
-					}
 
 					storyModel.setRecommend_date(story.getRecommend_date());
 
 					JsonConfig configs = new JsonConfig();
 					List<String> delArray = new ArrayList<String>();
-					if (Strings.isNullOrEmpty(story.getSubtitle())) {
-						delArray.add("subtitle");
-					}
 					if (Strings.isNullOrEmpty(story.getTitle())) {
 						delArray.add("title");
 					}
@@ -5861,10 +5735,6 @@ public class UserServiceImpl implements UserService {
 						List<String> delArray = new ArrayList<String>();
 						if(!Strings.isNullOrEmpty(collection.getActivity_description())){
 							ci.setActivity_description(collection.getActivity_description());
-						}else{
-							if (Strings.isNullOrEmpty(story.getSubtitle())) {
-								delArray.add("activity_description");
-							}
 						}
 						
 						
@@ -5900,9 +5770,6 @@ public class UserServiceImpl implements UserService {
 					}
 
 					storyModel.setTitle(story.getTitle());
-					if (!Strings.isNullOrEmpty(story.getSubtitle())) {
-						storyModel.setSubtitle(story.getSubtitle());
-					}
 
 					int count = 0;//this.commentDao.getCommentCountById((Long) story.getId());
 					Set<Comment> coSet = story.getComments();
@@ -5942,9 +5809,6 @@ public class UserServiceImpl implements UserService {
 					}
 					JsonConfig configs = new JsonConfig();
 					List<String> delArray = new ArrayList<String>();
-					if (Strings.isNullOrEmpty(story.getSubtitle())) {
-						delArray.add("subtitle");
-					}
 					if (Strings.isNullOrEmpty(story.getTitle())) {
 						delArray.add("title");
 					}
@@ -6099,10 +5963,6 @@ public class UserServiceImpl implements UserService {
 						List<String> delArray = new ArrayList<String>();
 						if(!Strings.isNullOrEmpty(collection.getActivity_description())){
 							ci.setActivity_description(collection.getActivity_description());
-						}else{
-							if (Strings.isNullOrEmpty(story.getSubtitle())) {
-								delArray.add("activity_description");
-							}
 						}
 						
 						
@@ -6138,19 +5998,11 @@ public class UserServiceImpl implements UserService {
 					}
 
 					storyModel.setTitle(story.getTitle());
-					if (!Strings.isNullOrEmpty(story.getSubtitle()))
-						storyModel.setSubtitle(story.getSubtitle());
-					else {
-						storyModel.setSubtitle(null);
-					}
 
 					storyModel.setRecommend_date(story.getRecommend_date());
 
 					JsonConfig configs = new JsonConfig();
 					List<String> delArray = new ArrayList<String>();
-					if (Strings.isNullOrEmpty(story.getSubtitle())) {
-						delArray.add("subtitle");
-					}
 					if (Strings.isNullOrEmpty(story.getTitle())) {
 						delArray.add("title");
 					}
@@ -6306,9 +6158,6 @@ public class UserServiceImpl implements UserService {
 					}
 
 					storyModel.setTitle(story.getTitle());
-					if (!Strings.isNullOrEmpty(story.getSubtitle())) {
-						storyModel.setSubtitle(story.getSubtitle());
-					}
 
 					storyModel.setAuthor(authorJson);
 					int count = 0;//this.commentDao.getCommentCountById((Long) story.getId());
@@ -6342,9 +6191,6 @@ public class UserServiceImpl implements UserService {
 					}
 					JsonConfig configs = new JsonConfig();
 					List<String> delArray = new ArrayList<String>();
-					if (Strings.isNullOrEmpty(story.getSubtitle())) {
-						delArray.add("subtitle");
-					}
 					if (Strings.isNullOrEmpty(story.getTitle())) {
 						delArray.add("title");
 					}
@@ -6486,19 +6332,11 @@ public class UserServiceImpl implements UserService {
 					}
 
 					storyModel.setTitle(story.getTitle());
-					if (!Strings.isNullOrEmpty(story.getSubtitle()))
-						storyModel.setSubtitle(story.getSubtitle());
-					else {
-						storyModel.setSubtitle(null);
-					}
 
 					storyModel.setRecommend_date(story.getRecommend_date());
 
 					JsonConfig configs = new JsonConfig();
 					List<String> delArray = new ArrayList<String>();
-					if (Strings.isNullOrEmpty(story.getSubtitle())) {
-						delArray.add("subtitle");
-					}
 					if (Strings.isNullOrEmpty(story.getTitle())) {
 						delArray.add("title");
 					}
@@ -6947,10 +6785,6 @@ public class UserServiceImpl implements UserService {
 			List<String> delArray = new ArrayList<String>();
 			if(!Strings.isNullOrEmpty(collection.getActivity_description())){
 				ci.setActivity_description(collection.getActivity_description());
-			}else{
-				if (Strings.isNullOrEmpty(story.getSubtitle())) {
-					delArray.add("activity_description");
-				}
 			}
 			
 			
@@ -6984,19 +6818,11 @@ public class UserServiceImpl implements UserService {
 		}
 
 		storyModel.setTitle(story.getTitle());
-		if (!Strings.isNullOrEmpty(story.getSubtitle()))
-			storyModel.setSubtitle(story.getSubtitle());
-		else {
-			storyModel.setSubtitle(null);
-		}
 
 		storyModel.setRecommend_date(story.getRecommend_date());
 
 		JsonConfig configs = new JsonConfig();
 		List<String> delArray = new ArrayList<String>();
-		if (Strings.isNullOrEmpty(story.getSubtitle())) {
-			delArray.add("subtitle");
-		}
 		if (Strings.isNullOrEmpty(story.getTitle())) {
 			delArray.add("title");
 		}

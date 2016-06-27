@@ -148,6 +148,15 @@ public class CollectionStoryDaoImpl extends BaseDaoImpl<CollectionStory, Long>im
 		}
 		return c;
 	}
+	
+	public List<Collection> getCollectionListByStoryId(Long storyId) {
+		String hql = "select cs.collection from CollectionStory cs where cs.story.id=? and audit=1";
+		Session session = getSessionFactory().getCurrentSession();
+		Query query = session.createQuery(hql);
+		query.setLong(0, storyId.longValue());
+		List<Collection> cList = query.list();
+		return cList;
+	}
 
 	public void deleteCollectionStoryByCollectionId(Long collectionId) {
 		Session session = getSessionFactory().getCurrentSession();
@@ -366,6 +375,104 @@ public class CollectionStoryDaoImpl extends BaseDaoImpl<CollectionStory, Long>im
 
 		return storyList;
 	
+	}
+
+	@Override
+	public List<Story> getStoriesByCollectionIdAndRecommand(Long collectionId, int count,String type) {
+		String hql = "select cs.story from CollectionStory cs where cs.collection.id = ? and cs.story.status=? "
+				+ "and cs.story.recommendation = true order by cs.story.recommend_date desc";
+		Session session = getSessionFactory().getCurrentSession();
+		Query query = session.createQuery(hql);
+		query.setLong(0,collectionId);
+		query.setString(1,type);
+		query.setMaxResults(count);
+		List<Story> storyList = query.list();
+		return storyList;
+	}
+
+	@Override
+	public List<Story> getStoriesByCollectionIdAndRecommand(Long collectionId, Long storyId, int count, int identify,String type) {
+		Story story = getStoryByStoryid(storyId);
+		List<Story> storyList = null;
+		String hql = "";
+		if (story != null) {
+			storyList = new ArrayList<Story>();
+			Session session = getSessionFactory().getCurrentSession();
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+			String create_time = sdf.format(story.getRecommend_date());
+			if(identify == 1){
+				hql = "select cs.story from CollectionStory cs where cs.collection.id = ? and cs.story.id != ? and cs.story.recommend_date <= ? cs.story.status=? "
+						+ "and cs.story.recommendation = true order by cs.story.recommend_date desc";
+				Query query = session.createQuery(hql);
+				query.setLong(0,collectionId);
+				query.setLong(1,storyId);
+				query.setString(2,create_time);
+				query.setString(3,type);
+				query.setMaxResults(count);
+				storyList = query.list();
+			}else if(identify == 2){
+				hql = "select cs.story from CollectionStory cs where cs.collection.id = ? and cs.story.id != ? and cs.story.recommend_date <= ? cs.story.status=? "
+						+ "and cs.story.recommendation = true order by cs.story.recommend_date desc";
+				Query query = session.createQuery(hql);
+				query.setLong(0,collectionId);
+				query.setLong(1,storyId);
+				query.setString(2,create_time);
+				query.setString(3,type);
+				query.setMaxResults(count);
+				storyList = query.list();
+			}
+		}
+		
+		return storyList;
+	}
+
+	@Override
+	public List<Story> getStoriesByCollectionIdAndHot(Long collectionId, int count,String type) {
+		String hql = "select cs.story from CollectionStory cs where cs.collection.id = ? and cs.story.status=? "
+				+ "order by cs.story.last_comment_date desc";
+		Session session = getSessionFactory().getCurrentSession();
+		Query query = session.createQuery(hql);
+		query.setLong(0,collectionId);
+		query.setString(1,type);
+		query.setMaxResults(count);
+		List<Story> storyList = query.list();
+		return storyList;
+	}
+
+	@Override
+	public List<Story> getStoriesByCollectionIdAndHot(Long collectionId, Long storyId, int count, int identify,String type) {
+		Story story = getStoryByStoryid(storyId);
+		List<Story> storyList = null;
+		String hql = "";
+		if (story != null) {
+			storyList = new ArrayList<Story>();
+			Session session = getSessionFactory().getCurrentSession();
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+			String create_time = sdf.format(story.getLast_comment_date());
+			if(identify == 1){
+				hql = "select cs.story from CollectionStory cs where cs.collection.id = ? and cs.story.id != ? and cs.story.last_comment_date <= ? cs.story.status=? "
+						+ " order by cs.story.last_comment_date desc";
+				Query query = session.createQuery(hql);
+				query.setLong(0,collectionId);
+				query.setLong(1,storyId);
+				query.setString(2,create_time);
+				query.setString(3,type);
+				query.setMaxResults(count);
+				storyList = query.list();
+			}else if(identify == 2){
+				hql = "select cs.story from CollectionStory cs where cs.collection.id = ? and cs.story.id != ? and cs.story.last_comment_date <= ? cs.story.status=? "
+						+ " order by cs.story.last_comment_date desc";
+				Query query = session.createQuery(hql);
+				query.setLong(0,collectionId);
+				query.setLong(1,storyId);
+				query.setString(2,create_time);
+				query.setString(3,type);
+				query.setMaxResults(count);
+				storyList = query.list();
+			}
+		}
+		
+		return storyList;
 	}
 	
 }
