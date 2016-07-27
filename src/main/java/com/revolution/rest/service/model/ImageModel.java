@@ -6,23 +6,14 @@ public class ImageModel implements Serializable {
 	
 	private static final long serialVersionUID = 8677822494332406332L;
 	
-	private String zoom;
 	
 	private String original_size;
 	
-	private String focalpoint;
 	
 	private String name;
 	
 	private String comment;
 
-	public String getZoom() {
-		return zoom;
-	}
-
-	public void setZoom(String zoom) {
-		this.zoom = zoom;
-	}
 
 	public String getOriginal_size() {
 		return original_size;
@@ -30,14 +21,6 @@ public class ImageModel implements Serializable {
 
 	public void setOriginal_size(String original_size) {
 		this.original_size = original_size;
-	}
-
-	public String getFocalpoint() {
-		return focalpoint;
-	}
-
-	public void setFocalpoint(String focalpoint) {
-		this.focalpoint = focalpoint;
 	}
 
 	public String getName() {

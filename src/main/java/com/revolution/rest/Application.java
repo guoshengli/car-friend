@@ -13,6 +13,7 @@ import com.revolution.rest.service.CommentServiceImpl;
 import com.revolution.rest.service.ConfigurationServiceImpl;
 import com.revolution.rest.service.DiscoverServiceImpl;
 import com.revolution.rest.service.FollowServiceImpl;
+import com.revolution.rest.service.HtmlServiceImpl;
 import com.revolution.rest.service.LikesServiceImpl;
 import com.revolution.rest.service.NotificationServiceImpl;
 import com.revolution.rest.service.PingServiceImpl;
@@ -45,6 +46,7 @@ import com.revolution.rest.service.UserServiceImpl;
      register(DiscoverServiceImpl.class);
      register(ShareServiceImpl.class);
      register(BasicParamServiceImpl.class);
+     register(HtmlServiceImpl.class);
      
    }
  }

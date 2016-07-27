@@ -57,6 +57,7 @@ import com.revolution.rest.service.model.UserFeatured;
 import com.revolution.rest.service.model.UserModel;
 import com.revolution.rest.service.model.UserParentModel;
 import com.revolution.rest.service.model.UserPublisherModel;
+import com.revolution.rest.service.model.VideoCover;
 
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
@@ -109,7 +110,7 @@ public class DiscoverServiceImpl implements DiscoverService {
 	public JSONObject getDiscover(Long loginUserid, HttpServletRequest request, String appVersion) {
 		JSONObject discover = new JSONObject();
 		JSONObject interJson = null;
-		List<Slide> slideList = slideDao.getSlideByGroups("discover");
+		/*List<Slide> slideList = slideDao.getSlideByGroups("discover");
 		List<SlideModel> slideModelList = new ArrayList<SlideModel>();
 		SlideModel slideModel = null;
 		JSONObject storyJson;
@@ -213,7 +214,7 @@ public class DiscoverServiceImpl implements DiscoverService {
 			}
 
 		}
-		discover.put("slides", slideModelList);
+		discover.put("slides", slideModelList);*/
 
 		List<Interest> interestList = interestDao.getInterestListBySequence();
 		List<JSONObject> interestJson = new ArrayList<JSONObject>();
@@ -222,18 +223,32 @@ public class DiscoverServiceImpl implements DiscoverService {
 				interJson = new JSONObject();
 				interJson.put("id", interest.getId());
 				interJson.put("interest_name", interest.getInterest_name());
+				if(!Strings.isNullOrEmpty(interest.getDescription())){
+					interJson.put("description",interest.getDescription());
+				}
+				
+				interJson.put("cover_image",JSONObject.fromObject(interest.getCover_image()));
+				List<Collection> cList = interest.getCollections();
+				if(cList != null && cList.size() > 0){
+					interJson.put("collections_count", cList.size());
+				}else{
+					interJson.put("collections_count",0);
+				}
+				
 				List<JSONObject> collectionJson = new ArrayList<JSONObject>();
-
+				int follower_count = 0;
 				List<Collection> collectionList = interest.getCollections();
 				if (collectionList != null && collectionList.size() > 0) {
 					for (Collection c : collectionList) {
 						JSONObject json = getCollectionInfo(c);
-						JSONObject collectionJ = new JSONObject();
-						collectionJ.put("collection", json);
-						collectionJson.add(collectionJ);
+						follower_count += json.getInt("followers_count");
+						collectionJson.add(json);
 					}
 					interJson.put("collections", collectionJson);
+					
 				}
+				
+				interJson.put("followers_count", follower_count);
 
 				interestJson.add(interJson);
 			}
@@ -300,17 +315,7 @@ public class DiscoverServiceImpl implements DiscoverService {
 		authorJson.put("is_following_current_user", Boolean.valueOf(is_following_current_user));
 
 		storyModel.setAuthor(authorJson);
-		Collection collection = this.collectionStoryDao.getCollectionByStoryId((Long) story.getId());
-		if (collection != null) {
-			CollectionIntro ci = new CollectionIntro();
-			ci.setId((Long) collection.getId());
-			ci.setCollection_name(collection.getCollectionName());
-			ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
-			ci.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
-			ci.setInfo(collection.getInfo());
-
-			storyModel.setCollection(ci);
-		}
+		
 		storyModel.setCreated_time(story.getCreated_time());
 		storyModel.setUpdate_time(story.getUpdate_time());
 
@@ -325,6 +330,9 @@ public class DiscoverServiceImpl implements DiscoverService {
 			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		} else if (type.equals("multimedia")) {
 			storyModel.setCover_media(jsonObject);
+		}else if(type.equals("video")){
+			coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		}
 
 		List<StoryElement> storyElements = new ArrayList<StoryElement>();
@@ -489,6 +497,9 @@ public class DiscoverServiceImpl implements DiscoverService {
 				storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 			} else if (type.equals("multimedia")) {
 				storyModel.setCover_media(jsonObject);
+			}else if(type.equals("video")){
+				VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+				storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 			}
 
 			storyModel.setTitle(story.getTitle());
@@ -598,9 +609,6 @@ public class DiscoverServiceImpl implements DiscoverService {
 			if (!Strings.isNullOrEmpty(collection.getCover_image())) {
 				collectionModel.setCover_image(JSONObject.fromObject(collection.getCover_image()));
 			}
-			if (!Strings.isNullOrEmpty(collection.getAvatar_image())) {
-				collectionModel.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
-			}
 			collectionModel.setInfo(collection.getInfo());
 		}
 		return collectionModel;
@@ -648,6 +656,9 @@ public class DiscoverServiceImpl implements DiscoverService {
 							storyIntro.setCover_media(JSONObject.fromObject(coverMedia));
 						} else if (type.equals("multimedia")) {
 							storyIntro.setCover_media(jsonObject);
+						}else if(type.equals("video")){
+							VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+							storyIntro.setCover_media(JSONObject.fromObject(coverMedia));
 						}
 						storyIntroList.add(storyIntro);
 					}
@@ -901,13 +912,11 @@ public class DiscoverServiceImpl implements DiscoverService {
 	public JSONObject getCollectionInfo(Collection c) {
 		CollectionDiscover cd = new CollectionDiscover();
 		cd.setId(c.getId());
-		cd.setAvatar_image(JSONObject.fromObject(c.getAvatar_image()));
 		cd.setCollection_name(c.getCollectionName());
 		cd.setCover_image(JSONObject.fromObject(c.getCover_image()));
 		cd.setIs_followed_by_current_user(false);
 		cd.setView_count(c.getView_count());
 		cd.setInfo(c.getInfo());
-		cd.setCollection_type(c.getCollection_type());
 
 		User u = c.getUser();// userDao.get(c.getAuthorId());
 		JSONObject author = new JSONObject();
@@ -920,13 +929,6 @@ public class DiscoverServiceImpl implements DiscoverService {
 
 		JsonConfig configs = new JsonConfig();
 		List<String> delArray = new ArrayList<String>();
-		if (!Strings.isNullOrEmpty(c.getActivity_description())) {
-			cd.setActivity_description(c.getActivity_description());
-		} else {
-			if (Strings.isNullOrEmpty(c.getActivity_description())) {
-				delArray.add("activity_description");
-			}
-		}
 
 		JSONObject collectionJ = null;
 		if ((delArray != null) && (delArray.size() > 0)) {
@@ -944,6 +946,13 @@ public class DiscoverServiceImpl implements DiscoverService {
 			collectionJ.put("followers_count", uSet.size());
 		} else {
 			collectionJ.put("followers_count", 0);
+		}
+		
+		Set<Story> sSet = c.getStories();
+		if(sSet != null && sSet.size() > 0){
+			collectionJ.put("story_count",sSet.size());
+		}else{
+			collectionJ.put("story_count",0);
 		}
 
 		return collectionJ;
@@ -1018,7 +1027,6 @@ public class DiscoverServiceImpl implements DiscoverService {
 						ci.setId((Long) collection.getId());
 						ci.setCollection_name(collection.getCollectionName());
 						ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
-						ci.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
 						ci.setInfo(collection.getInfo());
 						Set<User> uSet = collection.getUsers();
 						if (uSet != null && uSet.size() > 0) {
@@ -1026,7 +1034,6 @@ public class DiscoverServiceImpl implements DiscoverService {
 						} else {
 							ci.setFollowers_count(0);
 						}
-						ci.setCollection_type(collection.getCollection_type());
 						User u = collection.getUser();// userDao.get(collection.getAuthorId());
 						JSONObject author = new JSONObject();
 						author.put("id", u.getId());
@@ -1037,13 +1044,6 @@ public class DiscoverServiceImpl implements DiscoverService {
 						ci.setAuthor(author);
 						JsonConfig configs = new JsonConfig();
 						List<String> delArray = new ArrayList<String>();
-						if (!Strings.isNullOrEmpty(collection.getActivity_description())) {
-							ci.setActivity_description(collection.getActivity_description());
-						} else {
-							if (Strings.isNullOrEmpty(collection.getActivity_description())) {
-								delArray.add("activity_description");
-							}
-						}
 
 						JSONObject collectionJ = null;
 						if ((delArray != null) && (delArray.size() > 0)) {
@@ -1153,9 +1153,7 @@ public class DiscoverServiceImpl implements DiscoverService {
 						ci.setId((Long) collection.getId());
 						ci.setCollection_name(collection.getCollectionName());
 						ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
-						ci.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
 						ci.setInfo(collection.getInfo());
-						ci.setCollection_type(collection.getCollection_type());
 						User u = collection.getUser();// userDao.get(collection.getAuthorId());
 						JSONObject author = new JSONObject();
 						author.put("id", u.getId());
@@ -1163,13 +1161,6 @@ public class DiscoverServiceImpl implements DiscoverService {
 						ci.setAuthor(author);
 						JsonConfig configs = new JsonConfig();
 						List<String> delArray = new ArrayList<String>();
-						if (!Strings.isNullOrEmpty(collection.getActivity_description())) {
-							ci.setActivity_description(collection.getActivity_description());
-						} else {
-							if (Strings.isNullOrEmpty(collection.getActivity_description())) {
-								delArray.add("activity_description");
-							}
-						}
 
 						JSONObject collectionJ = null;
 						if ((delArray != null) && (delArray.size() > 0)) {

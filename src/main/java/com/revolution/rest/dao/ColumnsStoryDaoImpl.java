@@ -50,9 +50,11 @@ public class ColumnsStoryDaoImpl extends BaseDaoImpl<ColumnsStory, Long>implemen
 	
 	@Override
 	public List<Story> getStoriesByColumns(Long columns_id, int count,String type) {
-		String hql = "select cs.story from ColumnsStory cs where cs.columns.id=? and cs.story.status = ? order by cs.create_time desc";
+		String hql = "select cs.story from ColumnsStory cs where cs.columns.id=? and cs.story.status = ? and cs.story.recommendation=true order by cs.create_time desc";
 		Session session = getSessionFactory().getCurrentSession();
 		Query query = session.createQuery(hql);
+		query.setLong(0,columns_id).setString(1, type);
+		query.setMaxResults(count);
 		List<Story> list = query.list();
 		return list;
 	}
@@ -68,30 +70,52 @@ public class ColumnsStoryDaoImpl extends BaseDaoImpl<ColumnsStory, Long>implemen
 			String create_time = sdf.format(cs.getCreate_time());
 			String hql = "";
 			if (identifier == 1) {
-				hql = "select cs.story from CollectionStory cs where cs.columns.id=? and cs.story.status=? and cs.create_time <= ? and cs.story.id != ?  order by cs.create_time desc";
+				hql = "select cs.story from ColumnsStory cs where cs.columns.id=? and cs.story.status=? and cs.create_time <= ? and cs.story.id != ?  order by cs.create_time desc";
 				
 
 				Query query = session.createQuery(hql);
 				query.setLong(0, columns_id);
 				query.setString(1, type);
 				query.setString(2, create_time);
-				query.setLong(3, storyId.longValue());
+				query.setLong(3, storyId);
 				query.setMaxResults(count);
 				storyList = query.list();
 				//Collections.reverse(storyList);
 			} else if (identifier == 2) {
-				hql = "select cs.story from CollectionStory cs where cs.columns.id=? and cs.story.status=? and cs.create_time <= ? and cs.story.id != ? and cs.story.recommendation=true order by cs.create_time desc";
+				hql = "select cs.story from ColumnsStory cs where cs.columns.id=? and cs.story.status=? and cs.create_time <= ? and cs.story.id != ? and cs.story.recommendation=true order by cs.create_time desc";
 				Query query = session.createQuery(hql);
 				query.setLong(0,columns_id);
-				query.setString(0, type);
-				query.setString(1, create_time);
-				query.setLong(2, storyId.longValue());
+				query.setString(1, type);
+				query.setString(2, create_time);
+				query.setLong(3, storyId);
 				query.setMaxResults(count);
 				storyList = query.list();
 			}
 		}
 
 		return storyList;
+	}
+
+	@Override
+	public void deleteColumnsStoryByColumnsIdAndStoryId(Long columns_id, Long storyId) {
+		Session session = getSessionFactory().getCurrentSession();
+		String hql = "delete from ColumnsStory where 1=1 and columns.id=? and story.id=?";
+		Query query = session.createQuery(hql).setLong(0,columns_id).setLong(1,storyId);
+		query.executeUpdate();
+	}
+
+	@Override
+	public ColumnsStory getColumnsStoryByColumnsIdAndStoryId(Long columnsId, Long storyId) {
+		String hql = "from ColumnsStory cs where 1=1 and cs.columns.id=? and cs.story.id=?";
+		Session session = getSessionFactory().getCurrentSession();
+		Query query = session.createQuery(hql);
+		query.setLong(0,columnsId).setLong(1,storyId);
+		List<ColumnsStory> csList = query.list();
+		ColumnsStory cs = null;
+		if(csList != null && csList.size() > 0){
+			cs = csList.get(0);
+		}
+		return cs;
 	}
 
 

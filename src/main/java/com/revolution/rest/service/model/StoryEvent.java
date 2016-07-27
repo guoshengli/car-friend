@@ -25,6 +25,7 @@
    private int repost_count;
    
    private int like_count;
+   
  
    public Long getId()
    {
@@ -155,6 +156,7 @@ public String getSummary() {
 	public void setLike_count(int like_count) {
 		this.like_count = like_count;
 	}
+
    
 	
 	

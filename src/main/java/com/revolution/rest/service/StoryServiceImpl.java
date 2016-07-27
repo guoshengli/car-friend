@@ -43,6 +43,7 @@ import com.revolution.rest.dao.UserCollectionDao;
 import com.revolution.rest.dao.UserDao;
 import com.revolution.rest.model.Collection;
 import com.revolution.rest.model.CollectionStory;
+import com.revolution.rest.model.Columns;
 import com.revolution.rest.model.Comment;
 import com.revolution.rest.model.Configuration;
 import com.revolution.rest.model.Follow;
@@ -56,7 +57,6 @@ import com.revolution.rest.model.Story;
 import com.revolution.rest.model.StoryElement;
 import com.revolution.rest.model.Timeline;
 import com.revolution.rest.model.User;
-import com.revolution.rest.model.UserCollection;
 import com.revolution.rest.service.model.CollectionIntro;
 import com.revolution.rest.service.model.CommentModel;
 import com.revolution.rest.service.model.CommentStoryModel;
@@ -78,6 +78,7 @@ import com.revolution.rest.service.model.StoryModel;
 import com.revolution.rest.service.model.StoryPageModel;
 import com.revolution.rest.service.model.TextCover;
 import com.revolution.rest.service.model.UserIntro;
+import com.revolution.rest.service.model.VideoCover;
 
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
@@ -158,11 +159,6 @@ public class StoryServiceImpl implements StoryService {
 
 	public Response createStory(JSONObject storyModel, Long loginUserid, HttpServletRequest request) {
 		log.debug("create story");
-		String path = getClass().getResource("/../../META-INF/getui.json").getPath();
-		JSONObject jsonObject = ParseFile.parseJson(path);
-		String appId = jsonObject.getString("appId");
-		String appKey = jsonObject.getString("appKey");
-		String masterSecret = jsonObject.getString("masterSecret");
 		try {
 			if (storyModel != null) {
 				Story story = new Story();
@@ -211,99 +207,32 @@ public class StoryServiceImpl implements StoryService {
 					}
 				}
 				story.setElements(seSet);
+				
+				
+				
+				
 				this.storyDao.save(story);
 				log.debug("start add activity$$$$$$$$$$$$$$$$$$$$$$$$$$$" + story.getUser().getId() + " -->"
 						+ story.getId());
 				story.setTinyURL(makeURL(story.getId()));
 				storyDao.update(story);
-				Long collection_id = null;
+				
+				JSONArray collection_id = null;
 				if (storyModel.containsKey("collection_id")) {
-					collection_id = storyModel.getLong("collection_id");
-					UserCollection uCollection = userCollectionDao.getUserCollectionByCollectionId(collection_id,
-							loginUserid);
-					UserCollection uc = null;
-					if (uCollection == null) {
-						uc = new UserCollection();
-						Collection c = collectionDao.get(collection_id);
-						uc.setCollections(c);
-						uc.setUsers(user);
-						uc.setCreate_time(new Date());
-						userCollectionDao.save(uc);
-					}
-					Collection collection = this.collectionDao.getCollectionById(collection_id);
-					if (collection != null) {
-						CollectionStory cs = new CollectionStory();
-						cs.setStory(story);
-						cs.setCollection(collection);
-						String type = collection.getCollection_type();
-						int notification_type = 9;
-						if (type.equals("interest")) {
-							cs.setAudit(0);
-							notification_type = 11;
-						} else {
-							cs.setAudit(1);
+					collection_id = storyModel.getJSONArray("collection_id");
+					if(collection_id != null && collection_id.size() > 0){
+						Object[] ids = collection_id.toArray();
+						for(Object id:ids){
+							CollectionStory cs = new CollectionStory();
+							Collection collection = collectionDao.get(Long.parseLong(id.toString()));
+							cs.setStory(story);
+							cs.setCollection(collection);
+							collectionStoryDao.save(cs);
 						}
-						this.collectionStoryDao.save(cs);
-						Notification n = new Notification();
-						n.setRecipientId(collection.getUser().getId());
-						n.setSenderId(story.getUser().getId());
-						n.setNotificationType(notification_type);
-						n.setObjectType(1);
-						n.setObjectId(story.getId());
-						n.setStatus("enabled");
-						n.setRead_already(true);
-						notificationDao.save(n);
-						Configuration conf = this.configurationDao.getConfByUserId(collection.getUser().getId());
-						if (n.getNotificationType() == 9) {
-							if (conf.isNew_story_from_collection_push()) {
-								int counts = this.notificationDao
-										.getNotificationByRecipientId(collection.getUser().getId());
-								List<PushNotification> list = this.pushNotificationDao
-										.getPushNotificationByUserid(collection.getUser().getId());
-								try {
-									String content = "";
-									JSONObject json = new JSONObject();
-
-									content = user.getUsername() + " 在内容站 " + collection.getCollectionName()
-											+ " 发布了新的壹頁";
-									json.put("story_id", story.getId());
-
-									PushNotificationUtil.pushInfo(appId, appKey, masterSecret, list, counts, content,
-											json.toString());
-								} catch (Exception e) {
-									e.printStackTrace();
-								}
-							}
-						} else if (n.getNotificationType() == 11) {
-							if (conf.isNew_story_from_collection_review_push()) {
-								int counts = this.notificationDao
-										.getNotificationByRecipientId(collection.getUser().getId());
-								List<PushNotification> list = this.pushNotificationDao
-										.getPushNotificationByUserid(collection.getUser().getId());
-								try {
-									String content = "";
-									JSONObject json = new JSONObject();
-
-									content = user.getUsername() + " 向你的小站  " + collection.getCollectionName() + " 投稿";
-									json.put("notification_page", "notification_page");
-									PushNotificationUtil.pushInfo(appId, appKey, masterSecret, list, counts, content,
-											json.toString());
-								} catch (Exception e) {
-									e.printStackTrace();
-								}
-							}
-						}
-
-					} else {
-						JSONObject json = new JSONObject();
-						json.put("status", "collection_deleted");
-						json.put("code", Integer.valueOf(10088));
-						json.put("error_message", "The collection is already deleted");
-						return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
 					}
+					
 
 				}
-
 				List<Follow> followList = this.followDao.getFollowersByUserId(story.getUser().getId());
 				Timeline timeline = new Timeline();
 				timeline.setCreatorId(loginUserid);
@@ -362,6 +291,7 @@ public class StoryServiceImpl implements StoryService {
 			jo.put("error_message", "Invalid request payload");
 			return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
 		} catch (Exception e) {
+			e.printStackTrace();
 			JSONObject jo = new JSONObject();
 			jo.put("status", "invalid_request");
 			jo.put("code", Integer.valueOf(10010));
@@ -560,6 +490,9 @@ public class StoryServiceImpl implements StoryService {
 				storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 			} else if (type.equals("multimedia")) {
 				storyModel.setCover_media(jsonObject);
+			}else if(type.equals("video")){
+				VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+				storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 			}
 
 			List<StoryElementModel> storyElements = new ArrayList<StoryElementModel>();
@@ -595,18 +528,18 @@ public class StoryServiceImpl implements StoryService {
 			storyModel.setView_count(story.getViewTimes());
 			storyModel.setTitle(story.getTitle());
 
-			//Set<Collection> cSet = story.getCollections();
-			List<Collection> cList = collectionStoryDao.getCollectionListByStoryId(story.getId());
+			Set<Collection> cSet = story.getCollections();
+			//List<Collection> cList = collectionStoryDao.getCollectionListByStoryId(story.getId());
 			List<JSONObject> collectionListJson = new ArrayList<JSONObject>();
-			if (cList != null && cList.size() > 0) {
-				for(Collection collection:cList){
+			if (cSet != null && cSet.size() > 0) {
+				Iterator<Collection> iter = cSet.iterator();
+				while(iter.hasNext()){
+					Collection collection = iter.next();
 					CollectionIntro ci = new CollectionIntro();
 					ci.setId((Long) collection.getId());
 					ci.setCollection_name(collection.getCollectionName());
 					ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
-					ci.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
 					ci.setInfo(collection.getInfo());
-					ci.setCollection_type(collection.getCollection_type());
 					User u = userDao.get(collection.getUser().getId());
 					JSONObject author = new JSONObject();
 					author.put("id", u.getId());
@@ -617,9 +550,6 @@ public class StoryServiceImpl implements StoryService {
 					ci.setAuthor(author);
 					JsonConfig configs = new JsonConfig();
 					List<String> delArray = new ArrayList<String>();
-					if (!Strings.isNullOrEmpty(collection.getActivity_description())) {
-						ci.setActivity_description(collection.getActivity_description());
-					} 
 					
 					int follow_collection_count = userCollectionDao.getCollectionByCount(collection.getId());
 					ci.setFollowers_count(follow_collection_count);
@@ -646,6 +576,7 @@ public class StoryServiceImpl implements StoryService {
 				
 				storyModel.setCollection(collectionListJson);
 			}
+			
 
 			int count = 0;
 			Set<Comment> coSet = story.getComments();
@@ -758,13 +689,28 @@ public class StoryServiceImpl implements StoryService {
 			} else {
 				storyModel.setResource(null);
 			}
+			
+			Set<Columns> sSet = story.getColumns();
+			if(sSet != null && sSet.size() > 0){
+				JSONObject columnsJson = new JSONObject();
+				Iterator<Columns> iter = sSet.iterator();
+				if(iter.hasNext()){
+					Columns c = iter.next();
+					columnsJson.put("id",c.getId());
+					columnsJson.put("columns_name",c.getColumn_name());
+					storyModel.setColumns(columnsJson);
+				}
+				
+			}else{
+				delArray.add("columns");
+			}
 
 			if (Strings.isNullOrEmpty(story.getResource())) {
 				delArray.add("resource");
 			}
 
 
-			if (cList == null || cList.size() <= 0) {
+			if (cSet == null || cSet.size() <= 0) {
 				delArray.add("collection");
 			}
 			JSONObject storyJson = null;
@@ -795,11 +741,6 @@ public class StoryServiceImpl implements StoryService {
 
 	public Response updateStory(Long storyId, JSONObject storyModel, Long loginUserid) {
 		log.debug("*** start update story ***");
-		String path = getClass().getResource("/../../META-INF/getui.json").getPath();
-		JSONObject jsonObject = ParseFile.parseJson(path);
-		String appId = jsonObject.getString("appId");
-		String appKey = jsonObject.getString("appKey");
-		String masterSecret = jsonObject.getString("masterSecret");
 		try {
 			if (storyModel != null) {
 				Story story = (Story) this.storyDao.get(storyId);
@@ -858,94 +799,25 @@ public class StoryServiceImpl implements StoryService {
 						}
 
 						this.storyDao.update(story);
-						Long collection_id = null;
+						JSONArray collection_id = null;
 						if (storyModel.containsKey("collection_id")) {
-							collection_id = Long.valueOf(storyModel.getLong("collection_id"));
-							Collection isexist_collection = null;
-							Set<Collection> collectionSet = story.getCollections();
-							if (collectionSet != null && collectionSet.size() > 0) {
-								isexist_collection = collectionSet.iterator().next();
-							}
-							if (isexist_collection != null) {
-								this.collectionStoryDao.deleteCollectionStoryByCollectionIdAndStoryId(
-										isexist_collection.getId(), story.getId());
-								String type = isexist_collection.getCollection_type();
-								Notification notification = null;
-								if (type.equals("interest")) {
-									notification = notificationDao.getNotificationByAction(story.getId(),
-											story.getUser().getId(), 1, 11);
-								} else {
-									notification = notificationDao.getNotificationByAction(story.getId(),
-											story.getUser().getId(), 1, 9);
-								}
-								notificationDao.delete(notification.getId());
+							collection_id = storyModel.getJSONArray("collection_id");
+							collectionStoryDao.deleteCollectionStoryByStoryId(story.getId());
+							if(collection_id != null && collection_id.size() > 0){
+								Object[] cArr = collection_id.toArray();
+								for(Object c:cArr){
+									Long param_cid = Long.parseLong(c.toString());
+									
+									Collection collection = this.collectionDao.getCollectionById(param_cid);
 
-							}
-							Collection collection = this.collectionDao.getCollectionById(collection_id);
+									CollectionStory cs = new CollectionStory();
+									cs.setStory(story);
+									cs.setCollection(collection);
+									this.collectionStoryDao.save(cs);
 
-							CollectionStory cs = new CollectionStory();
-							cs.setStory(story);
-							cs.setCollection(collection);
-							String type = collection.getCollection_type();
-							int notification_type = 9;
-							if (type.equals("interest")) {
-								cs.setAudit(0);
-								notification_type = 11;
-							} else {
-								cs.setAudit(1);
-							}
-							this.collectionStoryDao.save(cs);
-
-							Notification n = new Notification();
-							n.setRecipientId(collection.getUser().getId());
-							n.setSenderId(story.getUser().getId());
-							n.setNotificationType(notification_type);
-							n.setObjectType(1);
-							n.setObjectId(story.getId());
-							n.setStatus("enabled");
-							n.setRead_already(true);
-							notificationDao.save(n);
-							Configuration conf = this.configurationDao.getConfByUserId(collection.getUser().getId());
-							if (n.getNotificationType() == 9) {
-								if (conf.isNew_story_from_collection_push()) {
-									int counts = this.notificationDao
-											.getNotificationByRecipientId(collection.getUser().getId());
-									List<PushNotification> list = this.pushNotificationDao
-											.getPushNotificationByUserid(collection.getUser().getId());
-									try {
-										String content = "";
-										JSONObject json = new JSONObject();
-
-										content = user.getUsername() + " 在内容站 " + collection.getCollectionName()
-												+ " 发布了新的壹頁";
-										json.put("story_id", story.getId());
-
-										PushNotificationUtil.pushInfo(appId, appKey, masterSecret, list, counts,
-												content, json.toString());
-									} catch (Exception e) {
-										e.printStackTrace();
-									}
-								}
-							} else if (n.getNotificationType() == 11) {
-								if (conf.isNew_story_from_collection_review_push()) {
-									int counts = this.notificationDao
-											.getNotificationByRecipientId(collection.getUser().getId());
-									List<PushNotification> list = this.pushNotificationDao
-											.getPushNotificationByUserid(collection.getUser().getId());
-									try {
-										String content = "";
-										JSONObject json = new JSONObject();
-
-										content = user.getUsername() + " 向你的小站  " + collection.getCollectionName()
-												+ " 投稿";
-										json.put("notification_page", "notification_page");
-										PushNotificationUtil.pushInfo(appId, appKey, masterSecret, list, counts,
-												content, json.toString());
-									} catch (Exception e) {
-										e.printStackTrace();
-									}
 								}
 							}
+							
 
 						}
 
@@ -1826,6 +1698,9 @@ public class StoryServiceImpl implements StoryService {
 			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		} else if (type.equals("multimedia")) {
 			storyModel.setCover_media(jsonObject);
+		}else if(type.equals("video")){
+			VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		}
 
 		List<StoryElement> storyElements = new ArrayList<StoryElement>();
@@ -1914,7 +1789,7 @@ public class StoryServiceImpl implements StoryService {
 		return storyModel;
 	}
 
-	public EventModel getEventModelListByLoginUserid(Timeline timeline, Long loginUserid, Long collection_id) {
+	public EventModel getEventModelListByLoginUserid(Timeline timeline, Long loginUserid, JSONArray collection_id) {
 		try {
 			EventModel event = new EventModel();
 			event.setId((Long) timeline.getId());
@@ -1947,13 +1822,6 @@ public class StoryServiceImpl implements StoryService {
 					if (!Strings.isNullOrEmpty(user.getCoverImage())) {
 						coverImageJson = JSONObject.fromObject(user.getCoverImage());
 					}
-					/*
-					 * int storyCount =
-					 * this.storyDao.getStoryCount((Long)user.getId()); int
-					 * follower_Count = this.followDao.userFollowedCount(
-					 * (Long)user .getId()); int following_count =
-					 * this.followDao.userFollowCount( (Long)user .getId());
-					 */
 
 					JSONObject authorJson = new JSONObject();
 					authorJson.put("id", user.getId());
@@ -1964,16 +1832,6 @@ public class StoryServiceImpl implements StoryService {
 					authorJson.put("introduction", user.getIntroduction());
 					authorJson.put("avatar_image", avatarImageJson);
 					authorJson.put("cover_image", coverImageJson);
-					// authorJson.put("likes_count",
-					// Integer.valueOf(likesCount));
-					// authorJson.put("reposts_count",
-					// Integer.valueOf(repostStoryCount));
-					// authorJson.put("stories_count",
-					// Integer.valueOf(storyCount));
-					// authorJson.put("followers_count",
-					// Integer.valueOf(follower_Count));
-					// authorJson.put("following_count",
-					// Integer.valueOf(following_count));
 					authorJson.put("user_type", user.getUser_type());
 					if (!Strings.isNullOrEmpty(user.getWebsite()))
 						authorJson.put("website", user.getWebsite());
@@ -2014,45 +1872,46 @@ public class StoryServiceImpl implements StoryService {
 					storyModel.setCreated_time(story.getCreated_time());
 					storyModel.setUpdate_time(story.getUpdate_time());
 					boolean flag_collection = false;
+					JSONArray collectArr = new JSONArray();
 					if (collection_id != null) {
-						Collection collect = collectionDao.getCollectionById(collection_id);
-						CollectionStory cs = collectionStoryDao.getCollectionStoryByCollectionIdAndStoryId(collection_id,story.getId());
-						if(cs.getAudit() == 1){
-							CollectionIntro ci = new CollectionIntro();
-							ci.setId((Long) collect.getId());
-							ci.setCollection_name(collect.getCollectionName());
-							ci.setCover_image(JSONObject.fromObject(collect.getCover_image()));
-							ci.setAvatar_image(JSONObject.fromObject(collect.getAvatar_image()));
-							ci.setInfo(collect.getInfo());
-							ci.setCollection_type(collect.getCollection_type());
-							User u = userDao.get(collect.getUser().getId());
-							JSONObject author = new JSONObject();
-							author.put("id", u.getId());
-							author.put("username", u.getUsername());
-							ci.setAuthor(author);
-							JsonConfig configs = new JsonConfig();
-							List<String> delArray = new ArrayList<String>();
-							if (!Strings.isNullOrEmpty(collect.getActivity_description())) {
-								ci.setActivity_description(collect.getActivity_description());
-							} 
+						Object[] cArr = collection_id.toArray();
+						if(cArr != null && cArr.length > 0){
+							for(Object cid:cArr){
+								Long param_cid = Long.parseLong(cid.toString());
+								Collection collect = collectionDao.getCollectionById(param_cid);
+								CollectionIntro ci = new CollectionIntro();
+								ci.setId((Long) collect.getId());
+								ci.setCollection_name(collect.getCollectionName());
+								ci.setCover_image(JSONObject.fromObject(collect.getCover_image()));
+								
+								User u = userDao.get(collect.getUser().getId());
+								JSONObject author = new JSONObject();
+								author.put("id", u.getId());
+								author.put("username", u.getUsername());
+								ci.setAuthor(author);
+								
+								JsonConfig configs = new JsonConfig();
+								List<String> delArray = new ArrayList<String>();
+								if(!Strings.isNullOrEmpty(collect.getInfo())){
+									ci.setInfo(collect.getInfo());
+								}else{
+									delArray.add("info");
+								}
+								JSONObject collectionJson = null;
+								if ((delArray != null) && (delArray.size() > 0)) {
+									configs.setExcludes((String[]) delArray.toArray(new String[delArray.size()]));
+									configs.setIgnoreDefaultExcludes(false);
+									configs.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
 
-							JSONObject collectionJson = null;
-							if ((delArray != null) && (delArray.size() > 0)) {
-								configs.setExcludes((String[]) delArray.toArray(new String[delArray.size()]));
-								configs.setIgnoreDefaultExcludes(false);
-								configs.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
-
-								collectionJson = JSONObject.fromObject(ci, configs);
-							} else {
-								collectionJson = JSONObject.fromObject(ci);
+									collectionJson = JSONObject.fromObject(ci, configs);
+								} else {
+									collectionJson = JSONObject.fromObject(ci);
+								}
+								
+								collectArr.add(collectionJson);
 							}
-
-							storyModel.setCollection(collectionJson);
-							flag_collection = true;
-						}else{
-							storyModel.setCollection(null);
-							flag_collection = false;
 						}
+						
 						
 					} else {
 						storyModel.setCollection(null);
@@ -2071,6 +1930,9 @@ public class StoryServiceImpl implements StoryService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
+					}else if(type.equals("video")){
+						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					List<StoryElement> storyElements = new ArrayList<StoryElement>();
@@ -2128,23 +1990,6 @@ public class StoryServiceImpl implements StoryService {
 						count = cSet.size();
 					}
 					storyModel.setComment_count(count);
-					/*
-					 * likes = this.likesDao.getLikeByUserIdAndStoryId(
-					 * loginUserid, storyId); if (likes != null)
-					 * storyModel.setLiked_by_current_user(true); else {
-					 * storyModel.setLiked_by_current_user(false); } int
-					 * likeCount = this.likesDao.likeStoryCount(storyId);
-					 * storyModel.setLike_count(likeCount); int repostCount =
-					 * this.republishDao.count(storyId);
-					 * storyModel.setRepost_count(repostCount);
-					 */
-					/*
-					 * Republish repost = this.republishDao
-					 * .getRepostByUserIdAndStoryId(loginUserid, storyId); if
-					 * (repost != null)
-					 * storyModel.setRepost_by_current_user(true); else {
-					 * storyModel.setRepost_by_current_user(false); }
-					 */
 
 					List<Comment> commentList = this.commentDao.getCommentByStoryIdNewThree((Long) story.getId());
 					if ((commentList != null) && (commentList.size() > 0)) {
@@ -2177,6 +2022,7 @@ public class StoryServiceImpl implements StoryService {
 
 					JsonConfig configs = new JsonConfig();
 					List<String> delArray = new ArrayList<String>();
+					
 					if (Strings.isNullOrEmpty(story.getResource())) {
 						delArray.add("resource");
 					}
@@ -2305,6 +2151,9 @@ public class StoryServiceImpl implements StoryService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
+					}else if(type.equals("video")){
+						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					List<StoryElement> storyElements = new ArrayList<StoryElement>();
@@ -2534,13 +2383,12 @@ public class StoryServiceImpl implements StoryService {
 					int count = this.commentDao.getCommentCountById(story.getId());
 					storyModel.setComment_count(count);
 					storyModel.setCreated_time(story.getCreated_time());
-					Collection collection = this.collectionStoryDao.getCollectionByStoryId(storyId);
+					/*Collection collection = this.collectionStoryDao.getCollectionByStoryId(storyId);
 					if (collection != null) {
 						CollectionIntro ci = new CollectionIntro();
 						ci.setId((Long) collection.getId());
 						ci.setCollection_name(collection.getCollectionName());
 						ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
-						ci.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
 						ci.setInfo(collection.getInfo());
 						User author = userDao.get(collection.getUser().getId());
 						JSONObject json = new JSONObject();
@@ -2549,9 +2397,6 @@ public class StoryServiceImpl implements StoryService {
 						ci.setAuthor(json);
 						JsonConfig configs = new JsonConfig();
 						List<String> delArray = new ArrayList<String>();
-						if (!Strings.isNullOrEmpty(collection.getActivity_description())) {
-							ci.setActivity_description(collection.getActivity_description());
-						}
 
 						JSONObject collectionJson = null;
 						if ((delArray != null) && (delArray.size() > 0)) {
@@ -2565,7 +2410,7 @@ public class StoryServiceImpl implements StoryService {
 						}
 
 						storyModel.setCollection(collectionJson);
-					}
+					}*/
 					JSONObject jsonObject = JSONObject.fromObject(story.getCover_page());
 					log.debug("***story.getCover_page()***" + jsonObject);
 					String type = jsonObject.getString("type");
@@ -2579,6 +2424,9 @@ public class StoryServiceImpl implements StoryService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
+					}else if(type.equals("video")){
+						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
@@ -2598,9 +2446,6 @@ public class StoryServiceImpl implements StoryService {
 						delArray.add("title");
 					}
 
-					if (collection == null) {
-						delArray.add("collection");
-					}
 					if (Strings.isNullOrEmpty(story.getSummary())) {
 						delArray.add("summary");
 					}
@@ -2671,7 +2516,7 @@ public class StoryServiceImpl implements StoryService {
 					else {
 						storyModel.setRepost_by_current_user(false);
 					}
-					Collection collection = this.collectionStoryDao.getCollectionByStoryId(storyId);
+					/*Collection collection = this.collectionStoryDao.getCollectionByStoryId(storyId);
 					if (collection != null) {
 						CollectionIntro ci = new CollectionIntro();
 						ci.setId((Long) collection.getId());
@@ -2686,9 +2531,6 @@ public class StoryServiceImpl implements StoryService {
 						ci.setAuthor(json);
 						JsonConfig configs = new JsonConfig();
 						List<String> delArray = new ArrayList<String>();
-						if (!Strings.isNullOrEmpty(collection.getActivity_description())) {
-							ci.setActivity_description(collection.getActivity_description());
-						} 
 
 						JSONObject collectionJson = null;
 						if ((delArray != null) && (delArray.size() > 0)) {
@@ -2702,7 +2544,7 @@ public class StoryServiceImpl implements StoryService {
 						}
 
 						storyModel.setCollection(collectionJson);
-					}
+					}*/
 					JSONObject jsonObject = JSONObject.fromObject(story.getCover_page());
 					log.debug("***story.getCover_page()***" + jsonObject);
 					String type = jsonObject.getString("type");
@@ -2716,6 +2558,9 @@ public class StoryServiceImpl implements StoryService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
+					}else if(type.equals("video")){
+						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
@@ -2724,9 +2569,6 @@ public class StoryServiceImpl implements StoryService {
 					List<String> delArray1 = new ArrayList<String>();
 					if (Strings.isNullOrEmpty(story.getTitle())) {
 						delArray1.add("title");
-					}
-					if (collection == null) {
-						delArray1.add("collection");
 					}
 
 					if (Strings.isNullOrEmpty(story.getSummary())) {
@@ -3265,38 +3107,46 @@ public class StoryServiceImpl implements StoryService {
 		storyModel.setAuthor(authorJson);
 		storyModel.setCreated_time(story.getCreated_time());
 		storyModel.setUpdate_time(story.getUpdate_time());
-		Collection collection = this.collectionStoryDao.getCollectionByStoryId((Long) story.getId());
-		if (collection != null) {
-			CollectionIntro ci = new CollectionIntro();
-			ci.setId((Long) collection.getId());
-			ci.setCollection_name(collection.getCollectionName());
-			ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
-			ci.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
-			ci.setInfo(collection.getInfo());
-			ci.setCollection_type(collection.getCollection_type());
-			User u = userDao.get(collection.getUser().getId());
-			JSONObject author = new JSONObject();
-			author.put("id", u.getId());
-			author.put("username", u.getUsername());
-			ci.setAuthor(author);
-			JsonConfig configs = new JsonConfig();
-			List<String> delArray = new ArrayList<String>();
-			if (!Strings.isNullOrEmpty(collection.getActivity_description())) {
-				ci.setActivity_description(collection.getActivity_description());
+		List<Collection> collectionList = this.collectionStoryDao.getCollectionListByStoryId((Long) story.getId());
+		JSONArray collectArr = new JSONArray();
+		if (collectionList != null && collectionList.size() > 0) {
+
+			for(Collection collect:collectionList){
+				CollectionIntro ci = new CollectionIntro();
+				ci.setId((Long) collect.getId());
+				ci.setCollection_name(collect.getCollectionName());
+				ci.setCover_image(JSONObject.fromObject(collect.getCover_image()));
+				
+				User u = userDao.get(collect.getUser().getId());
+				JSONObject author = new JSONObject();
+				author.put("id", u.getId());
+				author.put("username", u.getUsername());
+				ci.setAuthor(author);
+				
+				JsonConfig configs = new JsonConfig();
+				List<String> delArray = new ArrayList<String>();
+				if(!Strings.isNullOrEmpty(collect.getInfo())){
+					ci.setInfo(collect.getInfo());
+				}else{
+					delArray.add("info");
+				}
+				JSONObject collectionJson = null;
+				if ((delArray != null) && (delArray.size() > 0)) {
+					configs.setExcludes((String[]) delArray.toArray(new String[delArray.size()]));
+					configs.setIgnoreDefaultExcludes(false);
+					configs.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
+
+					collectionJson = JSONObject.fromObject(ci, configs);
+				} else {
+					collectionJson = JSONObject.fromObject(ci);
+				}
+				
+				collectArr.add(collectionJson);
 			}
-
-			JSONObject collectionJson = null;
-			if ((delArray != null) && (delArray.size() > 0)) {
-				configs.setExcludes((String[]) delArray.toArray(new String[delArray.size()]));
-				configs.setIgnoreDefaultExcludes(false);
-				configs.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
-
-				collectionJson = JSONObject.fromObject(ci, configs);
-			} else {
-				collectionJson = JSONObject.fromObject(ci);
-			}
-
-			storyModel.setCollection(collectionJson);
+		
+			
+		} else {
+			storyModel.setCollection(null);
 		}
 		storyModel.setSummary(story.getSummary());
 		JSONObject jsonObject = JSONObject.fromObject(story.getCover_page());
@@ -3310,6 +3160,9 @@ public class StoryServiceImpl implements StoryService {
 			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		} else if (type.equals("multimedia")) {
 			storyModel.setCover_media(jsonObject);
+		}else if(type.equals("video")){
+			coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		}
 
 		List<StoryElement> storyElements = new ArrayList<StoryElement>();
@@ -3424,7 +3277,7 @@ public class StoryServiceImpl implements StoryService {
 		if (Strings.isNullOrEmpty(story.getTitle())) {
 			delArray.add("title");
 		}
-		if (collection == null) {
+		if (collectionList == null) {
 			delArray.add("collection");
 		}
 		if (Strings.isNullOrEmpty(story.getSummary())) {

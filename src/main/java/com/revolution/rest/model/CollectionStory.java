@@ -34,9 +34,6 @@ import org.hibernate.annotations.Generated;
    @Column(name="create_time", insertable=false)
    private Date create_time;
    
-   @Column(name="audit")
-   private int audit;
- 
    public Collection getCollection()
    {
      return this.collection;
@@ -62,13 +59,6 @@ import org.hibernate.annotations.Generated;
      this.create_time = create_time;
    }
 
-public int getAudit() {
-	return audit;
-}
-
-public void setAudit(int audit) {
-	this.audit = audit;
-}
    
    
    

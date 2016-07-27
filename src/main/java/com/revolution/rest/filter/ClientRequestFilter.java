@@ -61,7 +61,8 @@ public class ClientRequestFilter extends OncePerRequestFilter implements Filter 
 				|| (uri.matches("/revolution-fashion/v1/stories/"+regex+"/comments"))
 				|| (uri.matches("/revolution-fashion/v1/users/"+regex+"/profile_collections"))
 				|| (uri.equals("/revolution-fashion/WebContent/META-INF/qiniu.json"))
-				||(uri.equals("/revolution-fashion/v1/admin/exception"))) {
+				||(uri.equals("/revolution-fashion/v1/admin/exception"))
+				||(uri.equals("/revolution-fashion/v1/index"))) {
 			log.info(String.format(String.format("[**No Auth**] Request uri:", new Object[] { uri }), new Object[0]));
 
 			filterChain.doFilter(request, response);

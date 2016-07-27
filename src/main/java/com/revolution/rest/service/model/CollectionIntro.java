@@ -11,14 +11,9 @@
    private String collection_name;
    private JSONObject cover_image;
    private String info;
-   private JSONObject avatar_image;
    private int story_count;
    
    private JSONObject author;
-   
-   private String collection_type;
-   
-   private String activity_description;
    
    private int followers_count;
  
@@ -53,29 +48,11 @@ public int getStory_count() {
 public void setStory_count(int story_count) {
 	this.story_count = story_count;
 }
-public JSONObject getAvatar_image() {
-	return avatar_image;
-}
-public void setAvatar_image(JSONObject avatar_image) {
-	this.avatar_image = avatar_image;
-}
 public JSONObject getAuthor() {
 	return author;
 }
 public void setAuthor(JSONObject author) {
 	this.author = author;
-}
-public String getCollection_type() {
-	return collection_type;
-}
-public void setCollection_type(String collection_type) {
-	this.collection_type = collection_type;
-}
-public String getActivity_description() {
-	return activity_description;
-}
-public void setActivity_description(String activity_description) {
-	this.activity_description = activity_description;
 }
 public int getFollowers_count() {
 	return followers_count;

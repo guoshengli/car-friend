@@ -37,6 +37,8 @@ public interface CollectionStoryDao extends BaseDao<CollectionStory, Long>
   public List<Collection> getCollectionListByStoryId(Long storyId);
 
   public void deleteCollectionStoryByCollectionId(Long paramLong);
+  
+  public void deleteCollectionStoryByStoryId(Long storyId);
 
   public void deleteCollectionStoryByCollectionIdAndStoryId(Long paramLong1, Long paramLong2);
 
@@ -49,6 +51,8 @@ public interface CollectionStoryDao extends BaseDao<CollectionStory, Long>
   public List<Story> getStoryByCollectionIds(String ids);
   
   public CollectionStory getCollectionStoryByStoryId(Long storyId);
+  
+  public List<CollectionStory> getCollectionStorysByStoryId(Long storyId);
   
   public Story getStoryByStoryid(Long storyId);
   

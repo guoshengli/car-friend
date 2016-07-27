@@ -141,6 +141,38 @@ public class PushNotificationUtil {
        
 		return ret.getResponse().toString();
 	}
+	
+	public static String pushSimple(String appId, String appKey, String masterSecret, PushNotification pn,
+			int count, String content,String payload) throws Exception {
+		IGtPush push = new IGtPush(url, appKey, masterSecret);
+		push.connect();
+
+		TransmissionTemplate template = setTransmissionTemplate(appId, appKey, count, content,payload);
+
+		ListMessage message = new ListMessage();
+		message.setData(template);
+		message.setOffline(true);
+
+		message.setOfflineExpireTime(86400000L);
+
+		List<Target> targets = new ArrayList<Target>();
+		Target target = null;
+		if (pn != null) {
+			target = new Target();
+			target.setAppId(appId);
+			target.setClientId(pn.getClientId());
+			targets.add(target);
+		}
+
+		String taskId = push.getContentId(message);
+
+		IPushResult ret = push.pushMessageToList(taskId, targets);
+
+		System.out.println(ret.getResponse().toString());
+		
+       
+		return ret.getResponse().toString();
+	}
 
 	public static TransmissionTemplate setTransmissionTemplate(String appId, String appKey, int count, String content,String payload)
 			throws Exception {

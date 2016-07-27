@@ -384,21 +384,21 @@ public List<Timeline> getTimelineByRecommandation(Long timelineId, int count, in
 }
 
 @Override
-public List<Timeline> getTimelineByHome(int count,String followIds) {
+public List<Timeline> getTimelineByHome(int count) {
 	Date now = new Date();
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 	String now_date = sdf.format(now);
-	String hql = "from Timeline where 1=1 and (creatorId in (?) or type='recommandation') and story.status ='publish' and createTime < ? order by createTime desc";
+	String hql = "from Timeline where 1=1 and type='recommandation' and story.status ='publish' and createTime < ? order by createTime desc";
 	Session session = getSessionFactory().getCurrentSession();
 	Query query = session.createQuery(hql);
-	query.setString(0,followIds).setString(1,now_date);
+	query.setString(0,now_date);
 	query.setMaxResults(count);
 	List<Timeline> list = query.list();
 	return list;
 }
 
 @Override
-public List<Timeline> getTimelineByHome(Long timelineId, int count, int identify,String followIds) {
+public List<Timeline> getTimelineByHome(Long timelineId, int count, int identify) {
 	Timeline timeline = (Timeline)get(timelineId);
     List<Timeline> timelineList = new ArrayList<Timeline>();
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -408,22 +408,20 @@ public List<Timeline> getTimelineByHome(Long timelineId, int count, int identify
       Session session = getSessionFactory().getCurrentSession();
       String hql = "";
       if (identify == 1) {
-    	  hql = "from Timeline where 1=1 and id != ?  and referenceId=story.id and story.status = ? and createTime <= ? and (creatorId in (?) or type='recommandation') order by createTime desc";
+    	  hql = "from Timeline where 1=1 and id != ?  and referenceId=story.id and story.status = ? and createTime <= ? and type='recommandation' order by createTime desc";
           Query query = session.createQuery(hql);
           query.setLong(0, timelineId);
           query.setString(1, "publish");
           query.setString(2, date);
-          query.setString(3, followIds);
           query.setMaxResults(count);
           timelineList = query.list();
           //Collections.reverse(timelineList);
       }else if (identify == 2) {
-    	hql = "from Timeline where 1=1 and id != ? and referenceId=story.id and story.status = ? and createTime >= ? and (creatorId in (?) or type='recommandation') order by createTime desc";
+    	hql = "from Timeline where 1=1 and id != ? and referenceId=story.id and story.status = ? and createTime >= ? and type='recommandation' order by createTime desc";
         Query query = session.createQuery(hql);
         query.setLong(0, timelineId);
         query.setString(1, "publish");
         query.setString(2, date);
-        query.setString(3, followIds);
         query.setMaxResults(count);
         timelineList = query.list();
        

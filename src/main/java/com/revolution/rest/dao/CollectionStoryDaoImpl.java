@@ -49,7 +49,7 @@ public class CollectionStoryDaoImpl extends BaseDaoImpl<CollectionStory, Long>im
 	}
 
 	public List<Story> getStoriesPage(Long collectionId, int count, String type) {
-		String hql = "select cs.story from CollectionStory cs where cs.collection.id=? and cs.story.status=? and cs.audit=1 order by cs.story.created_time desc";
+		String hql = "select cs.story from CollectionStory cs where cs.collection.id=? and cs.story.status=? order by cs.story.created_time desc";
 		Session session = getSessionFactory().getCurrentSession();
 		Query query = session.createQuery(hql);
 		query.setLong(0, collectionId.longValue());
@@ -71,7 +71,7 @@ public class CollectionStoryDaoImpl extends BaseDaoImpl<CollectionStory, Long>im
 
 			String hql = "";
 			if (identifier == 1) {
-				hql = "select cs.story from CollectionStory cs where cs.collection.id=? and cs.story.status=? and cs.story.created_time >= ? and cs.story.id != ? and cs.audit=1 order by cs.story.created_time";
+				hql = "select cs.story from CollectionStory cs where cs.collection.id=? and cs.story.status=? and cs.story.created_time >= ? and cs.story.id != ? order by cs.story.created_time";
 
 				Query query = session.createQuery(hql);
 				query.setLong(0, collectionId.longValue());
@@ -82,7 +82,7 @@ public class CollectionStoryDaoImpl extends BaseDaoImpl<CollectionStory, Long>im
 				storyList = query.list();
 				Collections.reverse(storyList);
 			} else if (identifier == 2) {
-				hql = "select cs.story from CollectionStory cs where cs.collection.id=? and cs.story.status=? and cs.story.created_time <= ? and cs.story.id != ? and cs.audit=1 order by cs.story.created_time desc";
+				hql = "select cs.story from CollectionStory cs where cs.collection.id=? and cs.story.status=? and cs.story.created_time <= ? and cs.story.id != ? order by cs.story.created_time desc";
 
 				Query query = session.createQuery(hql);
 				query.setLong(0, collectionId.longValue());
@@ -137,7 +137,7 @@ public class CollectionStoryDaoImpl extends BaseDaoImpl<CollectionStory, Long>im
 	}
 
 	public Collection getCollectionByStoryId(Long storyId) {
-		String hql = "select cs.collection from CollectionStory cs where cs.story.id=? and audit=1";
+		String hql = "select cs.collection from CollectionStory cs where cs.story.id=?";
 		Session session = getSessionFactory().getCurrentSession();
 		Query query = session.createQuery(hql);
 		query.setLong(0, storyId.longValue());
@@ -150,7 +150,7 @@ public class CollectionStoryDaoImpl extends BaseDaoImpl<CollectionStory, Long>im
 	}
 	
 	public List<Collection> getCollectionListByStoryId(Long storyId) {
-		String hql = "select cs.collection from CollectionStory cs where cs.story.id=? and audit=1";
+		String hql = "select cs.collection from CollectionStory cs where cs.story.id=?";
 		Session session = getSessionFactory().getCurrentSession();
 		Query query = session.createQuery(hql);
 		query.setLong(0, storyId.longValue());
@@ -174,7 +174,7 @@ public class CollectionStoryDaoImpl extends BaseDaoImpl<CollectionStory, Long>im
 
 	public List<Story> getFeturedStoriesPage(Long collectionId, int count, String type) {
 		//String hql = "select cs.story from CollectionStory cs where cs.collection.id=? and cs.story.status=? and cs.story.recommendation=true order by cs.story.recommend_date desc";
-		String hql = "select cs.story from CollectionStory cs where cs.collection.id=? and cs.story.status=? and cs.audit=1 order by cs.create_time desc";
+		String hql = "select cs.story from CollectionStory cs where cs.collection.id=? and cs.story.status=? order by cs.create_time desc";
 		Session session = getSessionFactory().getCurrentSession();
 		Query query = session.createQuery(hql);
 		query.setLong(0, collectionId.longValue());
@@ -197,7 +197,7 @@ public class CollectionStoryDaoImpl extends BaseDaoImpl<CollectionStory, Long>im
 			String hql = "";
 			if (identifier == 1) {
 				//hql = "select cs.story from CollectionStory cs where cs.collection.id=? and cs.story.status=? and cs.story.recommend_date >= ? and cs.story.id != ? and cs.story.recommendation=true order by cs.story.recommend_date";
-				hql = "select cs.story from CollectionStory cs where cs.collection.id=? and cs.story.status=? and cs.create_time >= ? and cs.story.id != ? and cs.audit=1 order by cs.create_time";
+				hql = "select cs.story from CollectionStory cs where cs.collection.id=? and cs.story.status=? and cs.create_time >= ? and cs.story.id != ? and order by cs.create_time";
 
 				Query query = session.createQuery(hql);
 				query.setLong(0, collectionId.longValue());
@@ -209,7 +209,7 @@ public class CollectionStoryDaoImpl extends BaseDaoImpl<CollectionStory, Long>im
 				Collections.reverse(storyList);
 			} else if (identifier == 2) {
 				//hql = "select cs.story from CollectionStory cs where cs.collection.id=? and cs.story.status=? and cs.story.recommend_date <= ? and cs.story.id != ? and cs.story.recommendation=true order by cs.story.recommend_date desc";
-				hql = "select cs.story from CollectionStory cs where cs.collection.id=? and cs.story.status=? and cs.create_time <= ? and cs.story.id != ? and cs.audit=1 order by cs.create_time desc";
+				hql = "select cs.story from CollectionStory cs where cs.collection.id=? and cs.story.status=? and cs.create_time <= ? and cs.story.id != ? order by cs.create_time desc";
 
 				Query query = session.createQuery(hql);
 				query.setLong(0, collectionId.longValue());
@@ -228,9 +228,9 @@ public class CollectionStoryDaoImpl extends BaseDaoImpl<CollectionStory, Long>im
 	public List<Story> getFeturedStoriesFollow(String ids, int count, String type) {
 		String hql = "";
 		if(!Strings.isNullOrEmpty(ids)){
-			hql = "select cs.story from CollectionStory cs where cs.collection.id in ("+ids+") and cs.story.status=? and cs.story.recommendation=true order by cs.create_time desc";
+			hql = "select distinct cs.story from CollectionStory cs where cs.collection.id in ("+ids+") and cs.story.status=? and cs.story.recommendation=true order by cs.create_time desc";
 		}else{
-			hql = "select cs.story from CollectionStory cs where cs.story.status=? and cs.story.recommendation=true order by cs.create_time desc";
+			hql = "select distinct cs.story from CollectionStory cs where cs.story.status=? and cs.story.recommendation=true order by cs.create_time desc";
 		}
 		Session session = getSessionFactory().getCurrentSession();
 		Query query = session.createQuery(hql);
@@ -336,7 +336,7 @@ public class CollectionStoryDaoImpl extends BaseDaoImpl<CollectionStory, Long>im
 
 	@Override
 	public List<Story> getStoryByCollectionIds(String ids, int count) {
-		String hql = "select cs.story from CollectionStory cs where cs.collection.id in ("+ids+") and cs.story.status='publish' and cs.audit=1 order by cs.create_time desc";
+		String hql = "select distinct cs.story from CollectionStory cs where cs.collection.id in ("+ids+") and cs.story.status='publish' order by cs.create_time desc";
 		Session session = getSessionFactory().getCurrentSession();
 		Query query = session.createQuery(hql);
 		query.setMaxResults(count);
@@ -356,7 +356,7 @@ public class CollectionStoryDaoImpl extends BaseDaoImpl<CollectionStory, Long>im
 			String create_time = sdf.format(cs.getCreate_time());
 			String hql = "";
 			if (identifier == 1) {
-				hql = "select cs.story from CollectionStory cs where cs.collection.id in ("+ids+") and cs.story.status='publish' and cs.create_time <= ? and cs.story.id != ? and cs.audit=1 order by cs.create_time desc";
+				hql = "select distinct cs.story from CollectionStory cs where cs.collection.id in ("+ids+") and cs.story.status='publish' and cs.create_time <= ? and cs.story.id != ? order by cs.create_time desc";
 				Query query = session.createQuery(hql);
 				query.setString(0, create_time);
 				query.setLong(1, storyId.longValue());
@@ -364,7 +364,7 @@ public class CollectionStoryDaoImpl extends BaseDaoImpl<CollectionStory, Long>im
 				storyList = query.list();
 				//Collections.reverse(storyList);
 			} else if (identifier == 2) {
-				hql = "select cs.story from CollectionStory cs where cs.collection.id in ("+ids+") and cs.story.status='publish' and cs.create_time <= ? and cs.story.id != ? and cs.audit=1 order by cs.create_time desc";
+				hql = "select distinct cs.story from CollectionStory cs where cs.collection.id in ("+ids+") and cs.story.status='publish' and cs.create_time <= ? and cs.story.id != ? order by cs.create_time desc";
 				Query query = session.createQuery(hql);
 				query.setString(0, create_time);
 				query.setLong(1, storyId.longValue());
@@ -473,6 +473,23 @@ public class CollectionStoryDaoImpl extends BaseDaoImpl<CollectionStory, Long>im
 		}
 		
 		return storyList;
+	}
+
+	@Override
+	public void deleteCollectionStoryByStoryId(Long storyId) {
+		String hql = "delete from CollectionStory cs where cs.story.id=?";
+		Session session = getSessionFactory().getCurrentSession();
+		session.createQuery(hql).setLong(0,storyId).executeUpdate();
+	}
+
+	@Override
+	public List<CollectionStory> getCollectionStorysByStoryId(Long storyId) {
+		String hql = "from CollectionStory cs where cs.story.id=?";
+		Session session = getSessionFactory().getCurrentSession();
+		Query query = session.createQuery(hql);
+		query.setLong(0,storyId);
+		List<CollectionStory> csList = query.list();
+		return csList;
 	}
 	
 }

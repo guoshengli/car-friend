@@ -70,6 +70,7 @@ import com.revolution.rest.dao.UserCollectionDao;
 import com.revolution.rest.dao.UserDao;
 import com.revolution.rest.model.Collection;
 import com.revolution.rest.model.CollectionStory;
+import com.revolution.rest.model.Columns;
 import com.revolution.rest.model.Comment;
 import com.revolution.rest.model.Configuration;
 import com.revolution.rest.model.Cover_page;
@@ -98,6 +99,7 @@ import com.revolution.rest.service.model.CommentSummaryModel;
 import com.revolution.rest.service.model.CoverMedia;
 import com.revolution.rest.service.model.CoverPageModel;
 import com.revolution.rest.service.model.EventModel;
+import com.revolution.rest.service.model.GetuiModel;
 import com.revolution.rest.service.model.ImageCover;
 import com.revolution.rest.service.model.LinkAccountModel;
 import com.revolution.rest.service.model.LinkModel;
@@ -111,6 +113,7 @@ import com.revolution.rest.service.model.PublisherInfoModel;
 import com.revolution.rest.service.model.SimpleMailSender;
 import com.revolution.rest.service.model.SlideModel;
 import com.revolution.rest.service.model.StoryEvent;
+import com.revolution.rest.service.model.StoryEventNew;
 import com.revolution.rest.service.model.StoryHome;
 import com.revolution.rest.service.model.StoryHomeCopy;
 import com.revolution.rest.service.model.StoryIntro;
@@ -124,6 +127,7 @@ import com.revolution.rest.service.model.UserParentModel;
 import com.revolution.rest.service.model.UserPhone;
 import com.revolution.rest.service.model.UserPublisherModel;
 import com.revolution.rest.service.model.UserQiNiuModel;
+import com.revolution.rest.service.model.VideoCover;
 
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
@@ -195,11 +199,7 @@ public class UserServiceImpl implements UserService {
 	public Response create(JSONObject user,String appVersion) {
 		User u = new User();
 		try {
-			String path = getClass().getResource("/../../META-INF/getui.json").getPath();
-			JSONObject json1 = ParseFile.parseJson(path);
-			String appId = json1.getString("appId");
-			String appKey = json1.getString("appKey");
-			String masterSecret = json1.getString("masterSecret");
+			GetuiModel gm = getGetuiInfo();
 			if (user != null) {
 				if (Strings.isNullOrEmpty(user.getString("username").trim())) {
 					JSONObject jo = new JSONObject();
@@ -422,6 +422,7 @@ public class UserServiceImpl implements UserService {
 				u.setUser_type("normal");
 				this.userDao.save(u);
 				Configuration c = new Configuration();
+				c.setNew_admin_push(true);
 				c.setNew_comment_on_your_comment_push(true);
 				c.setNew_comment_on_your_story_push(true);
 				c.setNew_favorite_from_following_push(true);
@@ -429,13 +430,9 @@ public class UserServiceImpl implements UserService {
 				c.setNew_story_from_following_push(true);
 				c.setRecommended_my_story_push(true);
 				c.setReposted_my_story_push(true);
-				c.setNew_story_from_collection_push(true);
-				c.setDelete_story_from_collection_push(true);
-				c.setNew_story_from_collection_review_push(true);
-				c.setCollection_review_agree_push(true);
-				c.setCollection_review_reject_push(true);
-				c.setCreate_collection_push(true);
+				
 				c.setUserId((Long) u.getId());
+				
 				this.configurationDao.save(c);
 				List<User> officialUser = userDao.getUserByUserType("official");
 				if(officialUser != null && officialUser.size() > 0){
@@ -481,10 +478,10 @@ public class UserServiceImpl implements UserService {
 						map.put(pn.getClientId(), Integer.valueOf(count));
 					}
 				}
-				String content = u.getUsername() + "注册了壹�?";
+				String content = u.getUsername() + "注册了";
 				JSONObject json = new JSONObject();
 				json.put("user_id",u.getId());
-				PushNotificationUtil.pushInfoAllFollow(appId, appKey, masterSecret, pnList, map, content,json.toString());
+				PushNotificationUtil.pushInfoAllFollow(gm.getAppId(), gm.getAppKey(), gm.getMasterSecret(), pnList, map, content,json.toString());
 				if (user.containsKey("link_account")) {
 					JSONObject link = JSONObject.fromObject(user.get("link_account"));
 					LinkAccounts la = new LinkAccounts();
@@ -530,41 +527,7 @@ public class UserServiceImpl implements UserService {
 		 * 版本控制
 		 */
 		
-		String path4 = getClass().getResource("/../../META-INF/version.json").getPath();
-		JSONObject v = ParseFile.parseJson(path4);
-		String version = v.getString("version");
-		boolean flagVersion = false;
-		if(!Strings.isNullOrEmpty(version)){
-			String[] vArr = version.split("\\.");
-			String[] vaArr = appVersion.split("\\.");
-			if(version.equals(appVersion)){
-				flagVersion = false;
-			}else{
-				if(!vArr[0].equals(vaArr[0])){
-					if(Integer.parseInt(vArr[0]) > Integer.parseInt(vaArr[0])){
-						flagVersion = false;
-					}else{
-						flagVersion = true;
-					}
-				}else{
-					if(!vArr[1].equals(vaArr[1])){
-						if(Integer.parseInt(vArr[1]) > Integer.parseInt(vaArr[1])){
-							flagVersion = false;
-						}else{
-							flagVersion = true;
-						}
-					}else{
-						if(!vArr[2].equals(vaArr[2])){
-							if(Integer.parseInt(vArr[2]) > Integer.parseInt(vaArr[2])){
-								flagVersion = false;
-							}else{
-								flagVersion = true;
-							}
-						}
-					}
-				}
-			}
-		}
+		boolean flagVersion = isAvailableVersion(appVersion);
 		
 		User user = null;
 		String website = null;
@@ -673,8 +636,6 @@ public class UserServiceImpl implements UserService {
 								ci.setCollection_name(co.getCollectionName());
 								ci.setCover_image(JSONObject.fromObject(co.getCover_image()));
 								ci.setInfo(co.getInfo());
-								ci.setAvatar_image(JSONObject.fromObject(co.getAvatar_image()));
-								ci.setCollection_type(co.getCollection_type());
 								Set<User> uSet = co.getUsers();
 								Iterator<User> it = uSet.iterator();
 								if(it.hasNext()){
@@ -719,7 +680,7 @@ public class UserServiceImpl implements UserService {
 						         authorJson.put("avatar_image", aiJson);
 						         authorJson.put("cover_image", ciJson);
 						         ci.setAuthor(authorJson);
-								collection_info.add(ci);
+								 collection_info.add(ci);
 							}
 						}
 					}
@@ -736,11 +697,6 @@ public class UserServiceImpl implements UserService {
 							cis.setCollection_name(collections.getCollectionName());
 							cis.setCover_image(JSONObject.fromObject(collections.getCover_image()));
 							cis.setInfo(collections.getInfo());
-							cis.setAvatar_image(JSONObject.fromObject(collections.getAvatar_image()));
-							cis.setCollection_type(collections.getCollection_type());
-							if(collections.getCollection_type().equals("activity")){
-								cis.setActivity_description(collections.getActivity_description());
-							}
 							Set<User> uSet = collections.getUsers();
 							Iterator<User> its = uSet.iterator();
 							if(its.hasNext()){
@@ -785,7 +741,6 @@ public class UserServiceImpl implements UserService {
 					         authorJson.put("avatar_image", aiJson);
 					         authorJson.put("cover_image", ciJson);
 					         cis.setAuthor(authorJson);
-							cis.setIs_review(collections.isIs_review());
 							followed_collection_info.add(cis);
 						
 						}
@@ -1707,14 +1662,7 @@ public class UserServiceImpl implements UserService {
 					JSONObject json = new JSONObject();
 					json.put("user_id",user.getId());
 					PushNotificationUtil.pushInfo(appId, appKey, masterSecret, list, counts, content,json.toString());
-					/*String path1 = request.getContextPath();    
-					String basePath = request.getScheme()+"://"+request.getServerName()+":"+request.getServerPort()+path1+"/";   
-					 File writename = new File(basePath+"WEB-INF/output.txt"); // 相对路径，如果没有则要建立一个新的output。txt文件  
-				        BufferedWriter out = new BufferedWriter(new FileWriter(writename));  
-				        out.write(ret+"\r\n"); // \r\n即为换行  
-				        out.flush(); // 把缓存区内容压入文件  
-				        out.close(); // �?后记得关闭文�?  
-*/				}
+				}
 
 				count = this.followDao.userFollowedCount(userId);
 			}
@@ -1787,13 +1735,7 @@ public class UserServiceImpl implements UserService {
 				conf.setRecommended_my_story_push(configuration.isRecommended_my_story_push());
 				conf.setReposted_my_story_push(configuration.isReposted_my_story_push());
 				conf.setNew_admin_push(configuration.isNew_admin_push());
-				conf.setNew_story_from_collection_push(configuration.isNew_story_from_collection_push());
-				conf.setDelete_story_from_collection_push(conf.isDelete_story_from_collection_push());
-				conf.setNew_story_from_collection_review_push(configuration.isNew_story_from_collection_review_push());
-				conf.setCollection_review_agree_push(configuration.isCollection_review_agree_push());
-				conf.setCollection_review_reject_push(configuration.isCollection_review_reject_push());
-				conf.setStory_move_to_collection(configuration.isStory_move_to_collection());
-				conf.setCollection_review_reject_push(configuration.isCollection_review_reject_push());
+				
 				this.configurationDao.update(conf);
 				JSONObject jo = new JSONObject();
 				jo.put("status", "success");
@@ -2477,15 +2419,13 @@ public class UserServiceImpl implements UserService {
 		storyModel.setAuthor(authorJson);
 		storyModel.setCreated_time(story.getCreated_time());
 		storyModel.setUpdate_time(story.getUpdate_time());
-		Collection collection = this.collectionStoryDao.getCollectionByStoryId((Long) story.getId());
+		/*Collection collection = this.collectionStoryDao.getCollectionByStoryId((Long) story.getId());
 		if (collection != null) {
 			CollectionIntro ci = new CollectionIntro();
 			ci.setId((Long) collection.getId());
 			ci.setCollection_name(collection.getCollectionName());
 			ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
-			ci.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
 			ci.setInfo(collection.getInfo());
-			ci.setCollection_type(collection.getCollection_type());
 			User u = collection.getUser();
 			JSONObject author = new JSONObject();
 			author.put("id", u.getId());
@@ -2493,9 +2433,6 @@ public class UserServiceImpl implements UserService {
 			ci.setAuthor(author);
 			JsonConfig configs = new JsonConfig();
 			List<String> delArray = new ArrayList<String>();
-			if(!Strings.isNullOrEmpty(collection.getActivity_description())){
-				ci.setActivity_description(collection.getActivity_description());
-			}
 			
 			
 			JSONObject collectionJson = null;
@@ -2510,7 +2447,7 @@ public class UserServiceImpl implements UserService {
 			}
 			
 			storyModel.setCollection(collectionJson);
-		}
+		}*/
 		storyModel.setSummary(story.getSummary());
 		JSONObject jsonObject = JSONObject.fromObject(story.getCover_page());
 		String type = jsonObject.getString("type");
@@ -2523,6 +2460,9 @@ public class UserServiceImpl implements UserService {
 			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		} else if (type.equals("multimedia")) {
 			storyModel.setCover_media(jsonObject);
+		}else if(type.equals("video")){
+			coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		}
 
 		List<StoryElement> storyElements = new ArrayList<StoryElement>();
@@ -2672,7 +2612,6 @@ public class UserServiceImpl implements UserService {
 				ci.setId((Long) collection.getId());
 				ci.setCollection_name(collection.getCollectionName());
 				ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
-				ci.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
 				ci.setInfo(collection.getInfo());
 				User author = collection.getUser();
 				JSONObject json = new JSONObject();
@@ -2681,9 +2620,6 @@ public class UserServiceImpl implements UserService {
 				ci.setAuthor(json);
 				JsonConfig configs = new JsonConfig();
 				List<String> delArray = new ArrayList<String>();
-				if(!Strings.isNullOrEmpty(collection.getActivity_description())){
-					ci.setActivity_description(collection.getActivity_description());
-				}
 				
 				
 				JSONObject collectionJson = null;
@@ -2714,6 +2650,9 @@ public class UserServiceImpl implements UserService {
 				storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 			} else if (type.equals("multimedia")) {
 				storyModel.setCover_media(jsonObject);
+			}else if(type.equals("video")){
+				VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+				storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 			}
 
 			storyModel.setTitle(story.getTitle());
@@ -2816,10 +2755,6 @@ public class UserServiceImpl implements UserService {
 				ci.setAuthor(json);
 				JsonConfig configs = new JsonConfig();
 				List<String> delArray = new ArrayList<String>();
-				if(!Strings.isNullOrEmpty(collection.getActivity_description())){
-					ci.setActivity_description(collection.getActivity_description());
-				}
-				
 				
 				JSONObject collectionJson = null;
 				if ((delArray != null) && (delArray.size() > 0)) {
@@ -2850,6 +2785,9 @@ public class UserServiceImpl implements UserService {
 				storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 			} else if (type.equals("multimedia")) {
 				storyModel.setCover_media(jsonObject);
+			}else if(type.equals("video")){
+				VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+				storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 			}
 
 			storyModel.setTitle(story.getTitle());
@@ -2963,6 +2901,9 @@ public class UserServiceImpl implements UserService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
+					}else if(type.equals("video")){
+						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					List<StoryElement> storyElements = new ArrayList<StoryElement>();
@@ -3165,6 +3106,9 @@ public class UserServiceImpl implements UserService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
+					}else if(type.equals("video")){
+						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					List<StoryElement> storyElements = new ArrayList<StoryElement>();
@@ -3448,6 +3392,9 @@ public class UserServiceImpl implements UserService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
+					}else if(type.equals("video")){
+						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
@@ -3557,56 +3504,8 @@ public class UserServiceImpl implements UserService {
 					}else{
 						storyModel.setLike_count(0);
 					}
-					/*Collection collection = null;
-					Set<Collection> cSet = story.getCollections();
-					if(cSet != null && cSet.size() > 0){
-						collection = cSet.iterator().next();
-					}*/
 					
-					Collection collection = collectionStoryDao.getCollectionByStoryId(storyId);
-					if (collection != null) {
-						CollectionIntro ci = new CollectionIntro();
-						ci.setId((Long) collection.getId());
-						ci.setCollection_name(collection.getCollectionName());
-						ci.setInfo(collection.getInfo());
-						ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
-						ci.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
-						ci.setCollection_type(collection.getCollection_type());
-						User u = collection.getUser();
-						JSONObject author = new JSONObject();
-						author.put("id", u.getId());
-						author.put("username", u.getUsername());
-						if(!Strings.isNullOrEmpty(u.getAvatarImage())){
-							author.put("avatar_image", JSONObject.fromObject(u.getAvatarImage()));
-						}
-						ci.setAuthor(author);
-						JsonConfig configs = new JsonConfig();
-						List<String> delArray = new ArrayList<String>();
-						if(!Strings.isNullOrEmpty(collection.getActivity_description())){
-							ci.setActivity_description(collection.getActivity_description());
-						}
-						
-						/*int follow_collection_count = userCollectionDao.getCollectionByCount(collection.getId());
-						ci.setFollowers_count(follow_collection_count);
-						Set<User> follow_collection = collection.getUsers();
-						if(follow_collection != null && follow_collection.size() > 0){
-							ci.setFollowers_count(follow_collection.size());
-						}else{
-							ci.setFollowers_count(0);
-						}*/
-						JSONObject collectionJson = null;
-						if ((delArray != null) && (delArray.size() > 0)) {
-							configs.setExcludes((String[]) delArray.toArray(new String[delArray.size()]));
-							configs.setIgnoreDefaultExcludes(false);
-							configs.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
-
-							collectionJson = JSONObject.fromObject(ci, configs);
-						} else {
-							collectionJson = JSONObject.fromObject(ci);
-						}
-						
-						storyModel.setCollection(collectionJson);
-					}
+					
 					storyModel.setSummary(story.getSummary());
 					storyModel.setCreated_time(story.getCreated_time());
 
@@ -3621,19 +3520,33 @@ public class UserServiceImpl implements UserService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
+					}else if(type.equals("video")){
+						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
 
 					storyModel.setRecommend_date(story.getRecommend_date());
-
 					JsonConfig configs = new JsonConfig();
 					List<String> delArray = new ArrayList<String>();
+					Set<Columns> cSet = story.getColumns();
+					if(cSet != null && cSet.size() > 0){
+						Iterator<Columns> iter = cSet.iterator();
+						if(iter.hasNext()){
+							Columns c = iter.next();
+							JSONObject json = new JSONObject();
+							json.put("id",c.getId());
+							json.put("column_name", c.getColumn_name());
+							storyModel.setColumns(json);
+						}
+					}else{
+						delArray.add("columns");
+					}
+
+					
 					if (Strings.isNullOrEmpty(story.getTitle())) {
 						delArray.add("title");
-					}
-					if (collection == null) {
-						delArray.add("collection");
 					}
 					if (Strings.isNullOrEmpty(story.getSummary())) {
 						delArray.add("summary");
@@ -3740,6 +3653,9 @@ public class UserServiceImpl implements UserService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
+					}else if(type.equals("video")){
+						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
@@ -3861,7 +3777,6 @@ public class UserServiceImpl implements UserService {
 					ci.setId((Long) collection.getId());
 					ci.setCollection_name(collection.getCollectionName());
 					ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
-					ci.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
 					ci.setInfo(collection.getInfo());
 					User author = collection.getUser();
 					JSONObject json = new JSONObject();
@@ -3870,9 +3785,6 @@ public class UserServiceImpl implements UserService {
 					ci.setAuthor(json);
 					JsonConfig configs = new JsonConfig();
 					List<String> delArray = new ArrayList<String>();
-					if(!Strings.isNullOrEmpty(collection.getActivity_description())){
-						ci.setActivity_description(collection.getActivity_description());
-					}
 					
 					
 					JSONObject collectionJson = null;
@@ -3904,6 +3816,9 @@ public class UserServiceImpl implements UserService {
 					storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 				} else if (type.equals("multimedia")) {
 					storyModel.setCover_media(jsonObject);
+				}else if(type.equals("video")){
+					VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+					storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 				}
 
 				storyModel.setTitle(story.getTitle());
@@ -4173,7 +4088,6 @@ public class UserServiceImpl implements UserService {
 				ci.setId((Long) collection.getId());
 				ci.setCollection_name(collection.getCollectionName());
 				ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
-				ci.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
 				ci.setInfo(collection.getInfo());
 				User author = collection.getUser();//userDao.get(collection.getAuthorId());
 				JSONObject json = new JSONObject();
@@ -4182,9 +4096,6 @@ public class UserServiceImpl implements UserService {
 				ci.setAuthor(json);
 				JsonConfig configs = new JsonConfig();
 				List<String> delArray = new ArrayList<String>();
-				if(!Strings.isNullOrEmpty(collection.getActivity_description())){
-					ci.setActivity_description(collection.getActivity_description());
-				}
 				
 				
 				JSONObject collectionJson = null;
@@ -4216,6 +4127,9 @@ public class UserServiceImpl implements UserService {
 			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		} else if (type.equals("multimedia")) {
 			storyModel.setCover_media(jsonObject);
+		}else if(type.equals("video")){
+			coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		}
 
 		storyModel.setTitle(story.getTitle());
@@ -4551,47 +4465,7 @@ public class UserServiceImpl implements UserService {
 		String code = request.getParameter("code");
 		String timestamp = request.getParameter("timestamp");
 		String password = request.getParameter("password");
-		/*String path1 = getClass().getResource("/../../META-INF/version.json").getPath();
-		JSONObject v = ParseFile.parseJson(path1);
-		String version = v.getString("version");
-		boolean flag = false;
-		if(!Strings.isNullOrEmpty(version)){
-			String[] vArr = version.split("\\.");
-			String[] vaArr = appVersion.split("\\.");
-			if(version.equals(appVersion)){
-				flag = true;
-			}else{
-				if(!vArr[0].equals(vaArr[0])){
-					if(Integer.parseInt(vArr[0]) > Integer.parseInt(vaArr[0])){
-						flag = false;
-					}else{
-						flag = true;
-					}
-				}else{
-					if(!vArr[1].equals(vaArr[1])){
-						if(Integer.parseInt(vArr[1]) > Integer.parseInt(vaArr[1])){
-							flag = false;
-						}else{
-							flag = true;
-						}
-					}else{
-						if(!vArr[2].equals(vaArr[2])){
-							if(Integer.parseInt(vArr[2]) > Integer.parseInt(vaArr[2])){
-								flag = false;
-							}else{
-								flag = true;
-							}
-						}
-					}
-				}
-			}
-		}*/
 		String appkey = "";
-		/*if(flag){
-			appkey = getClass().getResource("/../../META-INF/phone2.json").getPath();
-		}else{
-			
-		}*/
 		appkey = getClass().getResource("/../../META-INF/phone.json").getPath();
 		JSONObject jsonObject = parseJson(appkey);
 		String key = jsonObject.getString("appkey");
@@ -4601,11 +4475,6 @@ public class UserServiceImpl implements UserService {
 			if (user != null) {
 				String param = "appkey=" + key + "&phone=" + phone + "&zone=" + zone + "&&code=" + code;
 				String result = "";
-				/*if(flag){
-					result = requestData("https://webapi.sms.mob.com/sms/verify", param);
-				}else{
-					
-				}*/
 				result = requestData("https://web.sms.mob.com/sms/verify", param);
 				if (!Strings.isNullOrEmpty(result)) {
 					JSONObject json = JSONObject.fromObject(result);
@@ -4949,12 +4818,6 @@ public class UserServiceImpl implements UserService {
 		storyModel.setComment_count(set.size());
         storyModel.setCreated_time(story.getCreated_time());
         if(loginUserid != null && loginUserid > 0){
-        	/* Republish repost = this.republishDao.getRepostByUserIdAndStoryId(loginUserid, story.getId());
- 			if (repost != null)
- 				storyModel.setRepost_by_current_user(true);
- 			else {
- 				storyModel.setRepost_by_current_user(false);
- 			}*/
         	if(loginUser != null){
         		Set<Story> sSet = loginUser.getRepost_story();
     			List<Story> rsList = new ArrayList<Story>();
@@ -4979,7 +4842,7 @@ public class UserServiceImpl implements UserService {
         	storyModel.setRepost_by_current_user(false);
         }
        
-        Collection collection = null;//this.collectionStoryDao.getCollectionByStoryId(story.getId());
+        Collection collection = null;
         Set<Collection> cSet = story.getCollections();
         if(cSet != null && cSet.size() > 0){
         	collection = cSet.iterator().next();
@@ -4988,7 +4851,6 @@ public class UserServiceImpl implements UserService {
 				ci.setId((Long) collection.getId());
 				ci.setCollection_name(collection.getCollectionName());
 				ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
-				ci.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
 				ci.setInfo(collection.getInfo());
 				User author = collection.getUser();//userDao.get(collection.getAuthorId());
 				JSONObject json = new JSONObject();
@@ -4997,9 +4859,6 @@ public class UserServiceImpl implements UserService {
 				ci.setAuthor(json);
 				JsonConfig configs = new JsonConfig();
 				List<String> delArray = new ArrayList<String>();
-				if(!Strings.isNullOrEmpty(collection.getActivity_description())){
-					ci.setActivity_description(collection.getActivity_description());
-				}
 				
 				
 				JSONObject collectionJson = null;
@@ -5036,7 +4895,10 @@ public class UserServiceImpl implements UserService {
             JSONObject.fromObject(coverMedia));
         } else if (type.equals("multimedia")) {
           storyModel.setCover_media(jsonObject);
-        }
+        }else if(type.equals("video")){
+			VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
+		}
 
         storyModel.setTitle(story.getTitle());
         storyModel.setSummary(story.getSummary());
@@ -5183,22 +5045,22 @@ public class UserServiceImpl implements UserService {
 		}else{
 			long start1 = System.currentTimeMillis();
 			User loginUser = userDao.get(loginUserid);
-			String followingId = loginUserid + "";
+			/*String followingId = loginUserid + "";
 			List<Follow> followList = this.followDao.getFollowingsByUserId(loginUserid);
 			if ((followList != null) && (followList.size() > 0)) {
 				for (int i = 0; i < followList.size(); i++) {
 					followingId = followingId + "," +  followList.get(i).getPk().getFollower().getId();
 				}
-			}
+			}*/
 			SlideModel sm = null;
 			if ((Strings.isNullOrEmpty(countStr)) && (Strings.isNullOrEmpty(sinceIdStr))
 					&& (Strings.isNullOrEmpty(maxIdStr))) {
 				
-				timelineList = timelineDao.getTimelineByHome(count, followingId);
+				timelineList = timelineDao.getTimelineByHome(count);
 				
 				if(timelineList != null && timelineList.size() > 0){
 					for(Timeline tl:timelineList){
-						em = getEventModelListByLoginid(tl, loginUserid,loginUser);
+						em = getEventModelListByLoginidNew(tl, loginUserid,loginUser);
 						emList.add(em);
 					}
 				}
@@ -5217,10 +5079,10 @@ public class UserServiceImpl implements UserService {
 					&& (Strings.isNullOrEmpty(maxIdStr))) {
 				long startTime = System.currentTimeMillis();
 				count = Integer.parseInt(countStr);
-				timelineList = timelineDao.getTimelineByHome(count, followingId);
+				timelineList = timelineDao.getTimelineByHome(count);
 				if(timelineList != null && timelineList.size() > 0){
 					for(Timeline tl:timelineList){
-						em = getEventModelListByLoginid(tl, loginUserid,loginUser);
+						em = getEventModelListByLoginidNew(tl, loginUserid,loginUser);
 						long endTime = System.currentTimeMillis();
 						System.out.println("耗时--�?"+(endTime - startTime));
 						emList.add(em);
@@ -5239,10 +5101,10 @@ public class UserServiceImpl implements UserService {
 			} else if ((Strings.isNullOrEmpty(countStr)) && (!Strings.isNullOrEmpty(sinceIdStr))
 					&& (Strings.isNullOrEmpty(maxIdStr))) {
 				Long since_id = Long.valueOf(Long.parseLong(sinceIdStr));
-				timelineList = timelineDao.getTimelineByHome(since_id,count,1,followingId);
+				timelineList = timelineDao.getTimelineByHome(since_id,count,1);
 				if(timelineList != null && timelineList.size() > 0){
 					for(Timeline tl:timelineList){
-						em = getEventModelListByLoginid(tl, loginUserid,loginUser);
+						em = getEventModelListByLoginidNew(tl, loginUserid,loginUser);
 						emList.add(em);
 					}
 				}
@@ -5251,10 +5113,10 @@ public class UserServiceImpl implements UserService {
 					&& (Strings.isNullOrEmpty(maxIdStr))) {
 				count = Integer.parseInt(countStr);
 				Long since_id = Long.valueOf(Long.parseLong(sinceIdStr));
-				timelineList = timelineDao.getTimelineByHome(since_id,count,1,followingId);
+				timelineList = timelineDao.getTimelineByHome(since_id,count,1);
 				if(timelineList != null && timelineList.size() > 0){
 					for(Timeline tl:timelineList){
-						em = getEventModelListByLoginid(tl, loginUserid,loginUser);
+						em = getEventModelListByLoginidNew(tl, loginUserid,loginUser);
 						emList.add(em);
 					}
 				}
@@ -5262,10 +5124,10 @@ public class UserServiceImpl implements UserService {
 			} else if ((Strings.isNullOrEmpty(countStr)) && (Strings.isNullOrEmpty(sinceIdStr))
 					&& (!Strings.isNullOrEmpty(maxIdStr))) {
 				Long max_id = Long.valueOf(Long.parseLong(maxIdStr));
-				timelineList = timelineDao.getTimelineByHome(max_id,count,2,followingId);
+				timelineList = timelineDao.getTimelineByHome(max_id,count,2);
 				if(timelineList != null && timelineList.size() > 0){
 					for(Timeline tl:timelineList){
-						em = getEventModelListByLoginid(tl, loginUserid,loginUser);
+						em = getEventModelListByLoginidNew(tl, loginUserid,loginUser);
 						emList.add(em);
 					}
 				}
@@ -5275,10 +5137,10 @@ public class UserServiceImpl implements UserService {
 					&& (!Strings.isNullOrEmpty(maxIdStr))) {
 				count = Integer.parseInt(countStr);
 				Long max_id = Long.valueOf(Long.parseLong(maxIdStr));
-				timelineList = timelineDao.getTimelineByHome(max_id,count,2,followingId);
+				timelineList = timelineDao.getTimelineByHome(max_id,count,2);
 				if(timelineList != null && timelineList.size() > 0){
 					for(Timeline tl:timelineList){
-						em = getEventModelListByLoginid(tl, loginUserid,loginUser);
+						em = getEventModelListByLoginidNew(tl, loginUserid,loginUser);
 						emList.add(em);
 					}
 				}
@@ -5311,7 +5173,6 @@ public class UserServiceImpl implements UserService {
 				ci.setId((Long) collection.getId());
 				ci.setCollection_name(collection.getCollectionName());
 				ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
-				ci.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
 				ci.setInfo(collection.getInfo());
 				User author = collection.getUser();//userDao.get(collection.getAuthorId());
 				JSONObject ajson = new JSONObject();
@@ -5322,7 +5183,6 @@ public class UserServiceImpl implements UserService {
 				}
 				
 				ci.setAuthor(ajson);
-				ci.setCollection_type(collection.getCollection_type());
 				homepage.put("recomandation_collection", ci);
 			}
 		}
@@ -5343,8 +5203,6 @@ public class UserServiceImpl implements UserService {
 			JSONObject contentJson = new JSONObject();
 			Story story = timeline.getStory();
 			
-			//Story story = this.storyDao.getStoryByIdAndStatus(storyId, "publish", "disabled");
-			//Story story = this.storyDao.getStoryByIdAndStatus(storyId, "publish");
 			StoryEvent storyModel = new StoryEvent();
 
 			if (story != null) {
@@ -5365,42 +5223,14 @@ public class UserServiceImpl implements UserService {
 					if (!Strings.isNullOrEmpty(u.getAvatarImage())) {
 						avatarImageJson = JSONObject.fromObject(u.getAvatarImage());
 					}
-					/*String theme_color = null;
-					if (user.getTheme_id() != null) {
-						Theme_color color = (Theme_color) this.themeColorDao.get(user.getTheme_id());
-						theme_color = color.getColor();
-					}*/
 					authorJson.put("id", u.getId());
 					authorJson.put("cover_image", coverImageJson);
 					authorJson.put("username", u.getUsername());
-//					authorJson.put("introduction", user.getIntroduction());
 					if (avatarImageJson != null) {
 						authorJson.put("avatar_image", avatarImageJson);
 					}
 
-//					authorJson.put("theme_color", theme_color);
 					authorJson.put("user_type", u.getUser_type());
-					/*if ((user.getUser_type().equals("publisher")) || (user.getUser_type().equals("media"))) {
-						Set<PublisherInfo> publisherSet = user.getPublisherInfos();
-						List<PublisherInfoModel> publisherList = null;
-						PublisherInfoModel pim = null;
-						if ((publisherSet != null) && (publisherSet.size() > 0)) {
-							publisherList = new ArrayList<PublisherInfoModel>();
-							for (PublisherInfo pi : publisherSet) {
-								pim = new PublisherInfoModel();
-								pim.setType(pi.getType());
-								pim.setContent(pi.getContent());
-								publisherList.add(pim);
-							}
-						}
-
-						authorJson.put("publisher_info", publisherList);
-					}*/
-					/*if (!Strings.isNullOrEmpty(user.getWebsite()))
-						authorJson.put("website", user.getWebsite());
-					else {
-						authorJson.put("website", null);
-					}*/
 					storyModel.setAuthor(authorJson);
 					storyModel.setCreated_time(story.getCreated_time());
 					Collection collection = cs.getCollection();
@@ -5409,7 +5239,6 @@ public class UserServiceImpl implements UserService {
 						ci.setId((Long) collection.getId());
 						ci.setCollection_name(collection.getCollectionName());
 						ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
-						ci.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
 						ci.setInfo(collection.getInfo());
 						User author = collection.getUser(); //userDao.get(collection.getAuthorId());
 						JSONObject json = new JSONObject();
@@ -5418,9 +5247,6 @@ public class UserServiceImpl implements UserService {
 						ci.setAuthor(json);
 						JsonConfig configs = new JsonConfig();
 						List<String> delArray = new ArrayList<String>();
-						if(!Strings.isNullOrEmpty(collection.getActivity_description())){
-							ci.setActivity_description(collection.getActivity_description());
-						}
 						
 						
 						JSONObject collectionJson = null;
@@ -5451,6 +5277,9 @@ public class UserServiceImpl implements UserService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
+					}else if(type.equals("video")){
+						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
@@ -5494,7 +5323,6 @@ public class UserServiceImpl implements UserService {
 					storyModel.setId(storyId);
 					storyModel.setImage_count(story.getImage_count());
 					storyModel.setUrl(story.getTinyURL());
-					//User user = story.getUser();
 					JSONObject authorJson = new JSONObject();
 					JSONObject coverImageJson = null;
 					if (!Strings.isNullOrEmpty(u.getCoverImage())) {
@@ -5523,8 +5351,6 @@ public class UserServiceImpl implements UserService {
 					}
 					
 					storyModel.setAuthor(authorJson);
-					/*int count = this.commentDao.getCommentCountById((Long) story.getId());
-					storyModel.setComment_count(count);*/
 					Collection collection = cs.getCollection();
 					if (collection != null) {
 						CollectionIntro ci = new CollectionIntro();
@@ -5534,9 +5360,6 @@ public class UserServiceImpl implements UserService {
 						ci.setInfo(collection.getInfo());
 						JsonConfig configs = new JsonConfig();
 						List<String> delArray = new ArrayList<String>();
-						if(!Strings.isNullOrEmpty(collection.getActivity_description())){
-							ci.setActivity_description(collection.getActivity_description());
-						}
 						
 						
 						JSONObject collectionJson = null;
@@ -5568,6 +5391,9 @@ public class UserServiceImpl implements UserService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
+					}else if(type.equals("video")){
+						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
@@ -5644,7 +5470,8 @@ public class UserServiceImpl implements UserService {
 	}
 	
 	
-	public EventModel getEventModelListByLoginid(Timeline timeline, Long loginUserid,User loginUser) {
+	public EventModel getEventModelListByLoginid(Timeline timeline, 
+			Long loginUserid,User loginUser) {
 		try {
 			EventModel event = new EventModel();
 			event.setId((Long) timeline.getId());
@@ -5652,7 +5479,7 @@ public class UserServiceImpl implements UserService {
 			event.setEvent_type(timeline.getType());
 			JSONObject contentJson = new JSONObject();
 			Story story = timeline.getStory();
-			StoryEvent storyModel = new StoryEvent();
+			StoryEventNew storyModel = new StoryEventNew();
 
 			if (story != null) {
 				Long storyId = story.getId();
@@ -5679,22 +5506,6 @@ public class UserServiceImpl implements UserService {
 						authorJson.put("avatar_image", avatarImageJson);
 					}
 					
-					/*if ((u.getUser_type().equals("publisher")) || (u.getUser_type().equals("media"))) {
-						Set<PublisherInfo> publisherSet = u.getPublisherInfos();
-						List<PublisherInfoModel> publisherList = null;
-						PublisherInfoModel pim = null;
-						if ((publisherSet != null) && (publisherSet.size() > 0)) {
-							publisherList = new ArrayList<PublisherInfoModel>();
-							for (PublisherInfo pi : publisherSet) {
-								pim = new PublisherInfoModel();
-								pim.setType(pi.getType());
-								pim.setContent(pi.getContent());
-								publisherList.add(pim);
-							}
-						}
-
-						authorJson.put("publisher_info", publisherList);
-					}*/
 					authorJson.put("user_type", u.getUser_type());
 					storyModel.setAuthor(authorJson);
 					storyModel.setCreated_time(story.getCreated_time());
@@ -5705,52 +5516,6 @@ public class UserServiceImpl implements UserService {
 						storyModel.setLike_count(0);
 					}
 					
-					collection = collectionStoryDao.getCollectionByStoryId(story.getId());
-					
-					if (collection != null) {
-						CollectionIntro ci = new CollectionIntro();
-						ci.setId(collection.getId());
-						ci.setCollection_name(collection.getCollectionName());
-						ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
-						ci.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
-						ci.setInfo(collection.getInfo());
-						User author = collection.getUser();
-						JSONObject json = new JSONObject();
-						json.put("id",author.getId());
-						json.put("username",author.getUsername());
-						if(!Strings.isNullOrEmpty(author.getAvatarImage())){
-							json.put("avatar_image", JSONObject.fromObject(author.getAvatarImage()));
-						}
-						ci.setAuthor(json);
-						ci.setCollection_type(collection.getCollection_type());
-						/*int follow_collection_count = userCollectionDao.getCollectionByCount(collection.getId());
-						ci.setFollowers_count(follow_collection_count);
-						Set<User> follow_collection = collection.getUsers();
-						if(follow_collection != null && follow_collection.size() > 0){
-							ci.setFollowers_count(follow_collection.size());
-						}else{
-							ci.setFollowers_count(0);
-						}*/
-						JsonConfig configs = new JsonConfig();
-						List<String> delArray = new ArrayList<String>();
-						if(!Strings.isNullOrEmpty(collection.getActivity_description())){
-							ci.setActivity_description(collection.getActivity_description());
-						}
-						
-						
-						JSONObject collectionJson = null;
-						if ((delArray != null) && (delArray.size() > 0)) {
-							configs.setExcludes((String[]) delArray.toArray(new String[delArray.size()]));
-							configs.setIgnoreDefaultExcludes(false);
-							configs.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
-
-							collectionJson = JSONObject.fromObject(ci, configs);
-						} else {
-							collectionJson = JSONObject.fromObject(ci);
-						}
-						
-						storyModel.setCollection(collectionJson);
-					}
 					
 					storyModel.setSummary(story.getSummary());
 
@@ -5767,6 +5532,9 @@ public class UserServiceImpl implements UserService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
+					}else if(type.equals("video")){
+						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
@@ -5809,6 +5577,17 @@ public class UserServiceImpl implements UserService {
 					}
 					JsonConfig configs = new JsonConfig();
 					List<String> delArray = new ArrayList<String>();
+					Set<Columns> colSet = story.getColumns();
+					if(colSet != null && colSet.size() > 0){
+						Iterator<Columns> iter = colSet.iterator();
+						Columns c = iter.next();
+						JSONObject columnsJson = new JSONObject();
+						columnsJson.put("id",c.getId());
+						columnsJson.put("column_name",c.getColumn_name());
+						storyModel.setColumns(columnsJson);
+					}else{
+						delArray.add("columns");
+					}
 					if (Strings.isNullOrEmpty(story.getTitle())) {
 						delArray.add("title");
 					}
@@ -5925,60 +5704,7 @@ public class UserServiceImpl implements UserService {
 						}
 					}
 					storyModel.setComment_count(count);
-					//Set<Collection> cSet = story.getCollections();
 					
-					/*if(cSet != null && cSet.size() > 0){
-						Iterator<Collection> it = cSet.iterator();
-						collection = it.next();
-						
-					}*/
-					
-					collection = collectionStoryDao.getCollectionByStoryId(story.getId());
-					if (collection != null) {
-						CollectionIntro ci = new CollectionIntro();
-						ci.setId((Long) collection.getId());
-						ci.setCollection_name(collection.getCollectionName());
-						ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
-						ci.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
-						ci.setInfo(collection.getInfo());
-						User author = collection.getUser();//userDao.get(collection.getAuthorId());
-						JSONObject json = new JSONObject();
-						json.put("id",author.getId());
-						json.put("username",author.getUsername());
-						if(!Strings.isNullOrEmpty(author.getAvatarImage())){
-							json.put("avatar_image",JSONObject.fromObject(author.getAvatarImage()));
-						}
-						/*int follow_collection_count = userCollectionDao.getCollectionByCount(collection.getId());
-						ci.setFollowers_count(follow_collection_count);
-						Set<User> follow_collection = collection.getUsers();
-						if(follow_collection != null && follow_collection.size() > 0){
-							ci.setFollowers_count(follow_collection.size());
-						}else{
-							ci.setFollowers_count(0);
-						}*/
-						
-						ci.setAuthor(json);
-						ci.setCollection_type(collection.getCollection_type());
-						JsonConfig configs = new JsonConfig();
-						List<String> delArray = new ArrayList<String>();
-						if(!Strings.isNullOrEmpty(collection.getActivity_description())){
-							ci.setActivity_description(collection.getActivity_description());
-						}
-						
-						
-						JSONObject collectionJson = null;
-						if ((delArray != null) && (delArray.size() > 0)) {
-							configs.setExcludes((String[]) delArray.toArray(new String[delArray.size()]));
-							configs.setIgnoreDefaultExcludes(false);
-							configs.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
-
-							collectionJson = JSONObject.fromObject(ci, configs);
-						} else {
-							collectionJson = JSONObject.fromObject(ci);
-						}
-						
-						storyModel.setCollection(collectionJson);
-					}
 					storyModel.setSummary(story.getSummary());
 					storyModel.setCreated_time(story.getCreated_time());
 
@@ -5995,6 +5721,9 @@ public class UserServiceImpl implements UserService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
+					}else if(type.equals("video")){
+						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
@@ -6003,11 +5732,363 @@ public class UserServiceImpl implements UserService {
 
 					JsonConfig configs = new JsonConfig();
 					List<String> delArray = new ArrayList<String>();
+					Set<Columns> colSet = story.getColumns();
+					if(colSet != null && colSet.size() > 0){
+						Iterator<Columns> iter = colSet.iterator();
+						Columns c = iter.next();
+						JSONObject columnsJson = new JSONObject();
+						columnsJson.put("id",c.getId());
+						columnsJson.put("column_name",c.getColumn_name());
+						storyModel.setColumns(columnsJson);
+					}else{
+						delArray.add("columns");
+					}
 					if (Strings.isNullOrEmpty(story.getTitle())) {
 						delArray.add("title");
 					}
 					if (collection == null) {
 						delArray.add("collection");
+					}
+					if (Strings.isNullOrEmpty(story.getSummary())) {
+						delArray.add("summary");
+					}
+					JSONObject storyJson = null;
+					if ((delArray != null) && (delArray.size() > 0)) {
+						configs.setExcludes((String[]) delArray.toArray(new String[delArray.size()]));
+						configs.setIgnoreDefaultExcludes(false);
+						configs.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
+
+						storyJson = JSONObject.fromObject(storyModel, configs);
+					} else {
+						storyJson = JSONObject.fromObject(storyModel);
+					}
+					contentJson.put("story", storyJson);
+				}
+				if (timeline.getType().equals("recommandation")) {
+					event.setContent(contentJson);
+				}else if (timeline.getType().equals("post")) {
+					event.setContent(contentJson);
+				} else if (timeline.getType().equals("repost")) {
+					UserIntro userIntro = new UserIntro();
+					User user = (User) this.userDao.get(timeline.getCreatorId());
+					JSONObject userIntroJson = null;
+					if (user != null) {
+						userIntro.setId((Long) user.getId());
+						userIntro.setUsername(user.getUsername());
+						userIntro.setIntroduction(user.getIntroduction());
+						if (!Strings.isNullOrEmpty(user.getAvatarImage())) {
+							userIntro.setAvatar_image(JSONObject.fromObject(user.getAvatarImage()));
+						}
+
+						JsonConfig configs = new JsonConfig();
+						List<String> delArray = new ArrayList<String>();
+						if (Strings.isNullOrEmpty(user.getAvatarImage())) {
+							delArray.add("avatar_image");
+						}
+
+						if ((delArray != null) && (delArray.size() > 0)) {
+							configs.setExcludes((String[]) delArray.toArray(new String[delArray.size()]));
+							configs.setIgnoreDefaultExcludes(false);
+							configs.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
+
+							userIntroJson = JSONObject.fromObject(userIntro, configs);
+						} else {
+							userIntroJson = JSONObject.fromObject(userIntro);
+						}
+					}
+
+					contentJson.put("repost_by", userIntroJson);
+					event.setContent(contentJson);
+				}
+			}
+
+			return event;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return null;
+	}
+	
+	
+	public EventModel getEventModelListByLoginidNew(Timeline timeline, 
+			Long loginUserid,User loginUser) {
+		try {
+			EventModel event = new EventModel();
+			event.setId((Long) timeline.getId());
+			event.setEvent_time(timeline.getCreateTime());
+			event.setEvent_type(timeline.getType());
+			JSONObject contentJson = new JSONObject();
+			Story story = timeline.getStory();
+			StoryEventNew storyModel = new StoryEventNew();
+
+			if (story != null) {
+				Long storyId = story.getId();
+				User u = story.getUser();
+				if (u.getId().equals(loginUserid)) {
+					storyModel.setId(storyId);
+					storyModel.setImage_count(story.getImage_count());
+					storyModel.setUrl(story.getTinyURL());
+					JSONObject authorJson = new JSONObject();
+					JSONObject coverImageJson = null;
+					if (!Strings.isNullOrEmpty(u.getCoverImage())) {
+						coverImageJson = JSONObject.fromObject(u.getCoverImage());
+					}
+
+					JSONObject avatarImageJson = null;
+					if (!Strings.isNullOrEmpty(u.getAvatarImage())) {
+						avatarImageJson = JSONObject.fromObject(u.getAvatarImage());
+					}
+					authorJson.put("id", u.getId());
+					authorJson.put("cover_image", coverImageJson);
+					authorJson.put("username", u.getUsername());
+					if (avatarImageJson != null) {
+						authorJson.put("avatar_image", avatarImageJson);
+					}
+					
+					authorJson.put("user_type", u.getUser_type());
+					storyModel.setAuthor(authorJson);
+					storyModel.setCreated_time(story.getCreated_time());
+					Set<User> like_set = story.getLike_users();
+					if(like_set != null && like_set.size() > 0){
+						storyModel.setLike_count(like_set.size());
+					}else{
+						storyModel.setLike_count(0);
+					}
+					
+					
+					
+					
+					
+					storyModel.setSummary(story.getSummary());
+
+					JSONObject jsonObject = JSONObject.fromObject(story.getCover_page());
+					log.debug("***story.getCover_page()***" + jsonObject);
+					String type = jsonObject.getString("type");
+
+					if (type.equals("text")) {
+						TextCover coverMedia = (TextCover) JSONObject.toBean(jsonObject, TextCover.class);
+						log.debug("****get cover media **********" + JSONObject.fromObject(coverMedia));
+						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
+					} else if (type.equals("image")) {
+						ImageCover coverMedia = (ImageCover) JSONObject.toBean(jsonObject, ImageCover.class);
+						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
+					} else if (type.equals("multimedia")) {
+						storyModel.setCover_media(jsonObject);
+					}else if(type.equals("video")){
+						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
+					}
+
+					storyModel.setTitle(story.getTitle());
+
+					int count = 0;//this.commentDao.getCommentCountById((Long) story.getId());
+					Set<Comment> coSet = story.getComments();
+					if(coSet != null && coSet.size() > 0){
+						Iterator<Comment> it = coSet.iterator();
+						while(it.hasNext()){
+							Comment c = it.next();
+							if(c.getStatus().equals("enabled")){
+								count++;
+							}
+						}
+					}
+					storyModel.setComment_count(count);
+					storyModel.setRecommend_date(story.getRecommend_date());
+					
+					storyModel.setRepost_by_current_user(false);
+					
+					Set<User> uSet = story.getLike_users();
+					if(uSet != null && uSet.size() > 0){
+						storyModel.setLike_count(uSet.size());
+					}
+					
+					Set<Story> likeStory = loginUser.getLike_story();
+					List<Story> lsList = new ArrayList<Story>();
+					if(likeStory != null && likeStory.size() > 0 ){
+						Iterator<Story> it = likeStory.iterator();
+						while(it.hasNext()){
+							lsList.add(it.next());
+						}
+						if(lsList.contains(story)){
+							storyModel.setLiked_by_current_user(true);;
+						}else{
+							storyModel.setLiked_by_current_user(false);
+						}
+					}else{
+						storyModel.setLiked_by_current_user(false);
+					}
+					JsonConfig configs = new JsonConfig();
+					List<String> delArray = new ArrayList<String>();
+					
+					Set<Columns> colSet = story.getColumns();
+					if(colSet != null && colSet.size() > 0){
+						Iterator<Columns> iter = colSet.iterator();
+						if(iter.hasNext()){
+							Columns c = iter.next();
+							JSONObject json = new JSONObject();
+							json.put("id",c.getId());
+							json.put("column_name", c.getColumn_name());
+							storyModel.setColumns(json);
+						}
+					}else{
+						delArray.add("columns");
+					}
+					if (Strings.isNullOrEmpty(story.getTitle())) {
+						delArray.add("title");
+					}
+					if (Strings.isNullOrEmpty(story.getSummary())) {
+						delArray.add("summary");
+					}
+					JSONObject storyJson = null;
+					if ((delArray != null) && (delArray.size() > 0)) {
+						configs.setExcludes((String[]) delArray.toArray(new String[delArray.size()]));
+						configs.setIgnoreDefaultExcludes(false);
+						configs.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
+
+						storyJson = JSONObject.fromObject(storyModel, configs);
+					} else {
+						storyJson = JSONObject.fromObject(storyModel);
+					}
+
+					contentJson.put("story", storyJson);
+				} else if (story.getStatus().equals("publish")) {
+					storyModel.setId(storyId);
+					storyModel.setImage_count(story.getImage_count());
+					storyModel.setUrl(story.getTinyURL());
+					JSONObject authorJson = new JSONObject();
+					JSONObject coverImageJson = null;
+					if (!Strings.isNullOrEmpty(u.getCoverImage())) {
+						coverImageJson = JSONObject.fromObject(u.getCoverImage());
+					}
+
+					JSONObject avatarImageJson = null;
+					if (!Strings.isNullOrEmpty(u.getAvatarImage())) {
+						avatarImageJson = JSONObject.fromObject(u.getAvatarImage());
+					}
+					authorJson.put("id", u.getId());
+					authorJson.put("cover_image", coverImageJson);
+					authorJson.put("username", u.getUsername());
+					if (avatarImageJson != null) {
+						authorJson.put("avatar_image", avatarImageJson);
+					}
+					authorJson.put("user_type", u.getUser_type());
+					if ((u.getUser_type().equals("publisher")) || (u.getUser_type().equals("media"))) {
+						Set<PublisherInfo> publisherSet = u.getPublisherInfos();
+						List<PublisherInfoModel> publisherList = null;
+						PublisherInfoModel pim = null;
+						if ((publisherSet != null) && (publisherSet.size() > 0)) {
+							publisherList = new ArrayList<PublisherInfoModel>();
+							for (PublisherInfo pi : publisherSet) {
+								pim = new PublisherInfoModel();
+								pim.setType(pi.getType());
+								pim.setContent(pi.getContent());
+								publisherList.add(pim);
+							}
+						}
+
+						authorJson.put("publisher_info", publisherList);
+					}
+					if(loginUser != null){
+						Set<Story> sSet = loginUser.getRepost_story();
+						List<Story> rsList = new ArrayList<Story>();
+						if(sSet != null && sSet.size() > 0 ){
+							Iterator<Story> it = sSet.iterator();
+							while(it.hasNext()){
+								rsList.add(it.next());
+							}
+							if(rsList.contains(story)){
+								storyModel.setRepost_by_current_user(true);
+							}else{
+								storyModel.setRepost_by_current_user(false);
+							}
+						}else{
+							storyModel.setRepost_by_current_user(false);
+						}
+						
+						Set<User> like_set = story.getLike_users();
+						if(like_set != null && like_set.size() > 0){
+							storyModel.setLike_count(like_set.size());
+						}else{
+							storyModel.setLike_count(0);
+						}
+						Set<Story> likeStory = loginUser.getLike_story();
+						List<Story> lsList = new ArrayList<Story>();
+						if(likeStory != null && likeStory.size() > 0 ){
+							Iterator<Story> it = likeStory.iterator();
+							while(it.hasNext()){
+								lsList.add(it.next());
+							}
+							if(lsList.contains(story)){
+								storyModel.setLiked_by_current_user(true);;
+							}else{
+								storyModel.setLiked_by_current_user(false);
+							}
+						}else{
+							storyModel.setRepost_by_current_user(false);
+							storyModel.setLiked_by_current_user(false);
+						}
+						
+					}else{
+						storyModel.setRepost_by_current_user(false);
+						storyModel.setLiked_by_current_user(false);
+					}
+					
+					storyModel.setAuthor(authorJson);
+					int count = 0;//this.commentDao.getCommentCountById((Long) story.getId());
+					Set<Comment> coSet = story.getComments();
+					if(coSet != null && coSet.size() > 0){
+						Iterator<Comment> it = coSet.iterator();
+						while(it.hasNext()){
+							Comment c = it.next();
+							if(c.getStatus().equals("enabled")){
+								count++;
+							}
+						}
+					}
+					storyModel.setComment_count(count);
+					storyModel.setSummary(story.getSummary());
+					storyModel.setCreated_time(story.getCreated_time());
+
+					JSONObject jsonObject = JSONObject.fromObject(story.getCover_page());
+					log.debug("***story.getCover_page()***" + jsonObject);
+					String type = jsonObject.getString("type");
+
+					if (type.equals("text")) {
+						TextCover coverMedia = (TextCover) JSONObject.toBean(jsonObject, TextCover.class);
+						log.debug("****get cover media **********" + JSONObject.fromObject(coverMedia));
+						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
+					} else if (type.equals("image")) {
+						ImageCover coverMedia = (ImageCover) JSONObject.toBean(jsonObject, ImageCover.class);
+						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
+					} else if (type.equals("multimedia")) {
+						storyModel.setCover_media(jsonObject);
+					}else if(type.equals("video")){
+						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
+					}
+
+					storyModel.setTitle(story.getTitle());
+
+					storyModel.setRecommend_date(story.getRecommend_date());
+
+					JsonConfig configs = new JsonConfig();
+					List<String> delArray = new ArrayList<String>();
+					Set<Columns> colSet = story.getColumns();
+					if(colSet != null && colSet.size() > 0){
+						Iterator<Columns> iter = colSet.iterator();
+						if(iter.hasNext()){
+							Columns c = iter.next();
+							JSONObject json = new JSONObject();
+							json.put("id",c.getId());
+							json.put("column_name", c.getColumn_name());
+							storyModel.setColumns(json);
+						}
+					}else{
+						delArray.add("columns");
+					}
+					if (Strings.isNullOrEmpty(story.getTitle())) {
+						delArray.add("title");
 					}
 					if (Strings.isNullOrEmpty(story.getSummary())) {
 						delArray.add("summary");
@@ -6155,6 +6236,9 @@ public class UserServiceImpl implements UserService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
+					}else if(type.equals("video")){
+						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
@@ -6299,20 +6383,6 @@ public class UserServiceImpl implements UserService {
 						}
 					}
 					storyModel.setComment_count(count);
-					/*Set<Collection> cSet = story.getCollections();
-					if(cSet != null && cSet.size() > 0){
-						Iterator<Collection> it = cSet.iterator();
-						collection = it.next();
-						if (collection != null) {
-							CollectionIntro ci = new CollectionIntro();
-							ci.setId((Long) collection.getId());
-							ci.setCollection_name(collection.getCollectionName());
-							ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
-							ci.setInfo(collection.getInfo());
-
-							storyModel.setCollection(ci);
-						}
-					}*/
 					storyModel.setSummary(story.getSummary());
 					storyModel.setCreated_time(story.getCreated_time());
 
@@ -6329,6 +6399,9 @@ public class UserServiceImpl implements UserService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
+					}else if(type.equals("video")){
+						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
@@ -6412,7 +6485,7 @@ public class UserServiceImpl implements UserService {
 		JSONObject slideJson = new JSONObject();
 		if(type.equals("story")){
 			Story story = storyDao.get(id);
-			JSONObject json = getStoryEventByStory(story);
+			JSONObject json = getSlideStoryByStory(story);
 			slideJson.put("story", json);
 		}else if(type.equals("user")){
 			User user = userDao.get(id);
@@ -6435,9 +6508,7 @@ public class UserServiceImpl implements UserService {
  	         ci.setId((Long)collection.getId());
  	         ci.setCollection_name(collection.getCollectionName());
  	         ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
- 	         ci.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
  	         ci.setInfo(collection.getInfo());
- 	         ci.setCollection_type(collection.getCollection_type());
 			User u = collection.getUser();//.getId()userDao.get(collection.getAuthorId());
 			JSONObject author = new JSONObject();
 			author.put("id", u.getId());
@@ -6449,13 +6520,6 @@ public class UserServiceImpl implements UserService {
 			ci.setAuthor(author);
 			JsonConfig configs = new JsonConfig();
 			List<String> delArray = new ArrayList<String>();
-			if(!Strings.isNullOrEmpty(collection.getActivity_description())){
-				ci.setActivity_description(collection.getActivity_description());
-			}else{
-				if (Strings.isNullOrEmpty(collection.getActivity_description())) {
-					delArray.add("activity_description");
-				}
-			}
 			
 			
 			JSONObject collectionJ = null;
@@ -6503,47 +6567,8 @@ public class UserServiceImpl implements UserService {
 						return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
 					}
 					
-					/*String path1 = getClass().getResource("/../../META-INF/version.json").getPath();
-					JSONObject v = ParseFile.parseJson(path1);
-					String version = v.getString("version");
-					boolean flag = false;
-					if(!Strings.isNullOrEmpty(version)){
-						String[] vArr = version.split("\\.");
-						String[] vaArr = appVersion.split("\\.");
-						if(version.equals(appVersion)){
-							flag = true;
-						}else{
-							if(!vArr[0].equals(vaArr[0])){
-								if(Integer.parseInt(vArr[0]) > Integer.parseInt(vaArr[0])){
-									flag = false;
-								}else{
-									flag = true;
-								}
-							}else{
-								if(!vArr[1].equals(vaArr[1])){
-									if(Integer.parseInt(vArr[1]) > Integer.parseInt(vaArr[1])){
-										flag = false;
-									}else{
-										flag = true;
-									}
-								}else{
-									if(!vArr[2].equals(vaArr[2])){
-										if(Integer.parseInt(vArr[2]) > Integer.parseInt(vaArr[2])){
-											flag = false;
-										}else{
-											flag = true;
-										}
-									}
-								}
-							}
-						}
-					}*/
+					
 					String appkey = "";
-					/*if(flag){
-						appkey = getClass().getResource("/../../META-INF/phone2.json").getPath();
-					}else{
-						appkey = getClass().getResource("/../../META-INF/phone.json").getPath();
-					}*/
 					
 					appkey = getClass().getResource("/../../META-INF/phone.json").getPath();
 
@@ -6552,11 +6577,7 @@ public class UserServiceImpl implements UserService {
 
 					String param = "appkey=" + key + "&phone=" + phone + "&zone=" + zone + "&&code=" + code;
 					String result = "";
-					/*if(flag){
-						result = requestData("https://webapi.sms.mob.com/sms/verify", param);
-					}else{
-						result = requestData("https://web.sms.mob.com/sms/verify", param);
-					}*/
+					
 					
 					result = requestData("https://web.sms.mob.com/sms/verify", param);
 					
@@ -6704,7 +6725,7 @@ public class UserServiceImpl implements UserService {
 	}
 	
 	public JSONObject getStoryEventByStory(Story story){
-		StoryEvent storyModel = new StoryEvent();
+		StoryEventNew storyModel = new StoryEventNew();
 		storyModel.setId(story.getId());
 		storyModel.setImage_count(story.getImage_count());
 		storyModel.setUrl(story.getTinyURL());
@@ -6768,39 +6789,6 @@ public class UserServiceImpl implements UserService {
 			}
 		}
 		storyModel.setComment_count(count);
-		Collection collection = this.collectionStoryDao.getCollectionByStoryId(story.getId());
-		if (collection != null) {
-			CollectionIntro ci = new CollectionIntro();
-			ci.setId((Long) collection.getId());
-			ci.setCollection_name(collection.getCollectionName());
-			ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
-			ci.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
-			ci.setInfo(collection.getInfo());
-			User u = collection.getUser();//userDao.get(collection.getAuthorId());
-			JSONObject json = new JSONObject();
-			json.put("id",u.getId());
-			json.put("username",u.getUsername());
-			ci.setAuthor(json);
-			JsonConfig configs = new JsonConfig();
-			List<String> delArray = new ArrayList<String>();
-			if(!Strings.isNullOrEmpty(collection.getActivity_description())){
-				ci.setActivity_description(collection.getActivity_description());
-			}
-			
-			
-			JSONObject collectionJson = null;
-			if ((delArray != null) && (delArray.size() > 0)) {
-				configs.setExcludes((String[]) delArray.toArray(new String[delArray.size()]));
-				configs.setIgnoreDefaultExcludes(false);
-				configs.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
-
-				collectionJson = JSONObject.fromObject(ci, configs);
-			} else {
-				collectionJson = JSONObject.fromObject(ci);
-			}
-			
-			storyModel.setCollection(collectionJson);
-		}
 		storyModel.setSummary(story.getSummary());
 		storyModel.setCreated_time(story.getCreated_time());
 
@@ -6815,6 +6803,9 @@ public class UserServiceImpl implements UserService {
 			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		} else if (type.equals("multimedia")) {
 			storyModel.setCover_media(jsonObject);
+		}else if(type.equals("video")){
+			VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		}
 
 		storyModel.setTitle(story.getTitle());
@@ -6823,11 +6814,19 @@ public class UserServiceImpl implements UserService {
 
 		JsonConfig configs = new JsonConfig();
 		List<String> delArray = new ArrayList<String>();
+		Set<Columns> colSet = story.getColumns();
+		if(colSet != null && colSet.size() > 0){
+			Iterator<Columns> iter = colSet.iterator();
+			Columns c = iter.next();
+			JSONObject columnsJson = new JSONObject();
+			columnsJson.put("id",c.getId());
+			columnsJson.put("column_name",c.getColumn_name());
+			storyModel.setColumns(columnsJson);
+		}else{
+			delArray.add("columns");
+		}
 		if (Strings.isNullOrEmpty(story.getTitle())) {
 			delArray.add("title");
-		}
-		if (collection == null) {
-			delArray.add("collection");
 		}
 		if (Strings.isNullOrEmpty(story.getSummary())) {
 			delArray.add("summary");
@@ -7298,6 +7297,80 @@ public class UserServiceImpl implements UserService {
 			}
 		}
 		return Response.status(Response.Status.OK).entity(ufList).build();
+	}
+	
+	public JSONObject getSlideStoryByStory(Story story){
+		JSONObject storyModel = new JSONObject();
+		storyModel.put("id",story.getId());
+		storyModel.put("image_count",story.getImage_count());
+		storyModel.put("url",story.getTinyURL());
+		User user = story.getUser();
+		JSONObject authorJson = new JSONObject();
+		JSONObject coverImageJson = null;
+		if (!Strings.isNullOrEmpty(user.getCoverImage())) {
+			coverImageJson = JSONObject.fromObject(user.getCoverImage());
+		}
+
+		JSONObject avatarImageJson = null;
+		if (!Strings.isNullOrEmpty(user.getAvatarImage())) {
+			avatarImageJson = JSONObject.fromObject(user.getAvatarImage());
+		}
+		authorJson.put("id", user.getId());
+		authorJson.put("cover_image", coverImageJson);
+		authorJson.put("username", user.getUsername());
+		authorJson.put("introduction", user.getIntroduction());
+		if (avatarImageJson != null) {
+			authorJson.put("avatar_image", avatarImageJson);
+		}
+		authorJson.put("user_type", user.getUser_type());
+		if (!Strings.isNullOrEmpty(user.getWebsite()))
+			authorJson.put("website", user.getWebsite());
+		else {
+			authorJson.put("website", null);
+		}
+
+		if ((user.getUser_type().equals("publisher")) || (user.getUser_type().equals("media"))) {
+			Set<PublisherInfo> publisherSet = user.getPublisherInfos();
+			List<PublisherInfoModel> publisherList = null;
+			PublisherInfoModel pim = null;
+			if ((publisherSet != null) && (publisherSet.size() > 0)) {
+				publisherList = new ArrayList<PublisherInfoModel>();
+				for (PublisherInfo pi : publisherSet) {
+					pim = new PublisherInfoModel();
+					pim.setType(pi.getType());
+					pim.setContent(pi.getContent());
+					publisherList.add(pim);
+				}
+			}
+
+			authorJson.put("publisher_info", publisherList);
+		}
+		storyModel.put("author",authorJson);
+
+
+		JSONObject jsonObject = JSONObject.fromObject(story.getCover_page());
+		String type = jsonObject.getString("type");
+
+		if (type.equals("text")) {
+			TextCover coverMedia = (TextCover) JSONObject.toBean(jsonObject, TextCover.class);
+			storyModel.put("cover_media",JSONObject.fromObject(coverMedia));
+		} else if (type.equals("image")) {
+			ImageCover coverMedia = (ImageCover) JSONObject.toBean(jsonObject, ImageCover.class);
+			storyModel.put("cover_media",JSONObject.fromObject(coverMedia));
+		} else if (type.equals("multimedia")) {
+			storyModel.put("cover_media",jsonObject);
+		}else if(type.equals("video")){
+			VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
+			storyModel.put("cover_media",JSONObject.fromObject(coverMedia));
+		}
+
+
+		if (!Strings.isNullOrEmpty(story.getTitle())) {
+			storyModel.put("title",story.getTitle());
+		}
+		
+		
+		return storyModel;
 	}
 
 	@Override
@@ -7792,9 +7865,7 @@ public class UserServiceImpl implements UserService {
 	         ci.setId((Long)collection.getId());
 	         ci.setCollection_name(collection.getCollectionName());
 	         ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
-	         ci.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
 	         ci.setInfo(collection.getInfo());
-	         ci.setCollection_type(collection.getCollection_type());
 				User u = collection.getUser();//userDao.get(collection.getAuthorId());
 				JSONObject author = new JSONObject();
 				author.put("id", u.getId());
@@ -7803,13 +7874,6 @@ public class UserServiceImpl implements UserService {
 				ci.setAuthor(author);
 				JsonConfig configs = new JsonConfig();
 				List<String> delArray = new ArrayList<String>();
-				if(!Strings.isNullOrEmpty(collection.getActivity_description())){
-					ci.setActivity_description(collection.getActivity_description());
-				}else{
-					if (Strings.isNullOrEmpty(collection.getActivity_description())) {
-						delArray.add("activity_description");
-					}
-				}
 				
 				
 				JSONObject collectionJ = null;
@@ -7825,5 +7889,95 @@ public class UserServiceImpl implements UserService {
            return collectionJ;
 	}
 
+	@Override
+	public JSONObject getChatUser(Long userId) {
+		JSONObject json = new JSONObject();
+		if(userId != null && userId > 0){
+			User user = (User) this.userDao.get(userId);
+			json.put("id",user.getId());
+			json.put("username", user.getUsername());
+			if(!Strings.isNullOrEmpty(user.getAvatarImage())){
+				json.put("avatar_image",JSONObject.fromObject(user.getAvatarImage()));
+			}
+			
+		}
+		
+		return json;
+	}
 
+	@Override
+	public void push_info(JSONObject jsonObject) {
+		if(jsonObject != null){
+			Long userId = jsonObject.getLong("userId");
+			String username = jsonObject.getString("username");
+			String content = jsonObject.getString("content");
+			List<PushNotification> pnList = pushNotificationDao.getPushNotificationByUserid(userId);
+			GetuiModel gm = getGetuiInfo();
+			JSONObject json = new JSONObject();
+			json.put("user_id", userId);
+			content = username + ":" + content;
+			try {
+				PushNotificationUtil.pushInfo(gm.getAppId(),gm.getAppKey(), 
+						gm.getMasterSecret(), pnList, 1, content,json.toString());
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		
+	}
+
+	public GetuiModel getGetuiInfo(){
+		GetuiModel gm = new GetuiModel();
+		String path = getClass().getResource("/../../META-INF/getui.json").getPath();
+		JSONObject json1 = ParseFile.parseJson(path);
+		String appId = json1.getString("appId");
+		String appKey = json1.getString("appKey");
+		String masterSecret = json1.getString("masterSecret");
+		gm.setAppId(appId);
+		gm.setAppKey(appKey);
+		gm.setMasterSecret(masterSecret);
+		return gm;
+		
+	}
+	
+	public boolean isAvailableVersion(String appVersion){
+		String path4 = getClass().getResource("/../../META-INF/version.json").getPath();
+		JSONObject v = ParseFile.parseJson(path4);
+		String version = v.getString("version");
+		boolean flagVersion = false;
+		if(!Strings.isNullOrEmpty(version)){
+			String[] vArr = version.split("\\.");
+			String[] vaArr = appVersion.split("\\.");
+			if(version.equals(appVersion)){
+				flagVersion = false;
+			}else{
+				if(!vArr[0].equals(vaArr[0])){
+					if(Integer.parseInt(vArr[0]) > Integer.parseInt(vaArr[0])){
+						flagVersion = false;
+					}else{
+						flagVersion = true;
+					}
+				}else{
+					if(!vArr[1].equals(vaArr[1])){
+						if(Integer.parseInt(vArr[1]) > Integer.parseInt(vaArr[1])){
+							flagVersion = false;
+						}else{
+							flagVersion = true;
+						}
+					}else{
+						if(!vArr[2].equals(vaArr[2])){
+							if(Integer.parseInt(vArr[2]) > Integer.parseInt(vaArr[2])){
+								flagVersion = false;
+							}else{
+								flagVersion = true;
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		return flagVersion;
+	}
+	
 }

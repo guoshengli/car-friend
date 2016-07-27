@@ -774,13 +774,6 @@ public class NotificationServiceImpl implements NotificationService {
 					String audit = "";
 					if (n.getObjectType() == 1) {
 						if(cs != null && s != null){
-							if(cs.getAudit() == 0){
-								audit = "waiting_for_review";
-							}else if(cs.getAudit() == 1){
-								audit = "agree";
-							}else if(cs.getAudit() == 2){
-								audit = "reject";
-							}
 							Collection c = cs.getCollection();
 							StoryIntro storyIntro = new StoryIntro();
 							storyIntro.setId((Long) s.getId());
@@ -891,13 +884,6 @@ public class NotificationServiceImpl implements NotificationService {
 					String audit = "";
 					if (n.getObjectType() == 1) {
 						if(cs != null && s != null){
-							if(cs.getAudit() == 0){
-								audit = "waiting_for_review";
-							}else if(cs.getAudit() == 1){
-								audit = "agree";
-							}else if(cs.getAudit() == 2){
-								audit = "reject";
-							}
 							Collection c = cs.getCollection();
 							StoryIntro storyIntro = new StoryIntro();
 							storyIntro.setId((Long) s.getId());
@@ -957,13 +943,6 @@ public class NotificationServiceImpl implements NotificationService {
 					String audit = "";
 					if (n.getObjectType() == 1) {
 						if(cs != null && s != null){
-							if(cs.getAudit() == 0){
-								audit = "waiting_for_review";
-							}else if(cs.getAudit() == 1){
-								audit = "agree";
-							}else if(cs.getAudit() == 2){
-								audit = "reject";
-							}
 							StoryIntro storyIntro = new StoryIntro();
 							storyIntro.setId((Long) s.getId());
 							storyIntro.setTitle(s.getTitle());
@@ -1020,13 +999,6 @@ public class NotificationServiceImpl implements NotificationService {
 					String audit = "";
 					if (n.getObjectType() == 1) {
 						if(cs != null && s != null){
-							if(cs.getAudit() == 0){
-								audit = "waiting_for_review";
-							}else if(cs.getAudit() == 1){
-								audit = "agree";
-							}else if(cs.getAudit() == 2){
-								audit = "reject";
-							}
 							Collection c = cs.getCollection();
 							StoryIntro storyIntro = new StoryIntro();
 							storyIntro.setId((Long) s.getId());
@@ -1055,7 +1027,6 @@ public class NotificationServiceImpl implements NotificationService {
 							CollectionNotification cn = new CollectionNotification();
 							cn.setId(c.getId());
 							cn.setCollection_name(c.getCollectionName());
-							cn.setCollection_type(c.getCollection_type());
 							JSONObject collectionJson = JSONObject.fromObject(cn);
 							contentModel.setCollection(collectionJson);
 						}else{
@@ -1094,8 +1065,6 @@ public class NotificationServiceImpl implements NotificationService {
 			ci.setCollection_name(collection.getCollectionName());
 			ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
 			ci.setInfo(collection.getInfo());
-			ci.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
-			ci.setCollection_type(collection.getCollection_type());
 			User author = collection.getUser();//userDao.get(collection.getAuthorId());
 		JSONObject json = new JSONObject();
 		json.put("id",author.getId());
@@ -1103,13 +1072,6 @@ public class NotificationServiceImpl implements NotificationService {
 		ci.setAuthor(json);
 		JsonConfig configs = new JsonConfig();
 		List<String> delArray = new ArrayList<String>();
-		if(!Strings.isNullOrEmpty(collection.getActivity_description())){
-			ci.setActivity_description(collection.getActivity_description());
-		}else{
-			if (Strings.isNullOrEmpty(collection.getActivity_description())) {
-				delArray.add("activity_description");
-			}
-		}
 		
 		UserCollection uc = userCollectionDao.getUserCollectionByCollectionId(collection.getId(),loginUserid);
 		if(uc != null){
@@ -1267,13 +1229,8 @@ public class NotificationServiceImpl implements NotificationService {
 								if(cSet != null && cSet.size() > 0){
 									Iterator<Collection> ite = cSet.iterator();
 									Collection c = ite.next();
-									CollectionStory cs = collectionStoryDao.getCollectionStoryByCollectionIdAndStoryId(c.getId(),story.getId());
-									if(cs.getAudit() == 1){
-										JSONObject cJSON = getCollectionJSON(c);
-										storyIntro.setCollection(cJSON);
-									}else{
-										delArr.add("collection");
-									}
+									JSONObject cJSON = getCollectionJSON(c);
+									storyIntro.setCollection(cJSON);
 									
 								}else{
 									delArr.add("collection");
@@ -1332,10 +1289,6 @@ public class NotificationServiceImpl implements NotificationService {
 							notificationModel = null;
 						}
 					
-						
-						/*if (conf.isNew_comment_on_your_comment_push()) {} else {
-							notificationModel = null;
-						}*/
 
 					} 
 					
@@ -1380,9 +1333,7 @@ public class NotificationServiceImpl implements NotificationService {
 	         ci.setId((Long)collection.getId());
 	         ci.setCollection_name(collection.getCollectionName());
 	         ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
-	         ci.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
 	         ci.setInfo(collection.getInfo());
-	         ci.setCollection_type(collection.getCollection_type());
 				User u = collection.getUser();//userDao.get(collection.getAuthorId());
 				JSONObject author = new JSONObject();
 				author.put("id", u.getId());
@@ -1393,13 +1344,6 @@ public class NotificationServiceImpl implements NotificationService {
 				ci.setAuthor(author);
 				JsonConfig configs = new JsonConfig();
 				List<String> delArray = new ArrayList<String>();
-				if(!Strings.isNullOrEmpty(collection.getActivity_description())){
-					ci.setActivity_description(collection.getActivity_description());
-				}else{
-					if (Strings.isNullOrEmpty(collection.getActivity_description())) {
-						delArray.add("activity_description");
-					}
-				}
 				
 				
 				JSONObject collectionJ = null;

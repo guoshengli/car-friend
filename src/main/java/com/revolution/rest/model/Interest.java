@@ -19,6 +19,12 @@ public class Interest extends BaseEntity<Long> implements Serializable {
 	@Column(name="sequence")
 	private int sequence;
 	
+	@Column(name = "cover_image", columnDefinition = "TEXT")
+	private String cover_image;
+
+	@Column(name = "description")
+	private String description;
+	
 	@OneToMany(mappedBy="interest", cascade={javax.persistence.CascadeType.ALL}, fetch=FetchType.LAZY)
 	private List<Collection> collections = new ArrayList<Collection>();
 
@@ -44,6 +50,22 @@ public class Interest extends BaseEntity<Long> implements Serializable {
 
 	public void setCollections(List<Collection> collections) {
 		this.collections = collections;
+	}
+
+	public String getCover_image() {
+		return cover_image;
+	}
+
+	public void setCover_image(String cover_image) {
+		this.cover_image = cover_image;
+	}
+
+	public String getDescription() {
+		return description;
+	}
+
+	public void setDescription(String description) {
+		this.description = description;
 	}
 	
 	

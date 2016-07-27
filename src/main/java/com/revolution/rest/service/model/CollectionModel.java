@@ -12,7 +12,6 @@
    private JSONObject cover_image;
    private String info;
    private boolean is_story_in_collection;
-   private JSONObject avatar_image;
  
    public Long getId()
    {
@@ -55,15 +54,6 @@
      this.info = info;
    }
 
-public JSONObject getAvatar_image() {
-	return avatar_image;
-}
-
-public void setAvatar_image(JSONObject avatar_image) {
-	this.avatar_image = avatar_image;
-}
-   
-   
  
  }
 

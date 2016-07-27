@@ -19,7 +19,6 @@ import com.revolution.rest.dao.FollowDao;
 import com.revolution.rest.dao.LikesDao;
 import com.revolution.rest.dao.RepublishDao;
 import com.revolution.rest.dao.StoryDao;
-import com.revolution.rest.dao.UserDao;
 import com.revolution.rest.model.Collection;
 import com.revolution.rest.model.Comment;
 import com.revolution.rest.model.PublisherInfo;
@@ -48,9 +47,6 @@ import net.sf.json.util.CycleDetectionStrategy;
 public class ShareServiceImpl implements ShareService {
 	@Autowired
 	private StoryDao storyDao;
-	
-	@Autowired
-	private UserDao userDao;
 	
 	@Autowired
 	private CommentDao commentDao;
@@ -230,7 +226,6 @@ public class ShareServiceImpl implements ShareService {
 				ci.setId((Long) collection.getId());
 				ci.setCollection_name(collection.getCollectionName());
 				ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
-				ci.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
 				ci.setInfo(collection.getInfo());
 
 				storyModel.setCollection(ci);
@@ -352,7 +347,6 @@ public class ShareServiceImpl implements ShareService {
 	 			ci.setCollection_name(collection.getCollectionName());
 	 			ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
 	 			ci.setInfo(collection.getInfo());
-	 			ci.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
 	 			JSONObject ciJson = JSONObject.fromObject(ci);
 	 			User user = collection.getUser();//userDao.get(collection.getAuthorId());
 	 			JSONObject author = new JSONObject();
@@ -494,7 +488,6 @@ public class ShareServiceImpl implements ShareService {
 	 			ci.setCollection_name(collection.getCollectionName());
 	 			ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
 	 			ci.setInfo(collection.getInfo());
-	 			ci.setAvatar_image(JSONObject.fromObject(collection.getAvatar_image()));
 	 			User author = collection.getUser();//userDao.get(collection.getAuthorId());
 				JSONObject json = new JSONObject();
 				json.put("id",author.getId());
@@ -502,9 +495,6 @@ public class ShareServiceImpl implements ShareService {
 				ci.setAuthor(json);
 				JsonConfig configs = new JsonConfig();
 				List<String> delArray = new ArrayList<String>();
-				if(!Strings.isNullOrEmpty(collection.getActivity_description())){
-					ci.setActivity_description(collection.getActivity_description());
-				}
 				
 				
 				JSONObject collectionJson = null;

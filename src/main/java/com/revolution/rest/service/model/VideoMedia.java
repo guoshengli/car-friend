@@ -4,13 +4,12 @@
  import javax.xml.bind.annotation.XmlRootElement;
  
  @XmlRootElement
- public class ImageMedia
+ public class VideoMedia
    implements Serializable
  {
    private static final long serialVersionUID = -7233506673855725689L;
    private String name;
    private String original_size;
-   private String comment;
  
    public String getName()
    {
@@ -29,14 +28,6 @@
      this.original_size = original_size;
    }
  
- 
-public String getComment() {
-	return comment;
-}
-
-public void setComment(String comment) {
-	this.comment = comment;
-}
    
    
  }

@@ -12,7 +12,6 @@
    private static final long serialVersionUID = -627540663675725689L;
    private Long id;
    private String title;
-   private Object subtitle;
    private JSONObject cover_media;
    private JSONArray elements;
    private Long update_time;
@@ -28,7 +27,6 @@
    private JSONObject author;
    private String summary;
    private int image_count;
-   private CollectionIntro collection;
  
    public Long getId()
    {
@@ -47,13 +45,6 @@
      this.title = title;
    }
  
-   public Object getSubtitle() {
-     return this.subtitle;
-   }
- 
-   public void setSubtitle(Object subtitle) {
-     this.subtitle = subtitle;
-   }
  
    public JSONObject getCover_media() {
      return this.cover_media;
@@ -167,13 +158,6 @@
      this.image_count = image_count;
    }
  
-   public CollectionIntro getCollection() {
-     return this.collection;
-   }
- 
-   public void setCollection(CollectionIntro collection) {
-     this.collection = collection;
-   }
  
    public String getSummary() {
      return this.summary;

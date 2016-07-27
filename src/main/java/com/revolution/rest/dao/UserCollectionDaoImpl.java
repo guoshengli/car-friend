@@ -42,7 +42,7 @@ public class UserCollectionDaoImpl
 	@Override
 	public List<Collection> getCollectionByUserid(Long userid) {
 		Session session = getSessionFactory().getCurrentSession();
-		String hql = "select uc.collections from UserCollection uc where 1=1 and uc.users.id=? and uc.collections.collection_type != 'activity'";
+		String hql = "select uc.collections from UserCollection uc where 1=1 and uc.users.id=?";
 		List<Collection> list = session.createQuery(hql).setLong(0, userid).list();
 		return list;
 	}
@@ -50,15 +50,15 @@ public class UserCollectionDaoImpl
 	@Override
 	public List<Collection> getCollectionByUserid(Long userid,String type) {
 		Session session = getSessionFactory().getCurrentSession();
-		String hql = "select uc.collections from UserCollection uc where 1=1 and uc.users.id=? and uc.collections.collection_type != ?";
-		List<Collection> list = session.createQuery(hql).setLong(0, userid).setString(1,type).list();
+		String hql = "select uc.collections from UserCollection uc where 1=1 and uc.users.id=?";
+		List<Collection> list = session.createQuery(hql).setLong(0, userid).list();
 		return list;
 	}
 	
 	@Override
 	public List<Collection> getCollectionByUserid(Long userid, int count) {
 		Session session = getSessionFactory().getCurrentSession();
-		String hql = "select uc.collections from UserCollection uc where 1=1 and uc.users.id=? and uc.collections.collection_type='activity' order by uc.create_time desc";
+		String hql = "select uc.collections from UserCollection uc where 1=1 and uc.users.id=? order by uc.create_time desc";
 		Query query = session.createQuery(hql).setLong(0,userid);
 		query.setMaxResults(count);
 		List<Collection> list = query.list();
@@ -78,7 +78,7 @@ public class UserCollectionDaoImpl
 	       Session session = getSessionFactory().getCurrentSession();
 	       String hql = "";
 	       if (identify == 1) {
-	         hql = "select uc.collections from UserCollection uc where 1=1 and uc.users.id=? and uc.collections.collection_type='activity' and uc.create_time <= ? and uc.id != ? order by uc.create_time";
+	         hql = "select uc.collections from UserCollection uc where 1=1 and uc.users.id=? and uc.create_time <= ? and uc.id != ? order by uc.create_time";
 	         Query query = session.createQuery(hql);
 	         query.setLong(0, userid);
 	         query.setString(1, create_time);
@@ -88,7 +88,7 @@ public class UserCollectionDaoImpl
 	         Collections.reverse(cList);
 	       }
 	       else if (identify == 2) {
-	         hql = "select uc.collections from UserCollection uc where 1=1 and uc.users.id=? and uc.collections.collection_type='activity' and uc.create_time <= ? and uc.id != ? order by create_time desc";
+	         hql = "select uc.collections from UserCollection uc where 1=1 and uc.users.id=? and uc.create_time <= ? and uc.id != ? order by create_time desc";
 	         Query query = session.createQuery(hql);
 	         query.setLong(0, userid);
 	         query.setString(1, create_time);
@@ -247,6 +247,20 @@ public class UserCollectionDaoImpl
 	 
 	   
 		return uList;
+	}
+
+
+	@Override
+	public int getUserCountByCollectionId(Long collectionId) {
+		Session session = getSessionFactory().getCurrentSession();
+		String hql = "select count(id) from UserCollection where collections.id=?";
+		List<Long> list = session.createQuery(hql).setLong(0, collectionId).list();
+		int count = 0;
+		if ((list != null) && (list.size() > 0)) {
+			Long l = list.get(0);
+			count = l.intValue();
+		}
+		return count;
 	}
 	
 }

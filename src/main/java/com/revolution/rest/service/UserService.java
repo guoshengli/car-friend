@@ -43,6 +43,11 @@ public abstract interface UserService
   @GET
   public abstract UserParentModel get(@PathParam("userId") Long paramLong1, @HeaderParam("X-Tella-Request-Userid") Long paramLong2,@HeaderParam("X-Tella-Request-AppVersion") String appVersion);
 
+  @Path("/{userId}/chat")
+  @GET
+  public abstract JSONObject getChatUser(@PathParam("userId") Long userId);
+
+  
   @Path("/login")
   @POST
   @Consumes({"application/json"})
@@ -221,6 +226,9 @@ public abstract interface UserService
   @GET//@PathParam("userId")Long userId,
   public JSONObject rong_token(@HeaderParam("X-Tella-Request-Userid") Long loginUserid);
 
+  @Path("/privatechatpush")
+  @GET
+  public void push_info(JSONObject jsonObject);
   
 }
 

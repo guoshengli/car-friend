@@ -33,8 +33,3 @@ public abstract interface CommentService
   @Consumes({"application/json"})
   public abstract Response updateComment(@PathParam("commentId") Long paramLong, Comment paramComment);
 }
-
-/* Location:           E:\project\tella-webservice\WEB-INF\classes\
- * Qualified Name:     com.tella.rest.service.CommentService
- * JD-Core Version:    0.6.2
- */

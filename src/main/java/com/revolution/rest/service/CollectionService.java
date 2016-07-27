@@ -14,6 +14,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
+import com.revolution.rest.service.model.CollectionIntro;
 import com.revolution.rest.service.model.UserIntro;
 
 @Path("/collections")
@@ -43,7 +44,7 @@ public abstract interface CollectionService
 
   @Path("/{collectionId}/featured")
   @GET
-  public abstract List<JSONObject> getFeaturedStoriesByCollection_id(@PathParam("collectionId") Long paramLong1, @Context HttpServletRequest paramHttpServletRequest, @HeaderParam("X-Tella-Request-Userid") Long paramLong2);
+  public abstract JSONObject getFeaturedStoriesByCollection_id(@PathParam("collectionId") Long paramLong1, @Context HttpServletRequest paramHttpServletRequest, @HeaderParam("X-Tella-Request-Userid") Long paramLong2);
   
   @Path("/{collectionId}/hot")
   @GET
@@ -82,5 +83,9 @@ public abstract interface CollectionService
   @Path("/{collection_id}/following")
   @GET
   public abstract List<UserIntro> getFollowingByCollectionId(@PathParam("collection_id") Long collection_id, @Context HttpServletRequest request, @HeaderParam("X-Tella-Request-Userid") Long loginUserid);
+  
+  @Path("/{user_id}/follow")
+  @GET
+  public abstract List<CollectionIntro> getCollectionByFollow(@PathParam("user_id") Long user_id, @Context HttpServletRequest request);
 }
 

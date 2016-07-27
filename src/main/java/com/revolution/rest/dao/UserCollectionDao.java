@@ -9,6 +9,8 @@ import com.revolution.rest.model.UserCollection;
 public interface UserCollectionDao extends BaseDao<UserCollection, Long> {
 	public int getCollectionCountByUserid(Long userid);
 	
+	public int getUserCountByCollectionId(Long collectionId);
+	
 	public List<Collection> getCollectionByUserid(Long userid);
 	
 	public List<Collection> getCollectionByUserid(Long userid,String type);

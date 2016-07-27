@@ -12,4 +12,8 @@ public interface ColumnsStoryDao extends BaseDao<ColumnsStory, Long> {
 	public List<Story> getStoriesByColumns(Long columns_id, int count,String type);
 	  
 	public List<Story> getStoriesPageByColumns(Long columns_id, int count, Long storyId, int identifier,String type);
+	
+	public void deleteColumnsStoryByColumnsIdAndStoryId(Long columns_id,Long storyId);
+	
+	public ColumnsStory getColumnsStoryByColumnsIdAndStoryId(Long columnsId,Long storyId);
 }

@@ -36,7 +36,7 @@
    @Column(name="notify_admin_push", columnDefinition="BIT")
    private boolean new_admin_push;
    
-   @Column(name="new_story_from_collection_push", columnDefinition="BIT")
+/*   @Column(name="new_story_from_collection_push", columnDefinition="BIT")
    private boolean new_story_from_collection_push; //9
    
    @Column(name="delete_story_from_collection_push", columnDefinition="BIT")
@@ -56,7 +56,7 @@
    
    @Column(name="story_move_to_collection", columnDefinition="BIT")
    private boolean story_move_to_collection; //14
-   
+*/   
    @Column(name="user_id")
    private Long userId;
  
@@ -132,7 +132,7 @@
    
    
  
-   public boolean isNew_story_from_collection_push() {
+   /*public boolean isNew_story_from_collection_push() {
 	return new_story_from_collection_push;
 }
 
@@ -190,7 +190,7 @@ public boolean isStory_move_to_collection() {
 public void setStory_move_to_collection(boolean story_move_to_collection) {
 	this.story_move_to_collection = story_move_to_collection;
 }
-
+*/
 public Long getUserId() {
      return this.userId;
    }

@@ -14,8 +14,8 @@ import javax.persistence.TemporalType;
 
 import org.hibernate.annotations.Generated;
 import org.hibernate.annotations.GenerationTime;
-@Table
-@Entity(name="columns_story")
+@Entity
+@Table(name="columns_story")
 public class ColumnsStory extends BaseEntity<Long>implements Serializable {
 
 	private static final long serialVersionUID = 4584129142985705955L;
@@ -28,7 +28,7 @@ public class ColumnsStory extends BaseEntity<Long>implements Serializable {
 	@JoinColumn(name="story_id")
 	private Story story;
 	
-	@Temporal(TemporalType.TIMESTAMP)
+   @Temporal(TemporalType.TIMESTAMP)
    @Generated(GenerationTime.ALWAYS)
    @Column(name="create_time", insertable=false)
    private Date create_time;

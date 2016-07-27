@@ -20,6 +20,7 @@ import com.revolution.rest.service.model.CollectionModel;
 import com.revolution.rest.service.model.ReportModel;
 import com.revolution.rest.service.model.StoryModel;
 
+import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 
 @Path("/admin")
@@ -40,9 +41,9 @@ public abstract interface AdminService
   @DELETE
   public abstract Response deleteCollection(@PathParam("collection_id") Long paramLong);
 
-  @Path("/collection/{collectionId}/stories/{storyId}")
+  @Path("/collection/stories/{storyId}")
   @POST
-  public abstract Response createCollectionStory(@PathParam("collectionId") Long paramLong1, @PathParam("storyId") Long paramLong2,@HeaderParam("X-Tella-Request-Userid") Long loginUserid);
+  public abstract Response createCollectionStory(@PathParam("storyId") Long paramLong2,JSONObject collectionIds,@HeaderParam("X-Tella-Request-Userid") Long loginUserid);
 
   @Path("/collection/{collectionId}/stories/{storyId}")
   @DELETE
@@ -136,5 +137,39 @@ public abstract interface AdminService
   @Path("/exception")
   @GET
   public void createException();
+  
+  @Path("/interests")
+  @GET
+  public List<JSONObject> getAllInterest();
+  
+  @Path("/interest")
+  @POST
+  @Consumes({"application/json"})
+  public abstract Response createInterest(JSONObject json);
+  
+  @Path("/interest/{interest_id}")
+  @PUT
+  public abstract Response updateInterest(@PathParam("interest_id")Long interest_id,JSONObject interest);
+  
+  @Path("/columns")
+  @POST
+  @Consumes({"application/json"})
+  public abstract Response createColumns(@HeaderParam("X-Tella-Request-Userid") Long loginUserid,JSONObject json);
+  
+  @Path("/columns/{columns_id}")
+  @PUT
+  public abstract Response updateColumns(@PathParam("columns_id")Long columns_id,JSONObject columns);
+  
+  @Path("/columns/{columnsId}/story/{storyId}")
+  @POST
+  public abstract Response createColumnsStory(@PathParam("columnsId")Long columnsId,@PathParam("storyId")Long storyId,@HeaderParam("X-Tella-Request-Userid") Long loginUserid);
+  
+  @Path("/columns/{columnsId}/story/{storyId}")
+  @DELETE
+  public abstract Response deleteColumnsStory(@PathParam("columnsId")Long columnsId,@PathParam("storyId")Long storyId);
+  
+  @Path("/columns/{columnsId}/story/{storyId}")
+  @PUT
+  public abstract Response updateColumnsStory(@PathParam("columnsId")Long columnsId,@PathParam("storyId")Long storyId,@HeaderParam("X-Tella-Request-Userid") Long loginUserid);
 }
 

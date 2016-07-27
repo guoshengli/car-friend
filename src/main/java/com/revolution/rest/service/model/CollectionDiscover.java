@@ -12,15 +12,10 @@ public class CollectionDiscover implements Serializable {
 	private String collection_name;
 	private JSONObject cover_image;
 	private String info;
-	private JSONObject avatar_image;
 	private boolean is_followed_by_current_user;
 	private JSONObject author;
 	
 	private int view_count;
-	
-	private String collection_type;
-	
-	private String activity_description; 
 
 	public Long getId() {
 		return id;
@@ -54,13 +49,6 @@ public class CollectionDiscover implements Serializable {
 		this.info = info;
 	}
 
-	public JSONObject getAvatar_image() {
-		return avatar_image;
-	}
-
-	public void setAvatar_image(JSONObject avatar_image) {
-		this.avatar_image = avatar_image;
-	}
 
 	public boolean isIs_followed_by_current_user() {
 		return is_followed_by_current_user;
@@ -86,21 +74,6 @@ public class CollectionDiscover implements Serializable {
 		this.author = author;
 	}
 
-	public String getCollection_type() {
-		return collection_type;
-	}
-
-	public void setCollection_type(String collection_type) {
-		this.collection_type = collection_type;
-	}
-
-	public String getActivity_description() {
-		return activity_description;
-	}
-
-	public void setActivity_description(String activity_description) {
-		this.activity_description = activity_description;
-	}
 	
 	
 

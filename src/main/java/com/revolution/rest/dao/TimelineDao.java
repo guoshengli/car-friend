@@ -44,9 +44,9 @@ public abstract interface TimelineDao extends BaseDao<Timeline, Long>
   
   public List<Timeline> getTimelineBySquare(Long timelineId, int count, int identify);
   
-  public List<Timeline> getTimelineByHome(int count,String followIds);
+  public List<Timeline> getTimelineByHome(int count);
   
-  public List<Timeline> getTimelineByHome(Long timelineId, int count, int identify,String followIds);
+  public List<Timeline> getTimelineByHome(Long timelineId, int count, int identify);
   
   public List<Timeline> getTimelineByUserIdAndType(Long userId, String type,int count);
   

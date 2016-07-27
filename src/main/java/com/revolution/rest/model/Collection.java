@@ -26,10 +26,6 @@ public class Collection extends BaseEntity<Long>implements Serializable {
 	@Type(type = "text")
 	private String cover_image;
 
-	@Column(name = "avatar_image")
-	@Type(type = "text")
-	private String avatar_image;
-
 	@Column(name = "status")
 	private String status;
 
@@ -44,18 +40,8 @@ public class Collection extends BaseEntity<Long>implements Serializable {
 	@Column(name = "info")
 	private String info;
 
-	@Column(name = "is_review", columnDefinition = "BIT")
-	private boolean is_review;
-
 	@Column(name = "view_count")
 	private int view_count;
-
-	@Column(name = "type")
-	private String collection_type;
-
-	@Column(name = "activity_description")
-	@Type(type = "text")
-	private String activity_description;
 
 	@XmlTransient
 	@ManyToMany(mappedBy = "collections", fetch = FetchType.LAZY)
@@ -141,37 +127,7 @@ public class Collection extends BaseEntity<Long>implements Serializable {
 		this.users = users;
 	}
 
-	public String getAvatar_image() {
-		return avatar_image;
-	}
 
-	public void setAvatar_image(String avatar_image) {
-		this.avatar_image = avatar_image;
-	}
-
-	public boolean isIs_review() {
-		return is_review;
-	}
-
-	public void setIs_review(boolean is_review) {
-		this.is_review = is_review;
-	}
-
-	public String getCollection_type() {
-		return collection_type;
-	}
-
-	public void setCollection_type(String collection_type) {
-		this.collection_type = collection_type;
-	}
-
-	public String getActivity_description() {
-		return activity_description;
-	}
-
-	public void setActivity_description(String activity_description) {
-		this.activity_description = activity_description;
-	}
 
 	public int getView_count() {
 		return view_count;

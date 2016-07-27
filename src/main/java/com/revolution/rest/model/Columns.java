@@ -9,21 +9,28 @@ import javax.persistence.FetchType;
 import javax.persistence.ManyToMany;
 import javax.persistence.Table;
 import javax.xml.bind.annotation.XmlTransient;
+
 @Entity
-@Table(name="columns")
+@Table(name = "columns")
 public class Columns extends BaseEntity<Long>implements Serializable {
 
 	private static final long serialVersionUID = 3171210697245419841L;
-	
-	@Column(name="column_name")
+
+	@Column(name = "column_name")
 	private String column_name;
-	
-	@Column(name="sequence")
+
+	@Column(name = "sequence")
 	private int sequence;
-	
+
+	@Column(name = "cover_image", columnDefinition = "TEXT")
+	private String cover_image;
+
+	@Column(name = "description", columnDefinition = "TEXT")
+	private String description;
+
 	@XmlTransient
-   @ManyToMany(mappedBy="columns", fetch=FetchType.LAZY)
-   private Set<Story> stories;
+	@ManyToMany(mappedBy = "columns", fetch = FetchType.LAZY)
+	private Set<Story> stories;
 
 	public String getColumn_name() {
 		return column_name;
@@ -47,6 +54,22 @@ public class Columns extends BaseEntity<Long>implements Serializable {
 
 	public void setSequence(int sequence) {
 		this.sequence = sequence;
+	}
+
+	public String getCover_image() {
+		return cover_image;
+	}
+
+	public void setCover_image(String cover_image) {
+		this.cover_image = cover_image;
+	}
+
+	public String getDescription() {
+		return description;
+	}
+
+	public void setDescription(String description) {
+		this.description = description;
 	}
 	
 	

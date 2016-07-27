@@ -3,24 +3,26 @@
  import java.io.Serializable;
  import net.sf.json.JSONObject;
  
- public class StoryHomeCopy
+ public class StoryEventNew
    implements Serializable
  {
    private static final long serialVersionUID = -5048828880584684658L;
    private Long id;
    private String title;
-   private String subtitle;
    private Long created_time;
    private JSONObject cover_media;
+   private boolean repost_by_current_user;
+   private boolean Liked_by_current_user;
    private JSONObject author;
    private int image_count;
    private String summary;
+   private int comment_count;
    private String recommend_date;
    private String url;
    //09-25 ÐÂ¼Ó
-   private int comment_count;
+   private String resource;
    private int repost_count;
-   private boolean repost_by_current_user;
+   
    private int like_count;
    
    private JSONObject columns;
@@ -42,13 +44,6 @@
      this.title = title;
    }
  
-   public String getSubtitle() {
-     return this.subtitle;
-   }
- 
-   public void setSubtitle(String subtitle) {
-     this.subtitle = subtitle;
-   }
  
    public JSONObject getCover_media() {
      return this.cover_media;
@@ -81,8 +76,7 @@
    public void setImage_count(int image_count) {
      this.image_count = image_count;
    }
-  
-   
+ 
 
 public String getSummary() {
      return this.summary;
@@ -92,6 +86,21 @@ public String getSummary() {
      this.summary = summary;
    }
  
+   public boolean getRepost_by_current_user() {
+     return this.repost_by_current_user;
+   }
+ 
+   public void setRepost_by_current_user(boolean repost_by_current_user) {
+     this.repost_by_current_user = repost_by_current_user;
+   }
+ 
+   public int getComment_count() {
+     return this.comment_count;
+   }
+ 
+   public void setComment_count(int comment_count) {
+     this.comment_count = comment_count;
+   }
  
    public String getRecommend_date() {
      return this.recommend_date;
@@ -109,13 +118,13 @@ public String getSummary() {
 		this.url = url;
 	}
 
-/*	public String getResource() {
+	public String getResource() {
 		return resource;
 	}
 
 	public void setResource(String resource) {
 		this.resource = resource;
-	}*/
+	}
 
 	public int getRepost_count() {
 		return repost_count;
@@ -125,20 +134,12 @@ public String getSummary() {
 		this.repost_count = repost_count;
 	}
 
-	public int getComment_count() {
-		return comment_count;
+	public boolean isLiked_by_current_user() {
+		return Liked_by_current_user;
 	}
 
-	public void setComment_count(int comment_count) {
-		this.comment_count = comment_count;
-	}
-
-	public boolean isRepost_by_current_user() {
-		return repost_by_current_user;
-	}
-
-	public void setRepost_by_current_user(boolean repost_by_current_user) {
-		this.repost_by_current_user = repost_by_current_user;
+	public void setLiked_by_current_user(boolean liked_by_current_user) {
+		Liked_by_current_user = liked_by_current_user;
 	}
 
 	public int getLike_count() {

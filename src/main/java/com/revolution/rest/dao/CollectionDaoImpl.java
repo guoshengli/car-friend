@@ -105,9 +105,9 @@ public class CollectionDaoImpl extends BaseDaoImpl<Collection, Long>implements C
 	@Override
 	public List<Collection> getCollectionBytype(String type, int count) {
 		Session session = getSessionFactory().getCurrentSession();
-		String hql = "from Collection where status=? and collection_type = ? order by number";
+		String hql = "from Collection where status=? order by number";
 		List<Collection> collectionList = session.createQuery(hql)
-				.setString(0, "enabled").setString(1,type).setMaxResults(count).list();
+				.setString(0, "enabled").setMaxResults(count).list();
 		
 		return collectionList;
 	}
@@ -121,13 +121,13 @@ public class CollectionDaoImpl extends BaseDaoImpl<Collection, Long>implements C
 			Long num = collection.getNumber();
 		      String hql = "";
 		      if (identify == 1) {
-		    	  hql = "from Collection where status=? and collection_type = ? and id != ? and number <= ? order by number";
+		    	  hql = "from Collection where status=? and id != ? and number <= ? order by number";
 		    	  cList = session.createQuery(hql)
-		  				.setString(0, "enabled").setString(1,type).setLong(2,collection_id).setLong(3,num).setMaxResults(count).list();
+		  				.setString(0, "enabled").setLong(1,collection_id).setLong(2,num).setMaxResults(count).list();
 		      }else if(identify == 2){
-		    	  hql = "from Collection where status=? and collection_type = ? and id != ? and number >= ? order by number";
+		    	  hql = "from Collection where status=? and id != ? and number >= ? order by number";
 		    	  cList = session.createQuery(hql)
-		  				.setString(0, "enabled").setString(1,type).setLong(2,collection_id).setLong(3,num).setMaxResults(count).list();
+		  				.setString(0, "enabled").setLong(1,collection_id).setLong(2,num).setMaxResults(count).list();
 		      }
 		}
 		return cList;
@@ -136,9 +136,9 @@ public class CollectionDaoImpl extends BaseDaoImpl<Collection, Long>implements C
 	@Override
 	public List<Collection> getCollectionBytype(String type) {
 		Session session = getSessionFactory().getCurrentSession();
-		String hql = "from Collection where status=? and collection_type = ? order by number";
+		String hql = "from Collection where status=? order by number";
 		List<Collection> collectionList = session.createQuery(hql)
-				.setString(0, "enabled").setString(1,type).list();
+				.setString(0, "enabled").list();
 		
 		return collectionList;
 	}

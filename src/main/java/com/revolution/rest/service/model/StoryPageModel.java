@@ -23,7 +23,7 @@
    private JSONObject author;
    private List<JSONObject> comments;
    private List<StoryIntro> recommendation;
-   private JSONObject collection;
+   private JSONArray collection;
    private int image_count;
    private String summary;
    private String resource;
@@ -146,11 +146,11 @@ public List<StoryIntro> getRecommendation() {
    }
  
  
-   public JSONObject getCollection() {
+   public JSONArray getCollection() {
 	return collection;
 }
 
-public void setCollection(JSONObject collection) {
+public void setCollection(JSONArray collection) {
 	this.collection = collection;
 }
 

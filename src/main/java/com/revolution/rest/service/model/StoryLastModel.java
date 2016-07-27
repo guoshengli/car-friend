@@ -30,7 +30,7 @@ public class StoryLastModel implements Serializable {
 	private String summary;
 	private String resource;
 	private int like_count;
-	private Columns columns;
+	private JSONObject columns;
 
 	public Long getId() {
 		return this.id;
@@ -193,13 +193,14 @@ public class StoryLastModel implements Serializable {
 		this.like_count = like_count;
 	}
 
-	public Columns getColumns() {
+	public JSONObject getColumns() {
 		return columns;
 	}
 
-	public void setColumns(Columns columns) {
+	public void setColumns(JSONObject columns) {
 		this.columns = columns;
 	}
+
 	
 	
 

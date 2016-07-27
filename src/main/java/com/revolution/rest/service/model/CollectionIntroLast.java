@@ -13,7 +13,6 @@ import net.sf.json.JSONObject;
 	   private String collection_name;
 	   private JSONObject cover_image;
 	   private String info;
-	   private JSONObject avatar_image;
 	   private boolean is_followed_by_current_user;
 	   
 	   private int story_count;
@@ -21,8 +20,6 @@ import net.sf.json.JSONObject;
 	   private int followers_count;
 	   
 	   private JSONObject author;
-	   
-	   private boolean is_review;
 	   
 	   private String collection_type;
 	   
@@ -60,12 +57,6 @@ import net.sf.json.JSONObject;
 		public void setIs_followed_by_current_user(boolean is_followed_by_current_user) {
 			this.is_followed_by_current_user = is_followed_by_current_user;
 		}
-		public JSONObject getAvatar_image() {
-			return avatar_image;
-		}
-		public void setAvatar_image(JSONObject avatar_image) {
-			this.avatar_image = avatar_image;
-		}
 		public int getStory_count() {
 			return story_count;
 		}
@@ -83,12 +74,6 @@ import net.sf.json.JSONObject;
 		}
 		public void setAuthor(JSONObject author) {
 			this.author = author;
-		}
-		public boolean isIs_review() {
-			return is_review;
-		}
-		public void setIs_review(boolean is_review) {
-			this.is_review = is_review;
 		}
 		public String getCollection_type() {
 			return collection_type;
