@@ -31,4 +31,6 @@ public interface CommentDao extends BaseDao<Comment, Long>
   public List<Comment> getCommentByStoryIdNewThree(Long paramLong);
 
   public Comment getCommentByIdAndStatus(Long paramLong, String paramString);
+  
+  public List<Comment> getCommentByStoryIdAndRandom(Long storyId,int count);
 }

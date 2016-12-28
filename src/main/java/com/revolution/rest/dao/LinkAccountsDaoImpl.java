@@ -40,4 +40,17 @@ public class LinkAccountsDaoImpl extends BaseDaoImpl<LinkAccounts, Long>implemen
 		Query query = session.createQuery(hql).setLong(0, userid.longValue()).setString(1, service);
 		query.executeUpdate();
 	}
+
+	@Override
+	public Object[] getLinkAccountsByUUIDAndService(String uuid, String service) {
+		Session session = getSessionFactory().getCurrentSession();
+		String hql = "from LinkAccounts la,User u where la.uuid=? and la.service=? and la.user_id=u.id";
+		Query query = session.createQuery(hql).setString(0, uuid).setString(1, service);
+		List<Object[]> list = query.list();
+		Object[] la = null;
+		if ((list != null) && (list.size() > 0)) {
+			la =  list.get(0);
+		}
+		return la;
+	}
 }

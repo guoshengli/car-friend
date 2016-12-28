@@ -31,6 +31,7 @@ public interface ColumnsService {
 	@GET
 	public abstract List<JSONObject> getStoryByColumnsId(@PathParam("columns_id")Long columns_id,@HeaderParam("X-Tella-Request-Userid")Long loginUserid,@Context HttpServletRequest request);
 	
+	
 	@Path("/")
 	@GET
 	public abstract List<ColumnsModel> getAllColumns();

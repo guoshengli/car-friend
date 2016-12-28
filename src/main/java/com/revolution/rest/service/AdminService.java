@@ -20,7 +20,6 @@ import com.revolution.rest.service.model.CollectionModel;
 import com.revolution.rest.service.model.ReportModel;
 import com.revolution.rest.service.model.StoryModel;
 
-import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 
 @Path("/admin")
@@ -111,6 +110,11 @@ public abstract interface AdminService
   @PUT
   public abstract Response recommendStory(@HeaderParam("X-Tella-Request-Userid") Long loginUserid,@PathParam("story_id") Long paramLong, @Context HttpServletRequest paramHttpServletRequest);
 
+  @Path("/stories/{story_id}/cancelrecommend")
+  @DELETE
+  public abstract Response unrecommendStory(@HeaderParam("X-Tella-Request-Userid") Long loginUserid,@PathParam("story_id") Long paramLong, @Context HttpServletRequest paramHttpServletRequest);
+
+  
   @Path("/user/{user_id}")
   @PUT
   public abstract Response updateUserType(@PathParam("user_id") Long paramLong, @Context HttpServletRequest paramHttpServletRequest);
@@ -171,5 +175,13 @@ public abstract interface AdminService
   @Path("/columns/{columnsId}/story/{storyId}")
   @PUT
   public abstract Response updateColumnsStory(@PathParam("columnsId")Long columnsId,@PathParam("storyId")Long storyId,@HeaderParam("X-Tella-Request-Userid") Long loginUserid);
+  
+  @Path("/users/privatechat")
+  @GET
+  public abstract Response getConversion(@Context HttpServletRequest request);
+  
+  @Path("/{storyId}/lottery/{count}")
+  @GET
+  public abstract Response getLottery(@PathParam("storyId")Long storyId,@PathParam("count")int count);
 }
 

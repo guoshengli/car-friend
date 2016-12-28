@@ -557,6 +557,54 @@ public class NotificationServiceImpl implements NotificationService {
 				}
 				
 				
+				if(n.getNotificationType() == 16){
+
+
+					notificationModel.setNotification_type("recommended_my_story_slide_push");
+
+					contentModel.setSender(sender);
+					StoryIntro storyIntro = new StoryIntro();
+					List<String> delArr = new ArrayList<String>();
+					JsonConfig config = new JsonConfig();
+					if (n.getObjectType() == 1) {
+						Story story = this.storyDao.getStoryByIdAndStatus(n.getObjectId(), "publish");
+						if (story != null) {
+							storyIntro.setId((Long) story.getId());
+							storyIntro.setTitle(story.getTitle());
+							storyIntro.setCollectionId(Long.valueOf(1L));
+							storyIntro.setCover_media(JSONObject.fromObject(story.getCover_page()));
+							storyIntro.setSummary(story.getSummary());
+							if (Strings.isNullOrEmpty(story.getTitle())) {
+								delArr.add("title");
+							}
+
+
+							if (Strings.isNullOrEmpty(story.getSummary())) {
+								delArr.add("summary");
+							}
+
+							config.setExcludes((String[]) delArr.toArray(new String[delArr.size()]));
+							config.setIgnoreDefaultExcludes(false);
+							config.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
+							JSONObject sJson = JSONObject.fromObject(storyIntro,config);
+							contentModel.setStory(sJson);
+							contentJson = JSONObject.fromObject(contentModel);
+							contentJson.remove("collection");
+							contentJson.remove("comment");
+							contentJson.remove("sender");
+						} else {
+							notificationModel = null;
+						}
+					}
+
+				
+					/*if (conf.isRecommended_my_story_push()) {} else {
+						notificationModel = null;
+					}*/
+				
+				
+				}
+				
 
 				if (notificationModel != null) {
 					notificationModel.setContent(contentJson);
@@ -1172,10 +1220,52 @@ public class NotificationServiceImpl implements NotificationService {
 								storyIntro.setTitle(story.getTitle());
 								Set<Collection> cSet = story.getCollections();
 								if(cSet != null && cSet.size() > 0){
-									Iterator<Collection> ite = cSet.iterator();
-									Collection c = ite.next();
-									JSONObject cJSON = getCollectionJSON(c);
-									storyIntro.setCollection(cJSON);
+									List<JSONObject> collectionListJson = new ArrayList<JSONObject>();
+									if (cSet != null && cSet.size() > 0) {
+										Iterator<Collection> iter = cSet.iterator();
+										while(iter.hasNext()){
+											Collection collection = iter.next();
+											CollectionIntro ci = new CollectionIntro();
+											ci.setId((Long) collection.getId());
+											ci.setCollection_name(collection.getCollectionName());
+											ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
+											ci.setInfo(collection.getInfo());
+											User u = userDao.get(collection.getUser().getId());
+											JSONObject author = new JSONObject();
+											author.put("id", u.getId());
+											author.put("username", u.getUsername());
+											if(!Strings.isNullOrEmpty(u.getAvatarImage())){
+												author.put("avatar_image",JSONObject.fromObject(u.getAvatarImage()));
+											}
+											ci.setAuthor(author);
+											JsonConfig configs = new JsonConfig();
+											List<String> delArray = new ArrayList<String>();
+											
+											int follow_collection_count = userCollectionDao.getCollectionByCount(collection.getId());
+											ci.setFollowers_count(follow_collection_count);
+											/*Set<User> uSet = collection.getUsers();
+											if(uSet != null && uSet.size() > 0){
+												ci.setFollowers_count(uSet.size());
+											}else{
+												ci.setFollowers_count(0);
+											}*/
+
+											JSONObject collectionJson = null;
+											if ((delArray != null) && (delArray.size() > 0)) {
+												configs.setExcludes((String[]) delArray.toArray(new String[delArray.size()]));
+												configs.setIgnoreDefaultExcludes(false);
+												configs.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
+
+												collectionJson = JSONObject.fromObject(ci, configs);
+											} else {
+												collectionJson = JSONObject.fromObject(ci);
+											}
+
+											collectionListJson.add(collectionJson);
+										}
+										
+										storyIntro.setCollection(collectionListJson);
+									}
 								}else{
 									delArr.add("collection");
 								}
@@ -1227,10 +1317,51 @@ public class NotificationServiceImpl implements NotificationService {
 								storyIntro.setTitle(story.getTitle());
 								Set<Collection> cSet = story.getCollections();
 								if(cSet != null && cSet.size() > 0){
-									Iterator<Collection> ite = cSet.iterator();
-									Collection c = ite.next();
-									JSONObject cJSON = getCollectionJSON(c);
-									storyIntro.setCollection(cJSON);
+									List<JSONObject> collectionListJson = new ArrayList<JSONObject>();
+									Iterator<Collection> iter = cSet.iterator();
+									while(iter.hasNext()){
+										Collection collection = iter.next();
+										CollectionIntro ci = new CollectionIntro();
+										ci.setId((Long) collection.getId());
+										ci.setCollection_name(collection.getCollectionName());
+										ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
+										ci.setInfo(collection.getInfo());
+										User u = userDao.get(collection.getUser().getId());
+										JSONObject author = new JSONObject();
+										author.put("id", u.getId());
+										author.put("username", u.getUsername());
+										if(!Strings.isNullOrEmpty(u.getAvatarImage())){
+											author.put("avatar_image",JSONObject.fromObject(u.getAvatarImage()));
+										}
+										ci.setAuthor(author);
+										JsonConfig configs = new JsonConfig();
+										List<String> delArray = new ArrayList<String>();
+										
+										int follow_collection_count = userCollectionDao.getCollectionByCount(collection.getId());
+										ci.setFollowers_count(follow_collection_count);
+										/*Set<User> uSet = collection.getUsers();
+										if(uSet != null && uSet.size() > 0){
+											ci.setFollowers_count(uSet.size());
+										}else{
+											ci.setFollowers_count(0);
+										}*/
+
+										JSONObject collectionJson = null;
+										if ((delArray != null) && (delArray.size() > 0)) {
+											configs.setExcludes((String[]) delArray.toArray(new String[delArray.size()]));
+											configs.setIgnoreDefaultExcludes(false);
+											configs.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
+
+											collectionJson = JSONObject.fromObject(ci, configs);
+										} else {
+											collectionJson = JSONObject.fromObject(ci);
+										}
+
+										collectionListJson.add(collectionJson);
+									}
+									
+									storyIntro.setCollection(collectionListJson);
+								
 									
 								}else{
 									delArr.add("collection");

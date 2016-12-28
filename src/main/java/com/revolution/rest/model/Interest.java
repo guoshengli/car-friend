@@ -8,6 +8,7 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.OneToMany;
+import javax.persistence.OrderBy;
 import javax.persistence.Table;
 @Entity
 @Table(name="interest")
@@ -26,6 +27,7 @@ public class Interest extends BaseEntity<Long> implements Serializable {
 	private String description;
 	
 	@OneToMany(mappedBy="interest", cascade={javax.persistence.CascadeType.ALL}, fetch=FetchType.LAZY)
+	@OrderBy("number") 
 	private List<Collection> collections = new ArrayList<Collection>();
 
 	public String getInterest_name() {

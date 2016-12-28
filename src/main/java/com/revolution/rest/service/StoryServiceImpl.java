@@ -24,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.google.common.base.Strings;
+import com.revolution.rest.common.HttpUtil;
 import com.revolution.rest.common.ParseFile;
 import com.revolution.rest.common.PushNotificationUtil;
 import com.revolution.rest.dao.CollectionDao;
@@ -32,6 +33,7 @@ import com.revolution.rest.dao.CommentDao;
 import com.revolution.rest.dao.ConfigurationDao;
 import com.revolution.rest.dao.FollowDao;
 import com.revolution.rest.dao.LikesDao;
+import com.revolution.rest.dao.LinkAccountsDao;
 import com.revolution.rest.dao.NotificationDao;
 import com.revolution.rest.dao.PushNotificationDao;
 import com.revolution.rest.dao.ReportDao;
@@ -48,6 +50,7 @@ import com.revolution.rest.model.Comment;
 import com.revolution.rest.model.Configuration;
 import com.revolution.rest.model.Follow;
 import com.revolution.rest.model.Likes;
+import com.revolution.rest.model.LinkAccounts;
 import com.revolution.rest.model.Notification;
 import com.revolution.rest.model.PublisherInfo;
 import com.revolution.rest.model.PushNotification;
@@ -64,15 +67,16 @@ import com.revolution.rest.service.model.CommentSummaryModel;
 import com.revolution.rest.service.model.CoverMedia;
 import com.revolution.rest.service.model.EventModel;
 import com.revolution.rest.service.model.ImageCover;
+import com.revolution.rest.service.model.LineCover;
 import com.revolution.rest.service.model.LinkModel;
 import com.revolution.rest.service.model.LinkModels;
 import com.revolution.rest.service.model.LocationModel;
 import com.revolution.rest.service.model.PublisherInfoModel;
-import com.revolution.rest.service.model.ReplyComment;
 import com.revolution.rest.service.model.ReplyCommentModel;
 import com.revolution.rest.service.model.StoryElementModel;
 import com.revolution.rest.service.model.StoryEvent;
 import com.revolution.rest.service.model.StoryIntro;
+import com.revolution.rest.service.model.StoryIntros;
 import com.revolution.rest.service.model.StoryLastModel;
 import com.revolution.rest.service.model.StoryModel;
 import com.revolution.rest.service.model.StoryPageModel;
@@ -133,6 +137,9 @@ public class StoryServiceImpl implements StoryService {
 
 	@Autowired
 	private UserCollectionDao userCollectionDao;
+	
+	@Autowired
+	private LinkAccountsDao linkAccountsDao;
 
 	char[] table = new char[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
 
@@ -163,7 +170,6 @@ public class StoryServiceImpl implements StoryService {
 			if (storyModel != null) {
 				Story story = new Story();
 
-				log.debug("start add story$$$$$$$$$$$$$$$$$$$$$$$$$$$" + storyModel);
 				if (storyModel.containsKey("title"))
 					story.setTitle(storyModel.getString("title"));
 
@@ -190,7 +196,6 @@ public class StoryServiceImpl implements StoryService {
 				if (user != null) {
 					story.setUser(user);
 				}
-				log.debug("start add Elements$$$$$$$$$$$$$$$$$$$$$$$$$$$" + storyModel.getString("elements"));
 				JSONArray jsonArray = JSONArray.fromObject(storyModel.getString("elements"));
 				List<StoryElement> seSet = new ArrayList<StoryElement>();
 				JSONObject jo = null;
@@ -579,9 +584,9 @@ public class StoryServiceImpl implements StoryService {
 			
 
 			int count = 0;
-			Set<Comment> coSet = story.getComments();
-			if (coSet != null && coSet.size() > 0) {
-				count = coSet.size();
+			List<Comment> cList = commentDao.getCommentByStoryId(story.getId());
+			if (cList != null && cList.size() > 0) {
+				count = cList.size();
 			}
 			storyModel.setComment_count(count);
 			storyModel.setSummary(story.getSummary());
@@ -662,10 +667,11 @@ public class StoryServiceImpl implements StoryService {
 			}
 			List<Story> storyList = this.storyDao.getStoriesByRandThree(story.getId());
 			if ((storyList != null) && (storyList.size() > 0)) {
-				List<StoryIntro> recommendations = new ArrayList<StoryIntro>();
-				StoryIntro intro = null;
+				List<StoryIntros> recommendations = new ArrayList<StoryIntros>();
+				StoryIntros intro = null;
 				for (Story s : storyList) {
-					intro = new StoryIntro();
+					JSONObject author = new JSONObject();
+					intro = new StoryIntros();
 					intro.setId((Long) s.getId());
 					intro.setTitle(s.getTitle());
 					if (!Strings.isNullOrEmpty(s.getCover_page()))
@@ -675,6 +681,33 @@ public class StoryServiceImpl implements StoryService {
 					}
 					intro.setImage_count(s.getImage_count());
 					intro.setCollectionId(Long.valueOf(1L));
+					intro.setCreated_time(s.getCreated_time());
+					User us = s.getUser();
+					author.put("id", us.getId());
+					author.put("username", us.getUsername());
+					if(!Strings.isNullOrEmpty(us.getAvatarImage())){
+						author.put("avatar_image",JSONObject.fromObject(us.getAvatarImage()));
+					}
+					intro.setAuthor(author);
+					
+					Set<User> r_like_user = s.getLike_users();
+					if(r_like_user != null && r_like_user.size() > 0){
+						intro.setLike_count(r_like_user.size());
+					}else{
+						intro.setLike_count(0);
+					}
+					
+					Set<Comment> r_comment = s.getComments();
+					if(r_comment != null && r_comment.size()> 0){
+						intro.setComment_count(r_comment.size());
+					}else{
+						intro.setComment_count(0);
+					}
+					
+					if(!Strings.isNullOrEmpty(s.getTinyURL())){
+						intro.setUrl(s.getTinyURL());
+					}
+					
 					recommendations.add(intro);
 				}
 				storyModel.setRecommendation(recommendations);
@@ -959,7 +992,7 @@ public class StoryServiceImpl implements StoryService {
 		return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
 	}
 
-	public Response createReplyComment(ReplyComment replyComment, Long storyId, Long commentId, Long loginUserid) {
+	public Response createReplyComment(JSONObject replyComment, Long storyId, Long commentId, Long loginUserid) {
 		String path = getClass().getResource("/../../META-INF/getui.json").getPath();
 		JSONObject jsonObject = ParseFile.parseJson(path);
 		String appId = jsonObject.getString("appId");
@@ -967,26 +1000,34 @@ public class StoryServiceImpl implements StoryService {
 		String masterSecret = jsonObject.getString("masterSecret");
 		Story story = (Story) this.storyDao.get(storyId);
 		User user = (User) this.userDao.get(loginUserid);
-		if (!Strings.isNullOrEmpty(replyComment.getContent())) {
+		if (!Strings.isNullOrEmpty(replyComment.getString("content"))) {
 			Comment comment = new Comment();
 
 			Comment com = this.commentDao.get(commentId);
 
 			if (!story.getStatus().equals("removed")) {
 				if (!com.getStatus().equals("disabled")) {
-					if (replyComment.getTarget_user_id() != null) {
-						comment.setContent(replyComment.getContent());
+					if (replyComment.containsKey("target_user_id") ) {
+						comment.setContent(replyComment.getString("content"));
 						comment.setStory(story);
 						comment.setUser(user);
-						comment.setTarget_user_id(replyComment.getTarget_user_id());
+						comment.setTarget_user_id(replyComment.getLong("target_user_id"));
 						comment.setStatus("enabled");
 						comment.setTarget_comment_id(commentId);
+						if(replyComment.containsKey("comment_image")){
+							comment.setComment_image(replyComment.getString("comment_image"));
+						}
+						
 					} else {
-						comment.setContent(replyComment.getContent());
+						comment.setContent(replyComment.getString("content"));
 						comment.setStory(story);
 						comment.setUser(user);
 						comment.setStatus("enabled");
 						comment.setTarget_comment_id(commentId);
+						if(replyComment.containsKey("comment_image")){
+							comment.setComment_image(replyComment.getString("comment_image"));
+						}
+						
 					}
 
 					this.commentDao.save(comment);
@@ -1613,6 +1654,7 @@ public class StoryServiceImpl implements StoryService {
 		}
 		userIntro.put("avatar_image", avatarJson);
 		commentModel.setAuthor(userIntro);
+		
 		if (comment.getTarget_user_id() != null) {
 			User targetUser = (User) this.userDao.get(comment.getTarget_user_id());
 			JSONObject targetUserJson = new JSONObject();
@@ -1620,6 +1662,10 @@ public class StoryServiceImpl implements StoryService {
 			targetUserJson.put("username", targetUser.getUsername());
 			targetUserJson.put("user_type", targetUser.getUser_type());
 			commentModel.setTarget_user(targetUserJson);
+		}
+		
+		if(!Strings.isNullOrEmpty(comment.getComment_image())){
+			commentModel.setComment_image(comment.getComment_image());
 		}
 
 		return commentModel;
@@ -1933,6 +1979,9 @@ public class StoryServiceImpl implements StoryService {
 					}else if(type.equals("video")){
 						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
+					}else if(type.equals("line")){
+						LineCover coverMedia = (LineCover) JSONObject.toBean(jsonObject, LineCover.class);
+						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					List<StoryElement> storyElements = new ArrayList<StoryElement>();
@@ -1963,6 +2012,12 @@ public class StoryServiceImpl implements StoryService {
 									element.setContent(linkModel);
 								}
 
+							}else if (types.equals("video")){
+								VideoCover videoMedia = (VideoCover) JSONObject.toBean(content, VideoCover.class);
+								element.setContent(videoMedia);
+							}else if (types.equals("line")){
+								LineCover lineMedia = (LineCover) JSONObject.toBean(content, LineCover.class);
+								element.setContent(lineMedia);
 							}
 							storyElements.add(element);
 						}
@@ -2184,6 +2239,12 @@ public class StoryServiceImpl implements StoryService {
 									element.setContent(linkModel);
 								}
 
+							} else if (types.equals("video")){
+								VideoCover videoMedia = (VideoCover) JSONObject.toBean(content, VideoCover.class);
+								element.setContent(videoMedia);
+							} else if (types.equals("line")){
+								LineCover lineMedia = (LineCover) JSONObject.toBean(content, LineCover.class);
+								element.setContent(lineMedia);
 							}
 							storyElements.add(element);
 						}
@@ -3409,5 +3470,237 @@ public class StoryServiceImpl implements StoryService {
 		}
 
 	}
+
+	@Override
+	public Response getFBTag(Long loginUserid,JSONObject tag)throws Exception {
+		String content = getClass().getResource("/../../META-INF/fb.json").getPath();
+		JSONObject contentJson = ParseFile.parseJson(content);
+		String url = contentJson.getString("url");
+		JSONObject json = new JSONObject();
+		List<LinkAccounts> lam = linkAccountsDao.getLinkAccountsByUserid(loginUserid);
+		if(lam != null && lam.size() > 0){
+			LinkAccounts la = lam.get(0);
+			String authcode = la.getAuth_token();
+			tag.put("serviceName", "fd_getforums");
+			JSONObject tag_copy = JSONObject.fromObject(tag.toString());
+			System.out.println("tag-->"+tag);
+			String splitSign = HttpUtil.splitJSON(tag);
+			String privateKey = HttpUtil.getPrivateKey(new Date());
+			splitSign = splitSign + "&" +privateKey;
+			System.out.println("splitSign-->"+splitSign);
+			String sign = HttpUtil.getMD5Str(splitSign);
+			System.out.println("sign-->"+sign);
+			tag_copy.put("authcode", authcode);
+			tag_copy.put("sign",sign);
+			System.out.println("tag-->>>>>"+tag_copy.toString());
+			String responseData = HttpUtil.sendPost(url+"bbsapinew/fd_getforums.php", tag_copy);
+			return Response.status(Response.Status.OK).entity(responseData).build();
+		}else{
+			json.put("status", "invalid_request");
+			json.put("code", 10010);
+			json.put("error_message", "Invalid payload parameters");
+			return Response.status(Response.Status.OK).entity(json).build();
+		}
+		
+	}
+
+	@Override
+	public Response synchroniseStory(Long loginUserid, JSONObject invitation,Long storyId) throws Exception {
+		
+		JSONObject json = new JSONObject();
+		List<LinkAccounts> lam = linkAccountsDao.getLinkAccountsByUserid(loginUserid);
+		if(lam != null && lam.size() > 0){
+			//e族域名url
+			String content = getClass().getResource("/../../META-INF/fb.json").getPath();
+			JSONObject contentJson = ParseFile.parseJson(content);
+			String url = contentJson.getString("url");
+			
+			//七牛信息
+			String qiniu = getClass().getResource("/../../META-INF/qiniu.json").getPath();
+			JSONObject qiniuJson = ParseFile.parseJson(qiniu);
+			JSONObject media = JSONObject.fromObject(qiniuJson.getString("meta"));
+			String image_url = media.getString("get_img_url");
+			image_url = image_url.substring(0, image_url.lastIndexOf("/")+1);
+			Story story = storyDao.get(storyId);
+			String title = story.getTitle();
+			List<StoryElement> seList = story.getElements();
+			StringBuffer message = new StringBuffer();
+			String cover_page = story.getCover_page();
+			if(!Strings.isNullOrEmpty(cover_page)){
+				JSONObject coverJson = JSONObject.fromObject(cover_page);
+				String type = coverJson.getString("type");
+				if(type.equals("image")){
+					JSONObject mediaJson = JSONObject.fromObject(coverJson.get("media"));
+					String cover_url = mediaJson.getString("name");
+					cover_url = image_url+cover_url;
+					message.append("[img]"+cover_url+"[/img]");
+				}
+			}
+			if(seList != null && seList.size() > 0){
+				for(StoryElement se:seList){
+					if(se.getContents() != null){
+						JSONObject cmJson = JSONObject.fromObject(se.getContents());
+						String type = cmJson.getString("type");
+						if(type.equals("image")){
+							JSONObject mediaJson = JSONObject.fromObject(cmJson.getString("media"));
+							String image = mediaJson.getString("name");
+							String imagePath = image_url+image;
+							message.append("[img]"+imagePath+"[/img]");
+						}else if(type.equals("text")){
+							JSONObject mediaJson = JSONObject.fromObject(cmJson.getString("media"));
+							String plain_text = mediaJson.getString("plain_text");
+							message.append(plain_text);
+						}
+					}
+				}
+			}
+			
+			
+			LinkAccounts la = lam.get(0);
+			String authcode = la.getAuth_token();
+			invitation.put("serviceName", "fd_postthread");
+			JSONObject invitation_copy = JSONObject.fromObject(invitation.toString());
+			System.out.println("tag-->"+invitation);
+			String splitSign = HttpUtil.splitJSON(invitation);
+			String privateKey = HttpUtil.getPrivateKey(new Date());
+			splitSign = splitSign + "&" +privateKey;
+			System.out.println("splitSign-->"+splitSign);
+			String sign = HttpUtil.getMD5Str(splitSign);
+			System.out.println("sign-->"+sign);
+			invitation_copy.put("authcode", authcode);
+			invitation_copy.put("sign",sign);
+			invitation_copy.put("subject", title);
+			invitation_copy.put("message", message.toString());
+			System.out.println("tag-->>>>>"+invitation_copy.toString());
+			String responseData = HttpUtil.sendPost(url+"bbsapinew/fd_postthread.php", invitation_copy);
+			JSONObject responseJson = JSONObject.fromObject(responseData);
+			JSONObject rspInfo = responseJson.getJSONObject("rspInfo");
+			if(rspInfo.getInt("rspCode") == 1000){
+				JSONObject rspData = JSONObject.fromObject(responseJson.get("rspData"));
+				story.setTid(Long.parseLong(rspData.getString("tid")));
+				story.setFid(Long.parseLong(rspData.getString("fid")));
+				story.setPid(Long.parseLong(rspData.getString("pid")));
+				storyDao.update(story);
+				json.put("status","success");
+				return Response.status(Response.Status.OK).entity(json).build();
+			}else{
+				json.put("status", rspInfo.getString("rspType"));
+				json.put("code", rspInfo.getString("rspCode"));
+				json.put("error_message", rspInfo.getString("rspDesc"));
+				return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
+			}
+			
+		}else{
+			json.put("status", "invalid_request");
+			json.put("code", 10010);
+			json.put("error_message", "Invalid payload parameters");
+			return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
+		}
+		
+	}
+
+	@Override
+	public Response synchroniseEditStory(Long loginUserid, JSONObject invitation, Long storyId) throws Exception {
+		JSONObject json = new JSONObject();
+		List<LinkAccounts> lam = linkAccountsDao.getLinkAccountsByUserid(loginUserid);
+		if(lam != null && lam.size() > 0){
+			Story story = storyDao.get(storyId);
+			if(story.getPid() != null 
+					&& story.getPid() > 0){
+				System.out.println("update------->>>>>>>>>>>>>>>>");
+				
+				//e族域名url
+				String content = getClass().getResource("/../../META-INF/fb.json").getPath();
+				JSONObject contentJson = ParseFile.parseJson(content);
+				String url = contentJson.getString("url");
+				
+				//七牛信息
+				String qiniu = getClass().getResource("/../../META-INF/qiniu.json").getPath();
+				JSONObject qiniuJson = ParseFile.parseJson(qiniu);
+				JSONObject media = qiniuJson.getJSONObject("meta");
+				String image_url = media.getString("get_img_url");
+				image_url = image_url.substring(0, image_url.lastIndexOf("/")+1);
+				
+				String title = story.getTitle();
+				List<StoryElement> seList = story.getElements();
+				StringBuffer message = new StringBuffer();
+				String cover_page = story.getCover_page();
+				if(!Strings.isNullOrEmpty(cover_page)){
+					JSONObject coverJson = JSONObject.fromObject(cover_page);
+					String type = coverJson.getString("type");
+					if(type.equals("image")){
+						JSONObject mediaJson = JSONObject.fromObject(coverJson.get("media"));
+						String cover_url = mediaJson.getString("name");
+						cover_url = image_url+cover_url;
+						message.append("[img]"+cover_url+"[/img]");
+					}
+				}
+				if(seList != null && seList.size() > 0){
+					for(StoryElement se:seList){
+						if(se.getContents() != null){
+							String cm = se.getContents();
+							JSONObject cmJson = JSONObject.fromObject(cm);
+							String type = cmJson.getString("type");
+							if(type.equals("image")){
+								JSONObject mediaJson = cmJson.getJSONObject("media");
+								String image = mediaJson.getString("name");
+								String imagePath = image_url+image;
+								message.append("[img]"+imagePath+"[/img]");
+							}else if(type.equals("text")){
+								JSONObject mediaJson = cmJson.getJSONObject("media");
+								String plain_text = mediaJson.getString("plain_text");
+								message.append(plain_text);
+							}
+						}
+					}
+				}
+				
+				
+				LinkAccounts la = lam.get(0);
+				String authcode = la.getAuth_token();
+				invitation.put("serviceName", "fd_editthread");
+				JSONObject invitation_copy = JSONObject.fromObject(invitation.toString());
+				System.out.println("tag-->"+invitation);
+				String splitSign = HttpUtil.splitJSON(invitation);
+				String privateKey = HttpUtil.getPrivateKey(new Date());
+				splitSign = splitSign + "&" +privateKey;
+				System.out.println("splitSign-->"+splitSign);
+				String sign = HttpUtil.getMD5Str(splitSign);
+				System.out.println("sign-->"+sign);
+				invitation_copy.put("authcode", authcode);
+				invitation_copy.put("sign",sign);
+				invitation_copy.put("subject", title);
+				invitation_copy.put("message", message.toString());
+				invitation_copy.put("tid",story.getTid());
+				invitation_copy.put("pid",story.getPid());
+				invitation_copy.put("fid",story.getFid());
+				System.out.println("tag-->>>>>"+invitation_copy.toString());
+				String responseData = HttpUtil.sendPost(url+"bbsapinew/fd_editthread.php", invitation_copy);
+				JSONObject responseJson = JSONObject.fromObject(responseData);
+				JSONObject rspInfo = responseJson.getJSONObject("rspInfo");
+				if(rspInfo.getInt("rspCode") == 1000){
+					json.put("status","success");
+					System.out.println("update story-->>>>success");
+					return Response.status(Response.Status.OK).entity(json).build();
+				}else{
+					json.put("status", rspInfo.getString("rspType"));
+					json.put("code", rspInfo.getString("rspCode"));
+					json.put("error_message", rspInfo.getString("rspDesc"));
+					return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
+				}
+			}else{
+				json.put("status","success");
+				return Response.status(Response.Status.OK).entity(json).build();
+			}
+		}else{
+			json.put("status", "invalid_request");
+			json.put("code", 10010);
+			json.put("error_message", "Invalid payload parameters");
+			return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
+		}
+	}
+	
+	
+	
 
 }

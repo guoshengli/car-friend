@@ -34,6 +34,7 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.logging.Log;
@@ -49,10 +50,12 @@ import com.revolution.rest.ApiHttpClient;
 import com.revolution.rest.common.EncryptionUtil;
 import com.revolution.rest.common.ParseFile;
 import com.revolution.rest.common.PushNotificationUtil;
+import com.revolution.rest.dao.ChatDao;
 import com.revolution.rest.dao.CollectionDao;
 import com.revolution.rest.dao.CollectionStoryDao;
 import com.revolution.rest.dao.CommentDao;
 import com.revolution.rest.dao.ConfigurationDao;
+import com.revolution.rest.dao.ConversionDao;
 import com.revolution.rest.dao.CoverPageDao;
 import com.revolution.rest.dao.FeatureCollectionDao;
 import com.revolution.rest.dao.FeatureUserDao;
@@ -68,11 +71,13 @@ import com.revolution.rest.dao.StoryDao;
 import com.revolution.rest.dao.TimelineDao;
 import com.revolution.rest.dao.UserCollectionDao;
 import com.revolution.rest.dao.UserDao;
+import com.revolution.rest.model.Chat;
 import com.revolution.rest.model.Collection;
 import com.revolution.rest.model.CollectionStory;
 import com.revolution.rest.model.Columns;
 import com.revolution.rest.model.Comment;
 import com.revolution.rest.model.Configuration;
+import com.revolution.rest.model.Conversion;
 import com.revolution.rest.model.Cover_page;
 import com.revolution.rest.model.FeatureCollection;
 import com.revolution.rest.model.FeatureUser;
@@ -164,6 +169,8 @@ public class UserServiceImpl implements UserService {
 
 	@Autowired
 	private CommentDao commentDao;
+	
+	
 
 	@Autowired
 	private LinkAccountsDao linkAccountsDao;
@@ -195,6 +202,12 @@ public class UserServiceImpl implements UserService {
 	
 	@Autowired
 	private UserCollectionDao userCollectionDao;
+	
+	@Autowired
+	private ChatDao chatDao;
+	
+	@Autowired
+	private ConversionDao conversionDao;
 
 	public Response create(JSONObject user,String appVersion) {
 		User u = new User();
@@ -517,6 +530,11 @@ public class UserServiceImpl implements UserService {
 		String token = EncryptionUtil.hashMessage(raw);
 		json.put("access_token", token);
 		json.put("token_timestamp", u.getCreated_time());
+		json.put("username",u.getUsername());
+		String avatarImage = u.getAvatarImage();
+		if(!Strings.isNullOrEmpty(avatarImage)){
+			json.put("avatar_image",JSONObject.fromObject(avatarImage));
+		}
 		return Response.status(Response.Status.CREATED).entity(json).build();
 	}
 
@@ -526,8 +544,13 @@ public class UserServiceImpl implements UserService {
 		/**
 		 * 版本控制
 		 */
+		boolean flagVersion = false;
+		if(!Strings.isNullOrEmpty(appVersion)){
+			flagVersion = isAvailableVersion(appVersion);
+		}else{
+			flagVersion = true;
+		}
 		
-		boolean flagVersion = isAvailableVersion(appVersion);
 		
 		User user = null;
 		String website = null;
@@ -755,9 +778,7 @@ public class UserServiceImpl implements UserService {
 							JSONObject image = JSONObject.fromObject(cp.getImage());
 							cpm = new CoverPageModel();
 							cpm.setName(image.getString("name"));
-							cpm.setFocalpoint(image.getString("focalpoint"));
 							cpm.setOriginal_size(image.getString("original_size"));
-							cpm.setZoom(image.getString("zoom"));
 							cpmList.add(cpm);
 						}
 					}
@@ -1126,8 +1147,13 @@ public class UserServiceImpl implements UserService {
 			String token = EncryptionUtil.hashMessage(raw);
 
 			System.out.println("userId--->" + user.getId());
+			String avatarImage = user.getAvatarImage();
+			if(!Strings.isNullOrEmpty(avatarImage)){
+				auth.put("avatar_image",JSONObject.fromObject(avatarImage));
+			}
 			auth.put("userid", user.getId());
 			auth.put("access_token", token);
+			auth.put("username", user.getUsername());
 			auth.put("token_timestamp", Long.valueOf(Long.parseLong(timestamp)));
 		} else if ((!Strings.isNullOrEmpty(phone)) && (!Strings.isNullOrEmpty(zone))) {
 			if (Strings.isNullOrEmpty(password)) {
@@ -1151,9 +1177,9 @@ public class UserServiceImpl implements UserService {
 					return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
 				}
 			} else {
-				jo.put("status", "invalid_email");
-				jo.put("code", Integer.valueOf(10006));
-				jo.put("error_message", "Email doesn't exist");
+				jo.put("status", "invalid_phone");
+				jo.put("code", Integer.valueOf(10096));
+				jo.put("error_message", "Phone doesn't exist");
 				return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
 			}
 
@@ -1161,8 +1187,13 @@ public class UserServiceImpl implements UserService {
 			String token = EncryptionUtil.hashMessage(raw);
 
 			System.out.println("userId--->" + user.getId());
+			String avatarImage = user.getAvatarImage();
+			if(!Strings.isNullOrEmpty(avatarImage)){
+				auth.put("avatar_image",JSONObject.fromObject(avatarImage));
+			}
 			auth.put("userid", user.getId());
 			auth.put("access_token", token);
+			auth.put("username", user.getUsername());
 			auth.put("token_timestamp", Long.valueOf(Long.parseLong(timestamp)));
 		}
 
@@ -1735,6 +1766,7 @@ public class UserServiceImpl implements UserService {
 				conf.setRecommended_my_story_push(configuration.isRecommended_my_story_push());
 				conf.setReposted_my_story_push(configuration.isReposted_my_story_push());
 				conf.setNew_admin_push(configuration.isNew_admin_push());
+				conf.setRecommended_my_story_slide_push(configuration.isRecommended_my_story_slide_push());
 				
 				this.configurationDao.update(conf);
 				JSONObject jo = new JSONObject();
@@ -1767,7 +1799,7 @@ public class UserServiceImpl implements UserService {
 		JSONObject jo = new JSONObject();
 		jo.put("status", "no_data");
 		jo.put("code", Integer.valueOf(10020));
-		jo.put("error_message", "no logged in");
+		jo.put("error_message", "no logined in");
 		log.info("$$$$$$$$$$$$$$$$$$$$$$$$$$info$$$");
 		return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
 	}
@@ -3932,10 +3964,17 @@ public class UserServiceImpl implements UserService {
 		Object[] link = null;
 		if (la != null) {
 			String uuid = la.getUuid();
-			link = this.linkAccountsDao.getLinkAccountsByUUID(uuid);
+			String service = la.getService();
+			link = this.linkAccountsDao.getLinkAccountsByUUIDAndService(uuid,service);
 			
 			if (link != null) {
 				User user = (User)link[1];
+				LinkAccounts linkAccount = (LinkAccounts)link[0];
+				if(!la.getAuth_token().equals(linkAccount.getAuth_token()) 
+						&& la.getAuth_token() !=linkAccount.getAuth_token()){
+					linkAccount.setAuth_token(la.getAuth_token());
+					linkAccountsDao.update(linkAccount);
+				}
 				String raw = user.getId() + user.getPassword() + user.getCreated_time();
 				String token = EncryptionUtil.hashMessage(raw);
 
@@ -4614,8 +4653,7 @@ public class UserServiceImpl implements UserService {
 
 			if (conn.getResponseCode() == HttpURLConnection.HTTP_OK) {
 				String result = parsRtn(conn.getInputStream());
-				String str1 = result;
-				return str1;
+				return result;
 			}
 			System.out.println(conn.getResponseCode() + " " + conn.getResponseMessage());
 		} catch (Exception e) {
@@ -4645,10 +4683,12 @@ public class UserServiceImpl implements UserService {
 
 	public Response getUserByUserName(HttpServletRequest request, Long loginUserid) {
 		String username = request.getParameter("user_name");
+		System.out.println("username--->>>>>>>>>>>>>>>>>>"+username);
 		String website = null;
 		if (!Strings.isNullOrEmpty(username)) {
 			try {
-				username = new String(username.getBytes("iso-8859-1"), "utf-8");
+				username = new String(username.getBytes("utf-8"), "utf-8");
+				System.out.println("username--->>>>>>>>>>>>>>>>>>"+username);
 			} catch (UnsupportedEncodingException e) {
 				e.printStackTrace();
 			}
@@ -4932,7 +4972,8 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	public JSONObject getTimelinesBySlides(Long loginUserid, HttpServletRequest request,String appVersion) {
+	public JSONObject getTimelinesBySlides(Long loginUserid, HttpServletRequest request,HttpServletResponse response,String appVersion) {
+		
 		log.debug("*** Get Home Timeline of the Authenticated User ***");
 		String countStr = request.getParameter("count");
 		String sinceIdStr = request.getParameter("since_id");
@@ -7528,37 +7569,42 @@ public class UserServiceImpl implements UserService {
 		JSONObject v = ParseFile.parseJson(path1);
 		String version = v.getString("version");
 		boolean flag = false;
-		if(!Strings.isNullOrEmpty(version)){
-			String[] vArr = version.split("\\.");
-			String[] vaArr = appVersion.split("\\.");
-			if(version.equals(appVersion)){
-				flag = false;
-			}else{
-				if(!vArr[0].equals(vaArr[0])){
-					if(Integer.parseInt(vArr[0]) > Integer.parseInt(vaArr[0])){
-						flag = false;
-					}else{
-						flag = true;
-					}
+		if(!Strings.isNullOrEmpty(appVersion)){
+			if(!Strings.isNullOrEmpty(version)){
+				String[] vArr = version.split("\\.");
+				String[] vaArr = appVersion.split("\\.");
+				if(version.equals(appVersion)){
+					flag = false;
 				}else{
-					if(!vArr[1].equals(vaArr[1])){
-						if(Integer.parseInt(vArr[1]) > Integer.parseInt(vaArr[1])){
+					if(!vArr[0].equals(vaArr[0])){
+						if(Integer.parseInt(vArr[0]) > Integer.parseInt(vaArr[0])){
 							flag = false;
 						}else{
 							flag = true;
 						}
 					}else{
-						if(!vArr[2].equals(vaArr[2])){
-							if(Integer.parseInt(vArr[2]) > Integer.parseInt(vaArr[2])){
+						if(!vArr[1].equals(vaArr[1])){
+							if(Integer.parseInt(vArr[1]) > Integer.parseInt(vaArr[1])){
 								flag = false;
 							}else{
 								flag = true;
+							}
+						}else{
+							if(!vArr[2].equals(vaArr[2])){
+								if(Integer.parseInt(vArr[2]) > Integer.parseInt(vaArr[2])){
+									flag = false;
+								}else{
+									flag = true;
+								}
 							}
 						}
 					}
 				}
 			}
+		}else{
+			flag = true;
 		}
+		
 		
 		
 		int count = 20;
@@ -7978,6 +8024,180 @@ public class UserServiceImpl implements UserService {
 		}
 		
 		return flagVersion;
+	}
+
+	 
+    
+   
+	@Override
+	public Response getAuthCode(JSONObject jsonObject)throws Exception {
+		JSONObject jo = new JSONObject();
+		if(jsonObject != null){
+			String phone = jsonObject.getString("phone");
+			User user = userDao.getUserByPhoneAndZone("86",phone);
+			if(user != null){
+				
+				jo.put("status", "phone_exists");
+				jo.put("code", Integer.valueOf(10094));
+				jo.put("error_message", "Phone already used");
+				return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+			}else{
+				String appkey = "appkey=154468ccc7b01";
+				String params = appkey + "&phone="+phone+"&&zone=86"; 
+				String result = requestData("https://web.sms.mob.com/sms/sendmsg",
+						params);
+				return Response.status(Response.Status.OK).entity(result).build();
+			}
+			
+		}else{
+			jo.put("status", "request_invalid");
+			jo.put("code", Integer.valueOf(10010));
+			jo.put("error_message", "request is invalid");
+			return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+		}
+		
+	}
+
+	@Override
+	public Response privateChat(JSONObject chat,Long loginUserid) throws Exception {
+		String path = getClass().getResource("/../../META-INF/getui.json").getPath();
+		JSONObject jsonObject = ParseFile.parseJson(path);
+		String appId = jsonObject.getString("appId");
+		String appKey = jsonObject.getString("appKey");
+		String masterSecret = jsonObject.getString("masterSecret");
+		JSONObject jo = new JSONObject();
+		if(chat != null && loginUserid > 0){
+			Chat chatInfo = new Chat();
+			if(chat.containsKey("content") || chat.containsKey("picture")){
+				if(chat.containsKey("content") && 
+						!Strings.isNullOrEmpty(chat.getString("content"))){
+					chatInfo.setContent(chat.getString("content"));
+				}
+				
+				if(chat.containsKey("picture") && 
+						!Strings.isNullOrEmpty(chat.getString("picture"))){
+					chatInfo.setPicture(chat.getString("picture"));
+				}
+				
+			}
+			Long target_user_id = chat.getLong("target_user_id");
+			chatInfo.setTarget_user_id(target_user_id);
+			chatInfo.setCurrent_user_id(loginUserid);
+			List<Chat> cList = chatDao.getAllChat(target_user_id, loginUserid);
+			if(cList.size() == 0){
+				User target_user = userDao.get(target_user_id);
+				User current_user = userDao.get(loginUserid);
+				Conversion c = new Conversion();
+				/*if(!target_user.getUser_type().equals("admin") 
+						&& !target_user.getUser_type().equals("official")){
+					c.setTarget_user_id(target_user_id);
+				}else if(!current_user.getUser_type().equals("admin") 
+						&& !current_user.getUser_type().equals("official")){
+					c.setTarget_user_id(loginUserid);
+				}*/
+				
+				if(target_user.getUser_type().equals("normal")){
+					c.setTarget_user_id(target_user_id);
+				}else if(current_user.getUser_type().equals("normal")){
+					c.setTarget_user_id(loginUserid);
+				}
+				conversionDao.save(c);
+				chatInfo.setConversion(c);
+			}else{
+				Chat chat1 = cList.get(0);
+				chatInfo.setConversion(chat1.getConversion());
+			}
+			
+			chatDao.save(chatInfo);
+			
+			User user = userDao.get(loginUserid);
+			/*Notification n = new Notification();
+			n.setRecipientId(chat.getLong("target_user_id"));
+			n.setSenderId(loginUserid);
+			n.setNotificationType(7);
+			n.setObjectType(3);
+			n.setObjectId(chat.getLong("target_user_id"));
+			n.setStatus("enabled");
+			n.setRead_already(true);
+			notificationDao.save(n);*/
+			List<PushNotification> list = this.pushNotificationDao
+					.getPushNotificationByUserid(chatInfo.getTarget_user_id());
+			try {
+				String content = user.getUsername() + ": ";
+				if(chat.containsKey("content") || chat.containsKey("picture")){
+					if(chat.containsKey("content") && 
+							!Strings.isNullOrEmpty(chat.getString("content"))){
+						content = content + chat.getString("content");
+					}
+					
+					if(chat.containsKey("picture") && 
+							!Strings.isNullOrEmpty(chat.getString("picture"))){
+						content = content + "[图片]";
+					}
+					
+				}
+				
+				
+				JSONObject json = new JSONObject();
+				json.put("url","privatechat");
+				PushNotificationUtil.pushInfo(appId, appKey, masterSecret, list, 1, content, json.toString());
+			} catch (Exception e) {
+				jo.put("status", "request_invalid");
+				jo.put("code", Integer.valueOf(10010));
+				jo.put("error_message", "request is invalid");
+				return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+			}
+			jo.put("status","success");
+			return Response.status(Response.Status.OK).entity(jo).build();
+			
+		}else{
+			jo.put("status", "request_invalid");
+			jo.put("code", Integer.valueOf(10010));
+			jo.put("error_message", "request is invalid");
+			return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+		}
+	}
+
+	@Override
+	public Response getAllChat(Long userId, Long loginUserid) {
+		JSONObject jo = new JSONObject();
+		if(userId != null && loginUserid != null){
+			List<Chat> cList = chatDao.getAllChat(userId, loginUserid);
+			List<JSONObject> chatList = new ArrayList<JSONObject>();
+			JSONObject cJson = null;
+			if(cList != null && cList.size() > 0){
+				for(Chat c:cList){
+					cJson = new JSONObject();
+					if(!Strings.isNullOrEmpty(c.getContent())){
+						cJson.put("content",c.getContent());
+					}
+					
+					if(!Strings.isNullOrEmpty(c.getPicture())){
+						cJson.put("picture", c.getPicture());
+					}
+					Long current_id = c.getCurrent_user_id(); 
+					if(loginUserid != current_id && !loginUserid.equals(current_id)){
+						User user = userDao.get(c.getCurrent_user_id());
+						JSONObject targetUser = new JSONObject();
+						targetUser.put("id",user.getId());
+						targetUser.put("username",user.getUsername());
+						targetUser.put("avatar_image",JSONObject.fromObject(user.getAvatarImage()));
+						cJson.put("target_user",targetUser);
+					}
+					
+					cJson.put("create_time",c.getCreate_time());
+					chatList.add(cJson);
+				}
+			}
+			System.out.println("------------->>>>>>>>>>"+chatList.toString());
+			
+			return Response.status(Response.Status.OK).entity(chatList).build();
+		}else{
+			jo.put("status", "request_invalid");
+			jo.put("code", Integer.valueOf(10010));
+			jo.put("error_message", "request is invalid");
+			return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+		}
 	}
 	
 }

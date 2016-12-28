@@ -380,7 +380,7 @@ public class CollectionStoryDaoImpl extends BaseDaoImpl<CollectionStory, Long>im
 	@Override
 	public List<Story> getStoriesByCollectionIdAndRecommand(Long collectionId, int count,String type) {
 		String hql = "select cs.story from CollectionStory cs where cs.collection.id = ? and cs.story.status=? "
-				+ "and cs.story.recommendation = true order by cs.story.recommend_date desc";
+				+ "and cs.story.recommendation = true order by cs.create_time desc";
 		Session session = getSessionFactory().getCurrentSession();
 		Query query = session.createQuery(hql);
 		query.setLong(0,collectionId);
@@ -401,8 +401,8 @@ public class CollectionStoryDaoImpl extends BaseDaoImpl<CollectionStory, Long>im
 			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 			String create_time = sdf.format(story.getRecommend_date());
 			if(identify == 1){
-				hql = "select cs.story from CollectionStory cs where cs.collection.id = ? and cs.story.id != ? and cs.story.recommend_date <= ? cs.story.status=? "
-						+ "and cs.story.recommendation = true order by cs.story.recommend_date desc";
+				hql = "select cs.story from CollectionStory cs where cs.collection.id = ? and cs.story.id != ? and cs.story.recommend_date <= ? and cs.story.status=? "
+						+ "and cs.story.recommendation = true order by cs.create_time desc";
 				Query query = session.createQuery(hql);
 				query.setLong(0,collectionId);
 				query.setLong(1,storyId);
@@ -411,8 +411,8 @@ public class CollectionStoryDaoImpl extends BaseDaoImpl<CollectionStory, Long>im
 				query.setMaxResults(count);
 				storyList = query.list();
 			}else if(identify == 2){
-				hql = "select cs.story from CollectionStory cs where cs.collection.id = ? and cs.story.id != ? and cs.story.recommend_date <= ? cs.story.status=? "
-						+ "and cs.story.recommendation = true order by cs.story.recommend_date desc";
+				hql = "select cs.story from CollectionStory cs where cs.collection.id = ? and cs.story.id != ? and cs.story.recommend_date <= ? and cs.story.status=? "
+						+ "and cs.story.recommendation = true order by cs.create_time desc";
 				Query query = session.createQuery(hql);
 				query.setLong(0,collectionId);
 				query.setLong(1,storyId);
@@ -450,7 +450,7 @@ public class CollectionStoryDaoImpl extends BaseDaoImpl<CollectionStory, Long>im
 			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 			String create_time = sdf.format(story.getLast_comment_date());
 			if(identify == 1){
-				hql = "select cs.story from CollectionStory cs where cs.collection.id = ? and cs.story.id != ? and cs.story.last_comment_date <= ? cs.story.status=? "
+				hql = "select cs.story from CollectionStory cs where cs.collection.id = ? and cs.story.id != ? and cs.story.last_comment_date <= ? and cs.story.status=? "
 						+ " order by cs.story.last_comment_date desc";
 				Query query = session.createQuery(hql);
 				query.setLong(0,collectionId);
@@ -460,7 +460,7 @@ public class CollectionStoryDaoImpl extends BaseDaoImpl<CollectionStory, Long>im
 				query.setMaxResults(count);
 				storyList = query.list();
 			}else if(identify == 2){
-				hql = "select cs.story from CollectionStory cs where cs.collection.id = ? and cs.story.id != ? and cs.story.last_comment_date <= ? cs.story.status=? "
+				hql = "select cs.story from CollectionStory cs where cs.collection.id = ? and cs.story.id != ? and cs.story.last_comment_date <= ? and cs.story.status=? "
 						+ " order by cs.story.last_comment_date desc";
 				Query query = session.createQuery(hql);
 				query.setLong(0,collectionId);
@@ -490,6 +490,21 @@ public class CollectionStoryDaoImpl extends BaseDaoImpl<CollectionStory, Long>im
 		query.setLong(0,storyId);
 		List<CollectionStory> csList = query.list();
 		return csList;
+	}
+
+	@Override
+	public int getStoriesByCount(Long collectionId) {
+		String hql = "select cs.story from CollectionStory cs where cs.collection.id=? and cs.story.status=?";
+		Session session = getSessionFactory().getCurrentSession();
+		Query query = session.createQuery(hql);
+		query.setLong(0, collectionId.longValue());
+		query.setString(1, "publish");
+		int count = 0;
+		List<Story> storyList = query.list();
+		if(storyList != null && storyList.size() > 0){
+			count = storyList.size();
+		}
+		return count;
 	}
 	
 }

@@ -9,6 +9,7 @@
    private String content;
    private Long story_id;
    private Long target_user_id;
+   private Object comment_image;
  
    public String getContent()
    {
@@ -34,5 +35,15 @@
    public void setTarget_user_id(Long target_user_id) {
      this.target_user_id = target_user_id;
    }
+
+public Object getComment_image() {
+	return comment_image;
+}
+
+public void setComment_image(String comment_image) {
+	this.comment_image = comment_image;
+}
+   
+   
  }
 

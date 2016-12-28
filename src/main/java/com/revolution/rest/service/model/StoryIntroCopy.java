@@ -10,7 +10,6 @@
 	private static final long serialVersionUID = 8366273089642555311L;
 	private Long id;
    private String title;
-   private String subtitle;
    private Long collectionId;
    private JSONObject cover_media;
    private String summary;
@@ -33,14 +32,6 @@
  
    public void setTitle(String title) {
      this.title = title;
-   }
- 
-   public String getSubtitle() {
-     return this.subtitle;
-   }
- 
-   public void setSubtitle(String subtitle) {
-     this.subtitle = subtitle;
    }
  
    public Long getCollectionId() {

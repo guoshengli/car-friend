@@ -32,10 +32,17 @@ public class ClientRequestFilter extends OncePerRequestFilter implements Filter 
 		String requestURI = request.getRequestURI();
 		log.debug("Applying access filter...");
 		log.info("REQUEST URI: " + requestURI);
-
+		response.addHeader("Access-Control-Allow-Origin", "*");
+		response.addHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE, PUT");
+		response.setHeader("Access-Control-Allow-Headers",
+				 "authorization, content-type, x-tella-request-appversion, x-tella-request-provider, x-tella-request-timestamp, x-tella-request-token, x-tella-request-userid");
 		String uri = request.getRequestURI();
 		String regex = "[0-9]+";
+		String method = request.getMethod();
+		
+		
 		if ((uri.equals("/revolution-fashion/v1/users/appsignup")) 
+				|| (uri.equals("/revolution-fashion/v1/users/auth_code"))
 				|| (uri.equals("/revolution-fashion/v1/users/signup"))
 				|| (uri.equals("/revolution-fashion/v1/basic_params"))
 				||	(uri.equals("/revolution-fashion/v1/users/test"))
@@ -54,6 +61,7 @@ public class ClientRequestFilter extends OncePerRequestFilter implements Filter 
 				|| (uri.contains("/revolution-fashion/v1/users/timesquare_slides"))
 				|| (uri.matches("/revolution-fashion/v1/stories/"+regex))
 				|| (uri.matches("/revolution-fashion/v1/stories/"+regex+"/comments/count"))
+				|| (uri.matches("/revolution-fashion/v1/stories/"+regex+"/comments/"+regex))
 				|| (uri.matches("/revolution-fashion/v1/users/"+regex+"/following"))
 				|| (uri.matches("/revolution-fashion/v1/users/"+regex+"/followers"))
 				|| (uri.matches("/revolution-fashion/v1/users/"+regex+"/profile_stories"))
@@ -64,88 +72,83 @@ public class ClientRequestFilter extends OncePerRequestFilter implements Filter 
 				||(uri.equals("/revolution-fashion/v1/admin/exception"))
 				||(uri.equals("/revolution-fashion/v1/index"))) {
 			log.info(String.format(String.format("[**No Auth**] Request uri:", new Object[] { uri }), new Object[0]));
-
+			
 			filterChain.doFilter(request, response);
 		} else {
-			String userId = request.getHeader("X-Tella-Request-Userid") != null
-					? request.getHeader("X-Tella-Request-Userid") : "";
-			String timestamp = request.getHeader("X-Tella-Request-Timestamp") != null
-					? request.getHeader("X-Tella-Request-Timestamp") : "";
-			String token = request.getHeader("X-Tella-Request-Token") != null
-					? request.getHeader("X-Tella-Request-Token") : "";
-			String appVersion = request.getHeader("X-Tella-Request-AppVersion") != null
-							? request.getHeader("X-Tella-Request-AppVersion") : "";
-			if ((Strings.isNullOrEmpty(userId)) || (Strings.isNullOrEmpty(timestamp))
-					|| (Strings.isNullOrEmpty(token))) {
-				log.error(String.format("[**Auth Failure**] Missing params: userId:%s timestamp:%s token:%s",
-						new Object[] { userId, timestamp, token }));
-
-				String url = request.getServletContext().getContextPath() + "/v1/users/error/noData";
-				response.sendRedirect(url);
-				log.debug("*** no auth /v1/users/error/noData ****");
-				return;
-			}
-			User user = null;
-			if (!Strings.isNullOrEmpty(userId)) {
-				user = (User) this.userDao.get(Long.parseLong(userId));
-			}
-
-			if (user == null) {
-				log.error(String.format("[**Auth Failure**] invalid userId:%s timestamp:%s token:%s",
-						new Object[] { userId, timestamp, token }));
-				String url = getServletContext().getContextPath() + "/v1/users/error/noUser";
-				response.sendRedirect(url);
-				log.debug("*** no User /v1/users/error/noData ****");
-				return;
-			}
-			if ((!user.getUser_type().equals("admin")) && (!user.getUser_type().equals("super_admin"))
-					&& (uri.contains("/revolution-fashion/v1/admin"))) {
-				String url = getServletContext().getContextPath() + "/v1/users/error/noAuthority";
-				response.sendRedirect(url);
-				log.debug("*** no token /v1/users/error/noData ****");
-				return;
-			}
-			
-
-			String raw = user.getId() + user.getPassword() + timestamp;
-			String generatedToken = EncryptionUtil.hashMessage(raw);
-			log.debug("[**Debug Info**] raw: " + raw);
-			log.debug("[**Debug Info**] server calculated hash is: " + generatedToken);
-			log.debug("[**Debug Info**] provided hash is: " + token);
-
-			if (!token.equals(generatedToken)) {
-				log.error(String.format("[**Auth Failure**] invalid token for userId:%s timestamp:%s token:%s",
-						new Object[] { userId, timestamp, token }));
-				String url = getServletContext().getContextPath() + "/v1/users/error/invalid_token";
-				response.sendRedirect(url);
-				log.debug("*** no token /v1/users/error/noData ****");
-				return;
-			}
-			
-			
-			if(Strings.isNullOrEmpty(appVersion)){
+			if (request.getHeader("Access-Control-Request-Method") != null 
+					&& "OPTIONS".equals(method)) {
 				filterChain.doFilter(request, response);
-			}else{
-				String path = getClass().getResource("/../../META-INF/version.json").getPath();
-				JSONObject v = ParseFile.parseJson(path);
-				String version = v.getString("version");
-				if(!Strings.isNullOrEmpty(version)){
-					String[] vArr = version.split("\\.");
-					String[] vaArr = appVersion.split("\\.");
-					if(version.equals(appVersion)){
-						filterChain.doFilter(request, response);
-					}else{
-						if(!vArr[0].equals(vaArr[0])){
-							if(Integer.parseInt(vArr[0]) > Integer.parseInt(vaArr[0])){
-								String url = getServletContext().getContextPath() + "/v1/users/error/invalid_version";
-								response.sendRedirect(url);
-								return;
-							}else{
-								filterChain.doFilter(request, response);
-							}
+	        }else{
+	        	String userId = request.getHeader("X-Tella-Request-Userid") != null
+						? request.getHeader("X-Tella-Request-Userid") : "";
+				String timestamp = request.getHeader("X-Tella-Request-Timestamp") != null
+						? request.getHeader("X-Tella-Request-Timestamp") : "";
+				String token = request.getHeader("X-Tella-Request-Token") != null
+						? request.getHeader("X-Tella-Request-Token") : "";
+				String appVersion = request.getHeader("X-Tella-Request-AppVersion") != null
+								? request.getHeader("X-Tella-Request-AppVersion") : "";
+				if ((Strings.isNullOrEmpty(userId)) || (Strings.isNullOrEmpty(timestamp))
+						|| (Strings.isNullOrEmpty(token))) {
+					log.error(String.format("[**Auth Failure**] Missing params: userId:%s timestamp:%s token:%s",
+							new Object[] { userId, timestamp, token }));
+
+					String url = request.getServletContext().getContextPath() + "/v1/users/error/noData";
+					response.sendRedirect(url);
+					log.debug("*** no auth /v1/users/error/noData ****");
+					return;
+				}
+				User user = null;
+				if (!Strings.isNullOrEmpty(userId)) {
+					user = (User) this.userDao.get(Long.parseLong(userId));
+				}
+
+				if (user == null) {
+					log.error(String.format("[**Auth Failure**] invalid userId:%s timestamp:%s token:%s",
+							new Object[] { userId, timestamp, token }));
+					String url = getServletContext().getContextPath() + "/v1/users/error/noUser";
+					response.sendRedirect(url);
+					log.debug("*** no User /v1/users/error/noData ****");
+					return;
+				}
+				if ((!user.getUser_type().equals("admin")) && (!user.getUser_type().equals("super_admin"))
+						&& (!user.getUser_type().equals("official"))	&& (uri.contains("/revolution-fashion/v1/admin"))) {
+					String url = getServletContext().getContextPath() + "/v1/users/error/noAuthority";
+					response.sendRedirect(url);
+					log.debug("*** no token /v1/users/error/noData ****");
+					return;
+				}
+				
+
+				String raw = user.getId() + user.getPassword() + timestamp;
+				String generatedToken = EncryptionUtil.hashMessage(raw);
+				log.debug("[**Debug Info**] raw: " + raw);
+				log.debug("[**Debug Info**] server calculated hash is: " + generatedToken);
+				log.debug("[**Debug Info**] provided hash is: " + token);
+
+				if (!token.equals(generatedToken)) {
+					log.error(String.format("[**Auth Failure**] invalid token for userId:%s timestamp:%s token:%s",
+							new Object[] { userId, timestamp, token }));
+					String url = getServletContext().getContextPath() + "/v1/users/error/invalid_token";
+					response.sendRedirect(url);
+					log.debug("*** no token /v1/users/error/noData ****");
+					return;
+				}
+				
+				
+				if(Strings.isNullOrEmpty(appVersion)){
+					filterChain.doFilter(request, response);
+				}else{
+					String path = getClass().getResource("/../../META-INF/version.json").getPath();
+					JSONObject v = ParseFile.parseJson(path);
+					String version = v.getString("version");
+					if(!Strings.isNullOrEmpty(version)){
+						String[] vArr = version.split("\\.");
+						String[] vaArr = appVersion.split("\\.");
+						if(version.equals(appVersion)){
+							filterChain.doFilter(request, response);
 						}else{
-							if(!vArr[1].equals(vaArr[1])){
-								if(Integer.parseInt(vArr[1]) > Integer.parseInt(vaArr[1])){
+							if(!vArr[0].equals(vaArr[0])){
+								if(Integer.parseInt(vArr[0]) > Integer.parseInt(vaArr[0])){
 									String url = getServletContext().getContextPath() + "/v1/users/error/invalid_version";
 									response.sendRedirect(url);
 									return;
@@ -153,21 +156,32 @@ public class ClientRequestFilter extends OncePerRequestFilter implements Filter 
 									filterChain.doFilter(request, response);
 								}
 							}else{
-								if(!vArr[2].equals(vaArr[2])){
-									if(Integer.parseInt(vArr[2]) > Integer.parseInt(vaArr[2])){
+								if(!vArr[1].equals(vaArr[1])){
+									if(Integer.parseInt(vArr[1]) > Integer.parseInt(vaArr[1])){
 										String url = getServletContext().getContextPath() + "/v1/users/error/invalid_version";
 										response.sendRedirect(url);
 										return;
 									}else{
 										filterChain.doFilter(request, response);
 									}
+								}else{
+									if(!vArr[2].equals(vaArr[2])){
+										if(Integer.parseInt(vArr[2]) > Integer.parseInt(vaArr[2])){
+											String url = getServletContext().getContextPath() + "/v1/users/error/invalid_version";
+											response.sendRedirect(url);
+											return;
+										}else{
+											filterChain.doFilter(request, response);
+										}
+									}
 								}
 							}
 						}
 					}
+					
 				}
-				
-			}
+	        }
+			
 			
 		}
 	}

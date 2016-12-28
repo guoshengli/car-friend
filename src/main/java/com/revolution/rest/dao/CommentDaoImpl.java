@@ -180,4 +180,15 @@ public class CommentDaoImpl extends BaseDaoImpl<Comment, Long>implements Comment
 		}
 		return comment;
 	}
+
+	@Override
+	public List<Comment> getCommentByStoryIdAndRandom(Long storyId,int count) {
+		String hql = "from Comment c where c.story.id=? and c.status=? and c.target_comment_id is null and c.target_user_id is null group by c.user.id order by rand()";
+		Session session = getSessionFactory().getCurrentSession();
+		Query query = session.createQuery(hql);
+		query.setLong(0, storyId).setString(1, "enabled");
+		query.setMaxResults(count);
+		List<Comment> list = query.list();
+		return list;
+	}
 }

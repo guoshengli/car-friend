@@ -3,7 +3,6 @@ package com.revolution.rest.service.model;
 import java.io.Serializable;
 import java.util.List;
 
-import com.revolution.rest.model.Columns;
 
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
@@ -24,7 +23,7 @@ public class StoryLastModel implements Serializable {
 	private Object url;
 	private JSONObject author;
 	private List<JSONObject> comments;
-	private List<StoryIntro> recommendation;
+	private List<StoryIntros> recommendation;
 	private List<JSONObject> collection;
 	private int image_count;
 	private String summary;
@@ -137,11 +136,11 @@ public class StoryLastModel implements Serializable {
 		this.comments = comments;
 	}
 
-	public List<StoryIntro> getRecommendation() {
+	public List<StoryIntros> getRecommendation() {
 		return this.recommendation;
 	}
 
-	public void setRecommendation(List<StoryIntro> recommendation) {
+	public void setRecommendation(List<StoryIntros> recommendation) {
 		this.recommendation = recommendation;
 	}
 

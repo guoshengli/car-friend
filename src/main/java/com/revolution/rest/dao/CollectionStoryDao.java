@@ -64,5 +64,7 @@ public interface CollectionStoryDao extends BaseDao<CollectionStory, Long>
   public List<Story> getStoryByCollectionIds(String ids,int count);
   
   public List<Story> getStoryByCollectionIds(String ids,int count,Long storyId, int identifier);
+  
+  public int getStoriesByCount(Long collectionId);
 }
 

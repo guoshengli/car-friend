@@ -325,7 +325,6 @@ import org.hibernate.annotations.GenerationTime;
 	public void setCollection(Set<Collection> collection) {
 		this.collection = collection;
 	}
-	 
-	
+
 	   
  }

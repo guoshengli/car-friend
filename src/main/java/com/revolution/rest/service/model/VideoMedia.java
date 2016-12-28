@@ -9,7 +9,6 @@
  {
    private static final long serialVersionUID = -7233506673855725689L;
    private String name;
-   private String original_size;
  
    public String getName()
    {
@@ -18,14 +17,6 @@
  
    public void setName(String name) {
      this.name = name;
-   }
- 
-   public String getOriginal_size() {
-     return this.original_size;
-   }
- 
-   public void setOriginal_size(String original_size) {
-     this.original_size = original_size;
    }
  
    

@@ -81,6 +81,15 @@ import com.revolution.rest.service.model.CoverMedia;
    @Column(name="last_comment_date")
    private Date last_comment_date;
    
+   @Column(name="tid")
+   private Long tid;
+   
+   @Column(name="pid")
+   private Long pid;
+   
+   @Column(name="fid")
+   private Long fid;
+   
  
    @OneToMany(mappedBy="storyinfo", cascade={javax.persistence.CascadeType.ALL}, fetch=FetchType.LAZY)
    private List<StoryElement> elements = new ArrayList<StoryElement>();
@@ -317,6 +326,30 @@ import com.revolution.rest.service.model.CoverMedia;
 
 	public void setColumns(Set<Columns> columns) {
 		this.columns = columns;
+	}
+
+	public Long getTid() {
+		return tid;
+	}
+
+	public void setTid(Long tid) {
+		this.tid = tid;
+	}
+
+	public Long getPid() {
+		return pid;
+	}
+
+	public void setPid(Long pid) {
+		this.pid = pid;
+	}
+
+	public Long getFid() {
+		return fid;
+	}
+
+	public void setFid(Long fid) {
+		this.fid = fid;
 	}
 
 	

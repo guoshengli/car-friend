@@ -3,6 +3,7 @@ package com.revolution.rest.service;
 import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -155,7 +156,7 @@ public abstract interface UserService
 
   @Path("/homepage_slides")
   @GET
-  public abstract JSONObject getTimelinesBySlides(@HeaderParam("X-Tella-Request-Userid") Long paramLong, @Context HttpServletRequest paramHttpServletRequest,@HeaderParam("X-Tella-Request-AppVersion") String appVersion);
+  public abstract JSONObject getTimelinesBySlides(@HeaderParam("X-Tella-Request-Userid") Long paramLong, @Context HttpServletRequest paramHttpServletRequest, @Context HttpServletResponse response,@HeaderParam("X-Tella-Request-AppVersion") String appVersion);
 
   @Path("/timesquare_slides")
   @GET
@@ -229,6 +230,18 @@ public abstract interface UserService
   @Path("/privatechatpush")
   @GET
   public void push_info(JSONObject jsonObject);
+  
+  @Path("/auth_code")
+  @POST
+  public Response getAuthCode(JSONObject jsonObject)throws Exception;
+  
+  @Path("/privatechat")
+  @POST
+  public Response privateChat(JSONObject chat,@HeaderParam("X-Tella-Request-Userid") Long loginUserid)throws Exception;
+  
+  @Path("/{userId}/privatechat")
+  @GET
+  public Response getAllChat(@PathParam("userId") Long userId,@HeaderParam("X-Tella-Request-Userid") Long loginUserid);
   
 }
 

@@ -32,7 +32,7 @@ public class NotificationDaoImpl extends BaseDaoImpl<Notification, Long>implemen
 	}
 
 	public List<Notification> getNotifications(Long userId,int count) {
-		String hql = "from Notification where recipientId=? and notificationType in (1,2,3,5,6,7,8,15) and status='enabled' order by create_at desc";
+		String hql = "from Notification where recipientId=? and notificationType in (1,2,3,5,6,7,8,15,16) and status='enabled' order by create_at desc";
 		Session session = getSessionFactory().getCurrentSession();
 		Query query = session.createQuery(hql).setLong(0, userId.longValue());
 		query.setMaxResults(count);
@@ -49,7 +49,7 @@ public class NotificationDaoImpl extends BaseDaoImpl<Notification, Long>implemen
 			Long createTime = Long.valueOf(notification.getCreate_at().longValue() * 1000L);
 			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 			String create_time = sdf.format(new Date(createTime.longValue()));
-			String hql = "from Notification where recipientId=? and notificationType in (1,2,3,5,6,7,8,15) and create_at <= ? and id != ? and status='enabled' order by create_at desc";
+			String hql = "from Notification where recipientId=? and notificationType in (1,2,3,5,6,7,8,15,16) and create_at <= ? and id != ? and status='enabled' order by create_at desc";
 			Query query = session.createQuery(hql).setLong(0,paramLong).setString(1,create_time).setLong(2, notification.getId());
 			query.setMaxResults(count);
 			list = query.list();
@@ -58,7 +58,7 @@ public class NotificationDaoImpl extends BaseDaoImpl<Notification, Long>implemen
 			Long createTime = Long.valueOf(notification.getCreate_at().longValue() * 1000L);
 			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 			String create_time = sdf.format(new Date(createTime.longValue()));
-			String hql = "from Notification where recipientId=? and notificationType in (1,2,3,5,6,7,8,15) and create_at >= ? and id != ? and status='enabled' order by create_at";
+			String hql = "from Notification where recipientId=? and notificationType in (1,2,3,5,6,7,8,15,16) and create_at >= ? and id != ? and status='enabled' order by create_at";
 			Query query = session.createQuery(hql).setLong(0,paramLong).setString(1,create_time).setLong(2, notification.getId());
 			query.setMaxResults(count);
 			list = query.list();

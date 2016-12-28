@@ -948,13 +948,8 @@ public class DiscoverServiceImpl implements DiscoverService {
 			collectionJ.put("followers_count", 0);
 		}
 		
-		Set<Story> sSet = c.getStories();
-		if(sSet != null && sSet.size() > 0){
-			collectionJ.put("story_count",sSet.size());
-		}else{
-			collectionJ.put("story_count",0);
-		}
-
+		int count = collectionStoryDao.getStoriesByCount(c.getId());
+		collectionJ.put("story_count",count);
 		return collectionJ;
 	}
 

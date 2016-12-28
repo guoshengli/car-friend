@@ -15,7 +15,7 @@ public class SlideDaoImpl extends BaseDaoImpl<Slide, Long>implements SlideDao {
 
 	public List<Slide> getSlideList() {
 		Session session = getSessionFactory().getCurrentSession();
-		String hql = "from Slide where group='homepage' and status = 'enabled' order by sequence desc";
+		String hql = "from Slide where group='homepage' and status = 'enabled' order by create_time desc";
 		List<Slide> list = session.createQuery(hql).setMaxResults(5).list();
 		return list;
 	}

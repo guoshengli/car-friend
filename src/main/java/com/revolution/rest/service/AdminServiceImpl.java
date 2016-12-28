@@ -32,6 +32,7 @@ import com.revolution.rest.dao.ColumnsDao;
 import com.revolution.rest.dao.ColumnsStoryDao;
 import com.revolution.rest.dao.CommentDao;
 import com.revolution.rest.dao.ConfigurationDao;
+import com.revolution.rest.dao.ConversionDao;
 import com.revolution.rest.dao.FeatureCollectionDao;
 import com.revolution.rest.dao.FeatureUserDao;
 import com.revolution.rest.dao.FeedbackDao;
@@ -79,6 +80,7 @@ import com.revolution.rest.service.model.FeedbackModel;
 import com.revolution.rest.service.model.ImageCover;
 import com.revolution.rest.service.model.ImageMedia;
 import com.revolution.rest.service.model.InterestModel;
+import com.revolution.rest.service.model.LineCover;
 import com.revolution.rest.service.model.LinkModel;
 import com.revolution.rest.service.model.LinkModels;
 import com.revolution.rest.service.model.LocationModel;
@@ -165,6 +167,9 @@ public class AdminServiceImpl implements AdminService {
 	
 	@Autowired
 	private ColumnsStoryDao columnsStoryDao;
+	
+	@Autowired
+	private ConversionDao conversionDao;
 
 	public Response reset(Long loginUserid) throws Exception {
 		log.debug("**reset start ****");
@@ -640,6 +645,12 @@ public class AdminServiceImpl implements AdminService {
 						element.setContent(linkModel);
 					}
 
+				} else if (types.equals("video")){
+					VideoCover videoMedia = (VideoCover) JSONObject.toBean(content, VideoCover.class);
+					element.setContent(videoMedia);
+				} else if (types.equals("line")){
+					LineCover lineMedia = (LineCover) JSONObject.toBean(content, LineCover.class);
+					element.setContent(lineMedia);
 				}
 				storyElements.add(element);
 			}
@@ -844,13 +855,11 @@ public class AdminServiceImpl implements AdminService {
 		Slide slideModel = new Slide();
 		String type = slide.getString("type");
 		JSONObject json = new JSONObject();
-		/*
-		 * String path =
-		 * getClass().getResource("/../../META-INF/getui.json").getPath();
-		 * JSONObject json1 = ParseFile.parseJson(path); String appId =
-		 * json1.getString("appId"); String appKey = json1.getString("appKey");
-		 * String masterSecret = json1.getString("masterSecret");
-		 */
+		String path = getClass().getResource("/../../META-INF/getui.json").getPath();
+		JSONObject json1 = ParseFile.parseJson(path); 
+		String appId = json1.getString("appId"); 
+		String appKey = json1.getString("appKey");
+		String masterSecret = json1.getString("masterSecret");
 		Configuration conf = null;
 		Story s = null;
 		List<PushNotification> pnList = new ArrayList<PushNotification>();
@@ -889,6 +898,33 @@ public class AdminServiceImpl implements AdminService {
 					for (PushNotification pn : pnList) {
 						int count = this.notificationDao.getNotificationByRecipientId(pn.getUserId());
 						map.put(pn.getClientId(), Integer.valueOf(count));
+					}
+				}
+				
+				Notification n = new Notification();
+				n.setRecipientId(s.getUser().getId());
+				n.setSenderId(loginUserid);
+				n.setNotificationType(16);//推荐到轮播图
+				n.setObjectType(1);
+				n.setObjectId(s.getId());
+				n.setStatus("enabled");
+				n.setRead_already(true);
+				notificationDao.save(n);
+				
+				conf = this.configurationDao.getConfByUserId(s.getUser().getId());
+				if (conf.isRecommended_my_story_slide_push()) {
+					int counts = 1;
+					List<PushNotification> list = this.pushNotificationDao
+							.getPushNotificationByUserid(s.getUser().getId());
+					try {
+						JSONObject j = new JSONObject();
+
+						String content = "您的故事被推荐到轮播图";
+						j.put("story_id", s.getId());
+
+						PushNotificationUtil.pushInfo(appId, appKey, masterSecret, list, counts, content, j.toString());
+					} catch (Exception e) {
+						e.printStackTrace();
 					}
 				}
 				/*
@@ -1287,7 +1323,7 @@ public class AdminServiceImpl implements AdminService {
 			story.setRecommendation(true);
 
 			this.storyDao.update(story);
-			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 			String date = sdf.format(new Date());
 			Date d = null;
 			try {
@@ -1344,6 +1380,20 @@ public class AdminServiceImpl implements AdminService {
 		json.put("code", Integer.valueOf(10010));
 		json.put("error_message", "Invalid payload parameters");
 		return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
+	}
+	
+	
+	@Override
+	public Response unrecommendStory(Long loginUserid, Long story_id, HttpServletRequest paramHttpServletRequest) {
+		JSONObject json = new JSONObject();
+		Timeline timeline = timelineDao.getTimelineByStoryIdAndType(story_id, "recommandation");
+		if(timeline != null){
+			timelineDao.delete(timeline.getId());
+		}
+		notificationDao.deleteNotificationByAction(story_id,loginUserid,1,7);
+		
+		json.put("status","success");
+		return Response.status(Response.Status.OK).entity(json).build();
 	}
 
 	public Response updateUserType(Long user_id, HttpServletRequest request) {
@@ -2293,11 +2343,17 @@ public class AdminServiceImpl implements AdminService {
 		JSONObject json = new JSONObject();
 		if((columnsId != null && columnsId > 0) 
 				&& (storyId != null && storyId > 0)){
-			ColumnsStory cStory = columnsStoryDao.getColumnsStoryByColumnsIdAndStoryId(columnsId,storyId);
+			//ColumnsStory cStory = columnsStoryDao.getColumnsStoryByColumnsIdAndStoryId(columnsId,storyId);
+			List<ColumnsStory> csList = columnsStoryDao.getColumnsStoryListByStoryId(storyId);
 			ColumnsStory cs = new ColumnsStory();
-			if(cStory != null){
-				Story story = cStory.getStory();
-				columnsStoryDao.delete(cStory.getId());
+			if(csList != null && csList.size() > 0){
+				String ids = "";
+				Story story = csList.get(0).getStory();
+				for(ColumnsStory cs_ids:csList){
+					ids += cs_ids.getId()+",";
+				}
+				ids = ids.substring(0,ids.length()-1);
+				columnsStoryDao.deleteColumnsSotryList(ids);
 				
 				Columns c = columnsDao.get(columnsId);
 				cs.setColumns(c);
@@ -2324,4 +2380,171 @@ public class AdminServiceImpl implements AdminService {
 			return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
 		}
 	}
+
+	@Override
+	public Response getConversion(HttpServletRequest request) {
+		String since_id = request.getParameter("since_id");
+		String countStr = request.getParameter("count");
+		String maxIdStr = request.getParameter("max_id");
+		List<JSONObject> dataList = new ArrayList<JSONObject>();
+		int count =20;
+		if(Strings.isNullOrEmpty(maxIdStr)
+				&& Strings.isNullOrEmpty(countStr)){
+			List oList = conversionDao.getConversion(count);
+			if(oList != null && oList.size() > 0){
+				JSONObject json = null;
+				for(Object o:oList){
+					json = new JSONObject();
+					Object[] objects = (Object[]) o;
+					json.put("id",objects[0]);
+					User user = userDao.get(Long.parseLong(objects[1].toString()));
+					JSONObject target_user = new JSONObject();
+					target_user.put("id",user.getId());
+					target_user.put("username",user.getUsername());
+					target_user.put("avatar_image",JSONObject.fromObject(user.getAvatarImage()));
+					json.put("target_user", target_user);
+					json.put("content",objects[2]);
+					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+					Long create_time = 0l;
+					try {
+						Date d = sdf.parse(objects[3].toString());
+						create_time = d.getTime() / 1000L;
+					} catch (ParseException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					json.put("create_time",create_time);
+					dataList.add(json);
+				}
+				return Response.status(Response.Status.OK).entity(dataList).build();
+			}else{
+				return Response.status(Response.Status.OK).entity(oList).build();
+			}
+		}else if(Strings.isNullOrEmpty(maxIdStr)
+				&& !Strings.isNullOrEmpty(countStr)){
+			count = Integer.parseInt(countStr);
+			List oList = conversionDao.getConversion(count);
+			if(oList != null && oList.size() > 0){
+				JSONObject json = null;
+				for(Object o:oList){
+					json = new JSONObject();
+					Object[] objects = (Object[]) o;
+					json.put("id",objects[0]);
+					User user = userDao.get(Long.parseLong(objects[1].toString()));
+					JSONObject target_user = new JSONObject();
+					target_user.put("id",user.getId());
+					target_user.put("username",user.getUsername());
+					target_user.put("avatar_image",JSONObject.fromObject(user.getAvatarImage()));
+					json.put("target_user", target_user);
+					json.put("content",objects[2]);
+					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+					Long create_time = 0l;
+					try {
+						Date d = sdf.parse(objects[3].toString());
+						create_time = d.getTime() / 1000L;
+					} catch (ParseException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					json.put("create_time",create_time);
+					dataList.add(json);
+				}
+				return Response.status(Response.Status.OK).entity(dataList).build();
+			}else{
+				return Response.status(Response.Status.OK).entity(oList).build();
+			}
+		}else if(!Strings.isNullOrEmpty(maxIdStr)
+				&& Strings.isNullOrEmpty(countStr)){
+			List oList = conversionDao.getConversionById(count,Long.parseLong(maxIdStr));
+			if(oList != null && oList.size() > 0){
+				JSONObject json = null;
+				for(Object o:oList){
+					json = new JSONObject();
+					Object[] objects = (Object[]) o;
+					json.put("id",objects[0]);
+					User user = userDao.get(Long.parseLong(objects[1].toString()));
+					JSONObject target_user = new JSONObject();
+					target_user.put("id",user.getId());
+					target_user.put("username",user.getUsername());
+					target_user.put("avatar_image",JSONObject.fromObject(user.getAvatarImage()));
+					json.put("target_user", target_user);
+					json.put("content",objects[2]);
+					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+					Long create_time = 0l;
+					try {
+						Date d = sdf.parse(objects[3].toString());
+						create_time = d.getTime() / 1000L;
+					} catch (ParseException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					json.put("create_time",create_time);
+					dataList.add(json);
+				}
+				return Response.status(Response.Status.OK).entity(dataList).build();
+			}else{
+				return Response.status(Response.Status.OK).entity(oList).build();
+			}
+		}else if(!Strings.isNullOrEmpty(maxIdStr)
+				&& !Strings.isNullOrEmpty(countStr)){
+			count = Integer.parseInt(countStr);
+			List oList = conversionDao.getConversionById(count,Long.parseLong(maxIdStr));
+			if(oList != null && oList.size() > 0){
+				JSONObject json = null;
+				for(Object o:oList){
+					json = new JSONObject();
+					Object[] objects = (Object[]) o;
+					json.put("id",objects[0]);
+					User user = userDao.get(Long.parseLong(objects[1].toString()));
+					JSONObject target_user = new JSONObject();
+					target_user.put("id",user.getId());
+					target_user.put("username",user.getUsername());
+					target_user.put("avatar_image",JSONObject.fromObject(user.getAvatarImage()));
+					json.put("target_user", target_user);
+					json.put("content",objects[2]);
+					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+					Long create_time = 0l;
+					try {
+						Date d = sdf.parse(objects[3].toString());
+						create_time = d.getTime() / 1000L;
+					} catch (ParseException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					json.put("create_time",create_time);
+					dataList.add(json);
+				}
+				return Response.status(Response.Status.OK).entity(dataList).build();
+			}else{
+				return Response.status(Response.Status.OK).entity(oList).build();
+			}
+		}
+		return null;
+	}
+
+	@Override
+	public Response getLottery(Long storyId,int count) {
+		List<Comment> cList = commentDao.getCommentByStoryIdAndRandom(storyId, count);
+		JSONObject json = null;
+		List<JSONObject> userList = new ArrayList<JSONObject>();
+		if(cList != null && cList.size() > 0){
+			for(Comment c:cList){
+				User user = c.getUser();
+				json = new JSONObject();
+				json.put("id",user.getId());
+				json.put("username",user.getUsername());
+				String avatar = user.getAvatarImage();
+				if(!Strings.isNullOrEmpty(avatar)){
+					json.put("avatar_image",JSONObject.fromObject(user.getAvatarImage()));
+				}
+				
+				userList.add(json);
+			}
+			return Response.status(Response.Status.OK).entity(userList).build();
+		}else{
+			return Response.status(Response.Status.OK).entity(userList).build();
+		}
+	}
+
+	
 }

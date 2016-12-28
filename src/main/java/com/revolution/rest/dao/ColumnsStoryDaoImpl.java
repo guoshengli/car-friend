@@ -118,5 +118,24 @@ public class ColumnsStoryDaoImpl extends BaseDaoImpl<ColumnsStory, Long>implemen
 		return cs;
 	}
 
+	@Override
+	public List<ColumnsStory> getColumnsStoryListByStoryId(Long storyId) {
+		String hql = "from ColumnsStory cs where cs.story.id=?";
+		Session session = getSessionFactory().getCurrentSession();
+		Query query = session.createQuery(hql);
+		query.setLong(0,storyId);
+		List<ColumnsStory> csList = query.list();
+		return csList;
+	}
+
+	@Override
+	public void deleteColumnsSotryList(String ids) {
+		Session session = getSessionFactory().getCurrentSession();
+		String hql = "delete from ColumnsStory where 1=1 and id in (?)";
+		Query query = session.createQuery(hql).setString(0,ids);
+		query.executeUpdate();
+		
+	}
+
 
 }

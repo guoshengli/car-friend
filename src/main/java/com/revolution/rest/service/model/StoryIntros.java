@@ -3,7 +3,7 @@ package com.revolution.rest.service.model;
 import java.io.Serializable;
 import net.sf.json.JSONObject;
 
-public class StoryIntro implements Serializable {
+public class StoryIntros implements Serializable {
 	private static final long serialVersionUID = 7824726363855725357L;
 	private Long id;
 	private String title;
@@ -11,6 +11,11 @@ public class StoryIntro implements Serializable {
 	private JSONObject cover_media;
 	private String summary;
 	private int image_count;
+	private JSONObject author;
+	private Long created_time;
+	private int comment_count;
+	private int like_count;
+	private String url;
 
 	public Long getId() {
 		return this.id;
@@ -59,6 +64,48 @@ public class StoryIntro implements Serializable {
 	public void setSummary(String summary) {
 		this.summary = summary;
 	}
+
+	public JSONObject getAuthor() {
+		return author;
+	}
+
+	public void setAuthor(JSONObject author) {
+		this.author = author;
+	}
+
+	public Long getCreated_time() {
+		return created_time;
+	}
+
+	public void setCreated_time(Long created_time) {
+		this.created_time = created_time;
+	}
+
+	public int getComment_count() {
+		return comment_count;
+	}
+
+	public void setComment_count(int comment_count) {
+		this.comment_count = comment_count;
+	}
+
+	public int getLike_count() {
+		return like_count;
+	}
+
+	public void setLike_count(int like_count) {
+		this.like_count = like_count;
+	}
+
+	public String getUrl() {
+		return url;
+	}
+
+	public void setUrl(String url) {
+		this.url = url;
+	}
+	
+	
 
 	
 }

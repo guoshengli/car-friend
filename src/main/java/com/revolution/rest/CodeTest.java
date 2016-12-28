@@ -1,6 +1,7 @@
 package com.revolution.rest;
 
 import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -13,6 +14,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -30,6 +32,7 @@ import com.gexin.rp.sdk.base.impl.SingleMessage;
 import com.gexin.rp.sdk.base.impl.Target;
 import com.gexin.rp.sdk.http.IGtPush;
 import com.gexin.rp.sdk.template.NotificationTemplate;
+import com.revolution.rest.common.EncryptionUtil;
 import com.revolution.rest.dao.NotificationDao;
 import com.revolution.rest.dao.PushNotificationDao;
 import com.revolution.rest.model.PushNotification;
@@ -373,12 +376,37 @@ public class CodeTest {
 	static{
 		date = new Date();
 	}
+	
+	/** 
+     * 从文件中加载私钥 
+     *  
+     * @param keyFileName 
+     *            私钥文件名 
+     * @return 是否成功 
+     * @throws Exception 
+     */  
+    public static String loadPrivateKeyByFile(String path) throws Exception {  
+        try {  
+            BufferedReader br = new BufferedReader(new FileReader(path  
+                    + "/app/tomcat/webapps/tella-webservice/META-INF/database.properties"));  
+            String readLine = null;  
+            StringBuilder sb = new StringBuilder();  
+            while ((readLine = br.readLine()) != null) {  
+                sb.append(readLine);  
+            }  
+            br.close();  
+            return sb.toString();  
+        } catch (IOException e) {  
+            throw new Exception("私钥数据读取错误");  
+        } catch (NullPointerException e) {  
+        	 throw new Exception("私钥输入流为空");  
+        }  
+    }  
 
 	    public static void main(String[] args)throws Exception {
-	    	SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//定义格式，不显示毫秒
-	    	Timestamp now = new Timestamp(1458203734);//获取系统当前时间
-	    	String str = df.format(now);
-	    	System.out.println(str);
+	    	String s = "aa	bb	cc	dd";
+	    	String[] s1 = s.split("\t",-1);
+	    	System.out.println(s1.length);
 	    }
 
 }

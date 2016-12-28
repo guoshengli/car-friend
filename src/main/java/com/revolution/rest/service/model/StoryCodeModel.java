@@ -26,8 +26,8 @@ public class StoryCodeModel implements Serializable {
 	   private Object url;
 	   private JSONObject author;
 	   private List<CommentSummaryModel> comments;
-	   private List<StoryShare> recommendation;
-	   private CollectionIntro collection;
+	   private List<StoryIntros> recommendation;
+	   private List<JSONObject> collection;
 	   private int image_count;
 	   private String summary;
 	   private String resource;
@@ -127,16 +127,19 @@ public class StoryCodeModel implements Serializable {
 	public void setComments(List<CommentSummaryModel> comments) {
 		this.comments = comments;
 	}
-	public List<StoryShare> getRecommendation() {
+	
+	
+	
+	public List<StoryIntros> getRecommendation() {
 		return recommendation;
 	}
-	public void setRecommendation(List<StoryShare> recommendation) {
+	public void setRecommendation(List<StoryIntros> recommendation) {
 		this.recommendation = recommendation;
 	}
-	public CollectionIntro getCollection() {
+	public List<JSONObject> getCollection() {
 		return collection;
 	}
-	public void setCollection(CollectionIntro collection) {
+	public void setCollection(List<JSONObject> collection) {
 		this.collection = collection;
 	}
 	public int getImage_count() {

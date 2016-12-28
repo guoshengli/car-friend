@@ -32,6 +32,9 @@
  
    @Column(name="notify_recommend", columnDefinition="BIT")
    private boolean recommended_my_story_push;
+   
+   @Column(name="notify_recommend_slide", columnDefinition="BIT")
+   private boolean recommended_my_story_slide_push;
  
    @Column(name="notify_admin_push", columnDefinition="BIT")
    private boolean new_admin_push;
@@ -132,7 +135,15 @@
    
    
  
-   /*public boolean isNew_story_from_collection_push() {
+   public boolean isRecommended_my_story_slide_push() {
+	return recommended_my_story_slide_push;
+}
+
+public void setRecommended_my_story_slide_push(boolean recommended_my_story_slide_push) {
+	this.recommended_my_story_slide_push = recommended_my_story_slide_push;
+}
+
+/*public boolean isNew_story_from_collection_push() {
 	return new_story_from_collection_push;
 }
 

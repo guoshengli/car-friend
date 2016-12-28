@@ -16,6 +16,8 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
+import org.springframework.web.bind.annotation.RequestBody;
+
 import com.revolution.rest.model.Story;
 import com.revolution.rest.service.model.CommentModel;
 import com.revolution.rest.service.model.ReplyComment;
@@ -44,7 +46,7 @@ public abstract interface StoryService
   @Path("/{storyId}/comments/{commentId}")
   @POST
   @Consumes({"application/json"})
-  public abstract Response createReplyComment(ReplyComment paramReplyComment, @PathParam("storyId") Long paramLong1, @PathParam("commentId") Long paramLong2, @HeaderParam("X-Tella-Request-Userid") Long paramLong3);
+  public abstract Response createReplyComment(JSONObject paramReplyComment, @PathParam("storyId") Long paramLong1, @PathParam("commentId") Long paramLong2, @HeaderParam("X-Tella-Request-Userid") Long paramLong3);
 
   @Path("/{storyId}/comments")
   @GET
@@ -130,6 +132,18 @@ public abstract interface StoryService
   @Path("/{storyId}/send_notification")
   @GET
   public Response sendNotification(@HeaderParam("X-Tella-Request-Userid") Long loginUserid,@PathParam("storyId")Long storyId);
+  
+  @Path("/tags")
+  @POST
+  public Response getFBTag(@HeaderParam("X-Tella-Request-Userid") Long loginUserid,JSONObject tag)throws Exception;
+  
+  @Path("/{storyId}/synchronise")
+  @POST
+  public Response synchroniseStory(@HeaderParam("X-Tella-Request-Userid") Long loginUserid,JSONObject invitation,@PathParam("storyId")Long storyId)throws Exception;
+  
+  @Path("/{storyId}/synchroniseEdit")
+  @POST
+  public Response synchroniseEditStory(@HeaderParam("X-Tella-Request-Userid") Long loginUserid,JSONObject invitation,@PathParam("storyId")Long storyId)throws Exception;
   
 }
 

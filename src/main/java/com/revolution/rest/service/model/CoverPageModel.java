@@ -8,9 +8,7 @@
    private static final long serialVersionUID = 2991985103450161463L;
    private String name;
    private String original_size;
-   private String focalpoint;
-   private String zoom;
- 
+
    public String getName()
    {
      return this.name;
@@ -24,17 +22,6 @@
    public void setOriginal_size(String original_size) {
      this.original_size = original_size;
    }
-   public String getFocalpoint() {
-     return this.focalpoint;
-   }
-   public void setFocalpoint(String focalpoint) {
-     this.focalpoint = focalpoint;
-   }
-   public String getZoom() {
-     return this.zoom;
-   }
-   public void setZoom(String zoom) {
-     this.zoom = zoom;
-   }
+   
  }
 

@@ -1,7 +1,9 @@
  package com.revolution.rest.service.model;
  
  import java.io.Serializable;
- import net.sf.json.JSONObject;
+import java.util.List;
+
+import net.sf.json.JSONObject;
  
  public class StoryIntroCollection
    implements Serializable
@@ -9,8 +11,7 @@
    private static final long serialVersionUID = 7824726363855725357L;
    private Long id;
    private String title;
-   private String subtitle;
-   private JSONObject collection;
+   private List<JSONObject> collection;
    private JSONObject cover_media;
    private String summary;
    private int image_count;
@@ -32,20 +33,11 @@
      this.title = title;
    }
  
-   public String getSubtitle() {
-     return this.subtitle;
-   }
- 
-   public void setSubtitle(String subtitle) {
-     this.subtitle = subtitle;
-   }
-
-   
-   public JSONObject getCollection() {
+public List<JSONObject> getCollection() {
 	return collection;
 }
 
-public void setCollection(JSONObject collection) {
+public void setCollection(List<JSONObject> collection) {
 	this.collection = collection;
 }
 
