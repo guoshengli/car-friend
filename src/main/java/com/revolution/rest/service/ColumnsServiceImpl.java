@@ -22,6 +22,7 @@ import com.revolution.rest.model.Story;
 import com.revolution.rest.model.User;
 import com.revolution.rest.service.model.ColumnsModel;
 import com.revolution.rest.service.model.CoverMedia;
+import com.revolution.rest.service.model.IframeCover;
 import com.revolution.rest.service.model.ImageCover;
 import com.revolution.rest.service.model.PublisherInfoModel;
 import com.revolution.rest.service.model.StoryEventNew;
@@ -217,9 +218,6 @@ public class ColumnsServiceImpl implements ColumnsService {
 			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		} else if (type.equals("multimedia")) {
 			storyModel.setCover_media(jsonObject);
-		} else if (type.equals("video")) {
-			coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		}
 
 		if (!Strings.isNullOrEmpty(story.getTitle()))

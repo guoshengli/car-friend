@@ -10,6 +10,7 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
@@ -48,6 +49,8 @@ import com.qiniu.api.auth.digest.Mac;
 import com.qiniu.api.rs.PutPolicy;
 import com.revolution.rest.ApiHttpClient;
 import com.revolution.rest.common.EncryptionUtil;
+import com.revolution.rest.common.FBEncryption;
+import com.revolution.rest.common.HttpUtil;
 import com.revolution.rest.common.ParseFile;
 import com.revolution.rest.common.PushNotificationUtil;
 import com.revolution.rest.dao.ChatDao;
@@ -69,6 +72,7 @@ import com.revolution.rest.dao.RepublishDao;
 import com.revolution.rest.dao.SlideDao;
 import com.revolution.rest.dao.StoryDao;
 import com.revolution.rest.dao.TimelineDao;
+import com.revolution.rest.dao.UserCentreDao;
 import com.revolution.rest.dao.UserCollectionDao;
 import com.revolution.rest.dao.UserDao;
 import com.revolution.rest.model.Chat;
@@ -97,6 +101,7 @@ import com.revolution.rest.model.Story;
 import com.revolution.rest.model.StoryElement;
 import com.revolution.rest.model.Timeline;
 import com.revolution.rest.model.User;
+import com.revolution.rest.model.UserCentre;
 import com.revolution.rest.service.model.CollectionIntro;
 import com.revolution.rest.service.model.CollectionIntroLast;
 import com.revolution.rest.service.model.CollectionIntros;
@@ -132,7 +137,6 @@ import com.revolution.rest.service.model.UserParentModel;
 import com.revolution.rest.service.model.UserPhone;
 import com.revolution.rest.service.model.UserPublisherModel;
 import com.revolution.rest.service.model.UserQiNiuModel;
-import com.revolution.rest.service.model.VideoCover;
 
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
@@ -169,8 +173,6 @@ public class UserServiceImpl implements UserService {
 
 	@Autowired
 	private CommentDao commentDao;
-	
-	
 
 	@Autowired
 	private LinkAccountsDao linkAccountsDao;
@@ -186,8 +188,7 @@ public class UserServiceImpl implements UserService {
 
 	@Autowired
 	private CollectionStoryDao collectionStoryDao;
-
-
+	
 	@Autowired
 	private CoverPageDao coverPageDao;
 	
@@ -208,9 +209,20 @@ public class UserServiceImpl implements UserService {
 	
 	@Autowired
 	private ConversionDao conversionDao;
+	
+	@Autowired
+	private UserCentreDao userCentreDao;
 
-	public Response create(JSONObject user,String appVersion) {
+	public Response create(JSONObject user,String appVersion,HttpServletRequest request) {
 		User u = new User();
+		int centre_id = 0;
+		String ip = request.getRemoteAddr();
+		String urlkey = getClass().getResource("/../../META-INF/user_centre.json").getPath();
+		JSONObject jsonObject = parseJson(urlkey);
+		String url = jsonObject.getString("url");
+		String device = request.getHeader("X-Tella-Request-Device");
+		String fbToken = "";
+		String script = "";
 		try {
 			GetuiModel gm = getGetuiInfo();
 			if (user != null) {
@@ -245,6 +257,7 @@ public class UserServiceImpl implements UserService {
 				} else
 					u.setEmail(null);
 				if (user.containsKey("phone")) {
+					JSONObject resp = new JSONObject();
 					String zone = user.get("zone").toString();
 					String phone = user.get("phone").toString();
 					String code = user.get("code").toString();
@@ -252,11 +265,10 @@ public class UserServiceImpl implements UserService {
 							&& (!Strings.isNullOrEmpty(code))) {
 						User users = this.userDao.getUserByPhoneAndZone(zone, phone);
 						if (users != null) {
-							JSONObject jo = new JSONObject();
-							jo.put("status", "phone_exists");
-							jo.put("code", Integer.valueOf(10094));
-							jo.put("error_message", "Phone already used");
-							return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+							resp.put("status", "phone_exists");
+							resp.put("code", Integer.valueOf(10094));
+							resp.put("error_message", "Phone already used");
+							return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
 						}
 						
 						/*String path1 = getClass().getResource("/../../META-INF/version.json").getPath();
@@ -294,124 +306,89 @@ public class UserServiceImpl implements UserService {
 								}
 							}
 						}*/
-						String appkey = "";
 						/*if(flag){
 							appkey = getClass().getResource("/../../META-INF/phone2.json").getPath();
 						}else{
 							appkey = getClass().getResource("/../../META-INF/phone.json").getPath();
 						}*/
-						appkey = getClass().getResource("/../../META-INF/phone.json").getPath();
-						JSONObject jsonObject = parseJson(appkey);
-						String key = jsonObject.getString("appkey");
-
-						String param = "appkey=" + key + "&phone=" + phone + "&zone=" + zone + "&&code=" + code;
-						String result = "";
+						
+						Map<String,String> param = new HashMap<String,String>();
+						param.put("mobile", phone);
+						param.put("code", code);
+						param.put("ip",ip);
+						String regParams = publicParam(param);
+						String result = HttpUtil.sendPostStr(url+"/customer/account/check-mobile-for-register", regParams);
 						/*if(flag){
 							result = requestData("https://webapi.sms.mob.com/sms/verify", param);
 						}else{
 							result = requestData("https://web.sms.mob.com/sms/verify", param);
 						}*/
-						result = requestData("https://web.sms.mob.com/sms/verify", param);
+						
 						if (!Strings.isNullOrEmpty(result)) {
 							JSONObject json = JSONObject.fromObject(result);
-							String status = json.get("status").toString();
-							if (status.equals("200")) {
+							int status = json.getInt("code");
+							if (status == 10000) {
 								u.setZone(zone);
 								u.setPhone(phone);
-							} else {
-								if (status.equals("512")) {
-									JSONObject j = new JSONObject();
-									j.put("status", "验证失败");
-									j.put("code", Integer.valueOf(10100));
-									j.put("error_message", "服务器拒绝访问，或�?�拒绝操�?");
-									return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
-								}
-								if (status.equals("405")) {
-									JSONObject j = new JSONObject();
-									j.put("status", "验证失败");
-									j.put("code", Integer.valueOf(10101));
-									j.put("error_message", "求Appkey不存在或被禁用�??");
-									return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
+								Map<String,String> registerParam = new HashMap<String, String>();
+								registerParam.put("mobile", phone);
+								registerParam.put("code", code);
+								registerParam.put("username", "fd_"+phone);
+								registerParam.put("password", user.getString("password"));
+								registerParam.put("ip",ip);
+								registerParam.put("device",device);
+								
+								String params = publicParam(registerParam);
+								String register_result = HttpUtil.sendPostStr(url+"/customer/account/register-and-login", params);
+								JSONObject reg_res_json = JSONObject.fromObject(register_result);
+								int res_code = reg_res_json.getInt("code");
+								if(res_code == 10000){
+									JSONObject data = reg_res_json.getJSONObject("data");
+									centre_id = data.getInt("userid");
+									fbToken = data.getString("token");
+									if(device.equals("10")){
+										script = data.getString("script");
+									}
+									
 								}
 								
-								if (status.equals("406")) {
-									JSONObject j = new JSONObject();
-									j.put("status", "验证失败");
-									j.put("code", Integer.valueOf(10101));
-									j.put("error_message", "求Appkey不存在或被禁用�??");
-									return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
-								}
-								if (status.equals("514")) {
-									JSONObject j = new JSONObject();
-									j.put("status", "验证失败");
-									j.put("code", Integer.valueOf(10102));
-									j.put("error_message", "权限不足");
-									return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
-								}
-								if (status.equals("515")) {
-									JSONObject j = new JSONObject();
-									j.put("status", "验证失败");
-									j.put("code", 10103);
-									j.put("error_message", "服务器内部错�?");
-									return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
-								}
-								if (status.equals("517")) {
-									JSONObject j = new JSONObject();
-									j.put("status", "验证失败");
-									j.put("code", Integer.valueOf(10104));
-									j.put("error_message", "缺少必要的请求参�?");
-									return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
-								}
-								if (status.equals("518")) {
-									JSONObject j = new JSONObject();
-									j.put("status", "验证失败");
-									j.put("code", Integer.valueOf(10105));
-									j.put("error_message", "请求中用户的手机号格式不正确（包括手机的区号�?");
-									return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
-								}
-								if (status.equals("519")) {
-									JSONObject j = new JSONObject();
-									j.put("status", "验证失败");
-									j.put("code", Integer.valueOf(10106));
-									j.put("error_message", "请求发�?�验证码次数超出限制");
-									return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
-								}
-								if (status.equals("468")) {
-									JSONObject j = new JSONObject();
-									j.put("status", "验证失败");
-									j.put("code", Integer.valueOf(10107));
-									j.put("error_message", "无效验证码�??");
-									return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
-								}
-								
-								if (status.equals("467")) {
-									JSONObject j = new JSONObject();
-									j.put("status", "验证失败");
-									j.put("code", Integer.valueOf(10107));
-									j.put("error_message", "请求校验验证码频繁�??");
-									return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
-								}
-								
-								JSONObject j = new JSONObject();
-								j.put("status", "验证失败");
-								j.put("code", Integer.valueOf(10107));
-								j.put("error_message", "验证失败");
-								return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
-								
+							} else if(status == 10001) {	
+								resp.put("status", "缺少参数");
+								resp.put("code", 10600);
+								resp.put("error_message", "缺少参数");
+								return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+							}else if(status == 10110) {	
+								resp.put("status", "手机号格式错误");
+								resp.put("code", 10601);
+								resp.put("error_message", "手机号格式错误");
+								return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+							}else if(status == 10111) {	
+								resp.put("status", "该手机号已注册");
+								resp.put("code", 10602);
+								resp.put("error_message", "该手机号已注册");
+								return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+							}else if(status == 10112) {	
+								resp.put("status", "验证码不正确");
+								resp.put("code", 10603);
+								resp.put("error_message", "验证码不正确");
+								return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+							}else if(status == 10114) {	
+								resp.put("status", "用户名已存在");
+								resp.put("code", 10628);
+								resp.put("error_message", "用户名已存在");
+								return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
 							}
 						} else {
-							JSONObject j = new JSONObject();
-							j.put("status", "短信验证失败");
-							j.put("code", Integer.valueOf(10108));
-							j.put("error_message", "shareSDK 报错");
-							return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
+							resp.put("status", "用户中心报错");
+							resp.put("code", 10604);
+							resp.put("error_message", "用户中心报错");
+							return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
 						}
 					} else {
-						JSONObject jo = new JSONObject();
-						jo.put("status", "request_invalid");
-						jo.put("code", Integer.valueOf(10010));
-						jo.put("error_message", "request is invalid");
-						return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+						resp.put("status", "request_invalid");
+						resp.put("code", Integer.valueOf(10010));
+						resp.put("error_message", "request is invalid");
+						return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
 					}
 
 				}
@@ -426,14 +403,32 @@ public class UserServiceImpl implements UserService {
 					String pwd = Base64Utils.encodeToString(sb.toString().getBytes());
 					u.setPassword(pwd);
 				}else{
-					u.setPassword(user.getString("password"));
+					String pwd = Base64Utils.encodeToString(user.getString("password").getBytes());
+					u.setPassword(pwd);
 				}
 
 				u.setUsername(user.getString("username"));
 				u.setSalt(initSalt().toString());
 				u.setStatus("enabled");
 				u.setUser_type("normal");
-				this.userDao.save(u);
+				
+				if(centre_id > 0){
+					this.userDao.save(u);
+					UserCentre uc = new UserCentre();
+					uc.setCentre_id(centre_id);
+					uc.setUser_id(u.getId());
+					userCentreDao.save(uc);
+				}else{
+					if(user.containsKey("phone")){
+						JSONObject jo = new JSONObject();
+						jo.put("status", "注册失败，请验证后再试");
+						jo.put("code", 10609);
+						jo.put("error_message", "注册失败，请验证后再试");
+						return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+					}else{
+						this.userDao.save(u);
+					}
+				}
 				Configuration c = new Configuration();
 				c.setNew_admin_push(true);
 				c.setNew_comment_on_your_comment_push(true);
@@ -507,7 +502,84 @@ public class UserServiceImpl implements UserService {
 					la.setService(link.getString("service"));
 					la.setUser_id(u.getId());
 					la.setUuid(link.getString("uuid"));
+					
+					if(link.containsKey("union_id")){
+						la.setUnion_id(link.getString("union_id"));
+					}
+					
 					this.linkAccountsDao.save(la);
+					
+					Map<String,String> param = new HashMap<String, String>();
+					
+					param.put("third_party_openid", la.getUnion_id().toString());
+					param.put("device", device);
+					param.put("ip", ip);
+					String thried = la.getService();
+					
+					if(thried.equals("wechat")){
+						param.put("third_party_channel", "10");
+					}else if(thried.equals("weibo")){
+						param.put("third_party_channel", "20");
+					}
+					String params = null;
+					try {
+						params = publicParam(param);
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					
+					String result = HttpUtil.sendPostStr(url+"/customer/account/login-third-party-beegree", params);
+					JSONObject resp = new JSONObject();
+					if (!Strings.isNullOrEmpty(result)) {
+						JSONObject res_json = JSONObject.fromObject(result);
+						int status = res_json.getInt("code");
+						if (status == 10000) {
+							JSONObject data = res_json.getJSONObject("data");
+							int centreid = data.getInt("userid");
+							String fb_token = data.getString("token");
+							UserCentre uc = new UserCentre();
+							uc.setCentre_id(centreid);
+							uc.setUser_id(u.getId());
+							userCentreDao.save(uc);
+							String raw = u.getId() + u.getCreated_time().toString();
+							String token = EncryptionUtil.hashMessage(raw);
+
+							System.out.println("userId--->" + u.getId());
+							resp.put("userid", u.getId());
+							resp.put("access_token", token);
+							resp.put("token_timestamp", u.getCreated_time());
+							resp.put("token", fb_token);
+							resp.put("fbid", centreid);
+							System.out.println(resp.toString());
+							return Response.status(Response.Status.OK).entity(resp).build();
+						} else if(status == 10001) {	
+							resp.put("status", "缺少参数");
+							resp.put("code", 10600);
+							resp.put("error_message", "缺少参数");
+							return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+						}else if(status == 10110) {	
+							resp.put("status", "手机号格式错误");
+							resp.put("code", 10601);
+							resp.put("error_message", "手机号格式错误");
+							return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+						}else if(status == 10111) {	
+							resp.put("status", "该手机号已注册");
+							resp.put("code", 10602);
+							resp.put("error_message", "该手机号已注册");
+							return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+						}else if(status == 10112) {	
+							resp.put("status", "验证码不正确");
+							resp.put("code", 10603);
+							resp.put("error_message", "验证码不正确");
+							return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+						}
+					} else {
+						resp.put("status", "用户中心报错");
+						resp.put("code", 10604);
+						resp.put("error_message", "用户中心报错");
+						return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+					}
 				}
 
 				System.out.println("create successful");
@@ -518,19 +590,26 @@ public class UserServiceImpl implements UserService {
 			e.printStackTrace();
 			JSONObject jo = new JSONObject();
 			jo.put("status", "invalid request");
-			jo.put("code", Integer.valueOf(10107));
-			jo.put("error_message", "无效验证码�??");
+			jo.put("code", Integer.valueOf(10010));
+			jo.put("error_message", "请求参数有误");
 			return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
 		}
 
 		JSONObject json = new JSONObject();
 		json.put("userid", u.getId());
-		String raw = u.getId() + u.getPassword() + u.getCreated_time();
+		String raw = u.getId() + u.getCreated_time().toString();
 
 		String token = EncryptionUtil.hashMessage(raw);
 		json.put("access_token", token);
 		json.put("token_timestamp", u.getCreated_time());
 		json.put("username",u.getUsername());
+		json.put("token",fbToken);
+		json.put("fbid",centre_id);
+		if(!Strings.isNullOrEmpty(device) 
+				&& device.equals("10") &&
+				!Strings.isNullOrEmpty(script)){
+			json.put("script",script);
+		}
 		String avatarImage = u.getAvatarImage();
 		if(!Strings.isNullOrEmpty(avatarImage)){
 			json.put("avatar_image",JSONObject.fromObject(avatarImage));
@@ -1105,16 +1184,28 @@ public class UserServiceImpl implements UserService {
 	
 	
 
-	public Response userLogin(JSONObject userJson) {
+	public Response userLogin(JSONObject userJson,HttpServletRequest request)throws Exception {
 		User user = null;
+		String ip = request.getRemoteAddr();
 		String email = userJson.containsKey("email")?userJson.getString("email"):null;
+		String fbname = userJson.containsKey("fbname")?userJson.getString("fbname"):null;
 		String password = userJson.containsKey("password")?userJson.getString("password"):null;
 		String timestamp = userJson.containsKey("timestamp")?userJson.getString("timestamp"):null;
 		String zone = userJson.containsKey("zone")?userJson.getString("zone"):null;
 		String phone = userJson.containsKey("phone")?userJson.getString("phone"):null;
-
+		String path = getClass().getResource("/../../META-INF/user_centre.json").getPath();
+		JSONObject jsonObject = ParseFile.parseJson(path);
+		String url = jsonObject.getString("url");
 		JSONObject jo = new JSONObject();
 		JSONObject auth = new JSONObject();
+		int centre_id = 0;
+		String fbToken = "";
+		String script = "";
+		String device = String.valueOf(userJson.get("device"));
+		
+		
+		Map<String,String> param = new HashMap<String, String>();
+		param.put("ip", ip);
 		if (!Strings.isNullOrEmpty(email)) {
 			if (Strings.isNullOrEmpty(password)) {
 				jo.put("status", "invalid_password");
@@ -1126,10 +1217,64 @@ public class UserServiceImpl implements UserService {
 
 			if (emailUser != null) {
 				try {
-					user = this.userDao.loginUser(email, password);
+//					password = Base64Utils.encodeToString(password.getBytes());
+//					user = this.userDao.loginUser(email, password);
+					
+					param.put("username", email);
+					param.put("password", password);
+					param.put("device", device);
+					if(device.equals("10")){
+						param.put("remember_me", "1");
+					}
+					String params = publicParam(param);
+					String result = HttpUtil.sendPostStr(url+"/customer/account/login", params);
+					JSONObject resp_json = JSONObject.fromObject(result);
+					int code = resp_json.getInt("code");
+					//user = this.userDao.loginByPhone(zone, phone, password);
+					if(code == 10000){
+						JSONObject data = resp_json.getJSONObject("data");
+						centre_id = data.getInt("userid");
+						fbToken = data.getString("token");
+						if(device.equals("10")){
+							script = data.getString("script");
+						}
+						UserCentre uc = userCentreDao.getUserCentreByCentreId(centre_id);
+						if(uc == null){
+							UserCentre ucentre = new UserCentre();
+							ucentre.setCentre_id(centre_id);
+							ucentre.setUser_id(emailUser.getId());
+							userCentreDao.save(ucentre);
+						}
+						user = emailUser;
+					}else if(code == 10001){
+						jo.put("status", "缺少参数");
+						jo.put("code", 10600);
+						jo.put("error_message", "缺少参数");
+						return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+					}else if(code == 10110){
+						jo.put("status", "您输入的账号不存在，请先注册");
+						jo.put("code", 10605);
+						jo.put("error_message", "您输入的账号不存在，请先注册");
+						return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+					}else if(code == 10111){
+						jo.put("status", "密码不存在");
+						jo.put("code", 10606);
+						jo.put("error_message", "密码不存在");
+						return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+					}else if(code == 10112){
+						jo.put("status", "用户名或密码不正确");
+						jo.put("code", 10607);
+						jo.put("error_message", "用户名或密码不正确");
+						return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+					}
 
-					if (user == null)
-						throw new Exception("invalid password");
+					if (user == null){
+						jo.put("status", "您输入的账号不存在，请先注册");
+						jo.put("code", 10605);
+						jo.put("error_message", "您输入的账号不存在，请先注册");
+						return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+					}
+
 				} catch (Exception e) {
 					jo.put("status", "invalid_password");
 					jo.put("code", Integer.valueOf(10007));
@@ -1143,7 +1288,7 @@ public class UserServiceImpl implements UserService {
 				return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
 			}
 
-			String raw = user.getId() + user.getPassword() + timestamp;
+			String raw = user.getId() + timestamp;
 			String token = EncryptionUtil.hashMessage(raw);
 
 			System.out.println("userId--->" + user.getId());
@@ -1155,6 +1300,11 @@ public class UserServiceImpl implements UserService {
 			auth.put("access_token", token);
 			auth.put("username", user.getUsername());
 			auth.put("token_timestamp", Long.valueOf(Long.parseLong(timestamp)));
+			auth.put("token", fbToken);
+			auth.put("fbid",centre_id);
+			if(device.equals("10")){
+				auth.put("script",script);
+			}
 		} else if ((!Strings.isNullOrEmpty(phone)) && (!Strings.isNullOrEmpty(zone))) {
 			if (Strings.isNullOrEmpty(password)) {
 				jo.put("status", "invalid_password");
@@ -1162,28 +1312,179 @@ public class UserServiceImpl implements UserService {
 				jo.put("error_message", "invalid password");
 				return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
 			}
-			User phoneUser = this.userDao.getUserByPhoneAndZone(zone, phone);
+			//---
 
-			if (phoneUser != null) {
-				try {
-					user = this.userDao.loginByPhone(zone, phone, password);
-
-					if (user == null)
-						throw new Exception("invalid password");
-				} catch (Exception e) {
-					jo.put("status", "invalid_password");
-					jo.put("code", Integer.valueOf(10007));
-					jo.put("error_message", "invalid password");
+			try {
+				param.put("username", phone);
+				param.put("password", password);
+				param.put("device", String.valueOf(userJson.getInt("device")));
+				if(device.equals("10")){
+					param.put("remember_me", "1");
+				}
+				String params = publicParam(param);
+				String result = HttpUtil.sendPostStr(url+"/customer/account/login", params);
+				JSONObject resp_json = JSONObject.fromObject(result);
+				int code = resp_json.getInt("code");
+				//user = this.userDao.loginByPhone(zone, phone, password);
+				if(code == 10000){
+					JSONObject data = resp_json.getJSONObject("data");
+					centre_id = data.getInt("userid");
+					fbToken = data.getString("token");
+					String fbusername = data.getString("username");
+					if(device.equals("10")){
+						script = data.getString("script");
+					}
+					List<User> uList = userDao.getUserByFbnameAndPhone(fbusername, phone);
+					//User phoneUser = this.userDao.getUserByPhoneAndZone(zone, phone);
+					if(uList != null && uList.size() > 0){
+						User phoneUser = uList.get(0);
+						UserCentre uc = userCentreDao.getUserCentreByCentreId(centre_id);
+						if(uc == null){
+							UserCentre ucentre = new UserCentre();
+							ucentre.setCentre_id(centre_id);
+							ucentre.setUser_id(phoneUser.getId());
+							userCentreDao.save(ucentre);
+						}
+						if(Strings.isNullOrEmpty(phoneUser.getFbname())){
+							phoneUser.setFbname(fbname);
+							userDao.update(phoneUser);
+						}
+						user = phoneUser;
+					}else{
+					
+						User u = new User();
+						u.setZone(zone);
+						u.setPhone(phone);
+						u.setFbname(fbusername);
+						String chars = "abcde0f12g3hi4jk5l6m7n8o9pqrstuvwxyz";
+				    	StringBuffer sb = new StringBuffer();
+				    	for(int i=0;i<10;i++){
+				    		char c = chars.charAt((int)(Math.random() * 10));
+				    		sb.append(c);
+				    	}
+				    	u.setPassword(password);
+				    	u.setUsername(sb.toString());
+				    	u.setSalt(initSalt().toString());
+				    	u.setStatus("enabled");
+				    	u.setUser_type("normal");
+						
+				    	this.userDao.save(u);
+				    	
+				    	UserCentre uc = new UserCentre();
+						uc.setCentre_id(centre_id);
+						uc.setUser_id(u.getId());
+						userCentreDao.save(uc);
+						user =u;
+						
+						//--
+						Configuration c = new Configuration();
+						c.setNew_admin_push(true);
+						c.setNew_comment_on_your_comment_push(true);
+						c.setNew_comment_on_your_story_push(true);
+						c.setNew_favorite_from_following_push(true);
+						c.setNew_follower_push(true);
+						c.setNew_story_from_following_push(true);
+						c.setRecommended_my_story_push(true);
+						c.setReposted_my_story_push(true);
+						
+						c.setUserId((Long) u.getId());
+						
+						this.configurationDao.save(c);
+						List<User> officialUser = userDao.getUserByUserType("official");
+						if(officialUser != null && officialUser.size() > 0){
+							for(User official:officialUser){
+								Follow f = new Follow();
+								FollowId fid = new FollowId();
+								fid.setUser(u);
+								fid.setFollower(official);
+								f.setPk(fid);
+								f.setCreateTime(new Date());
+								followDao.save(f);
+							}
+						}
+						List<User> userList = this.userDao.getUserByUserType();
+						List<PushNotification> pnList = new ArrayList<PushNotification>();
+						Notification n = null;
+						List<Notification> notificationList = new ArrayList<Notification>();
+						Configuration conf;
+						if ((userList != null) && (userList.size() > 0)) {
+							for (User admin : userList) {
+								n = new Notification();
+								n.setRecipientId((Long) admin.getId());
+								n.setSenderId((Long) u.getId());
+								n.setNotificationType(8);
+								n.setObjectType(3);
+								n.setObjectId((Long) admin.getId());
+								n.setStatus("enabled");
+								n.setRead_already(true);
+								notificationList.add(n);
+								conf = this.configurationDao.getConfByUserId((Long) admin.getId());
+								if (conf.isNew_admin_push()) {
+									List<PushNotification> list = this.pushNotificationDao
+											.getPushNotificationByUserid(admin.getId());
+									pnList.addAll(list);
+								}
+							}
+						}
+						this.notificationDao.saveNotifications(notificationList);
+						Map<String, Integer> map = new HashMap<String, Integer>();
+						if ((pnList != null) && (pnList.size() > 0)) {
+							for (PushNotification pn : pnList) {
+								int count = this.notificationDao.getNotificationByRecipientId(pn.getUserId());
+								map.put(pn.getClientId(), Integer.valueOf(count));
+							}
+						}
+						String content = u.getUsername() + "注册了";
+						JSONObject json = new JSONObject();
+						json.put("user_id",u.getId());
+						GetuiModel gm = getGetuiInfo();
+						PushNotificationUtil.pushInfoAllFollow(gm.getAppId(), gm.getAppKey(), gm.getMasterSecret(), pnList, map, content,json.toString());
+						//--
+					}
+					
+				}else if(code == 10001){
+					jo.put("status", "缺少参数");
+					jo.put("code", 10600);
+					jo.put("error_message", "缺少参数");
+					return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+				}else if(code == 10004){
+					jo.put("status", "校验签名不通过");
+					jo.put("code", 10620);
+					jo.put("error_message", "校验签名不通过");
+					return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+				}else if(code == 10110){
+					jo.put("status", "您输入的账号不存在，请先注册");
+					jo.put("code", 10605);
+					jo.put("error_message", "您输入的账号不存在，请先注册");
+					return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+				}else if(code == 10111){
+					jo.put("status", "密码不存在");
+					jo.put("code", 10606);
+					jo.put("error_message", "密码不存在");
+					return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+				}else if(code == 10112){
+					jo.put("status", "用户名或密码不正确");
+					jo.put("code", 10607);
+					jo.put("error_message", "用户名或密码不正确");
 					return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
 				}
-			} else {
-				jo.put("status", "invalid_phone");
-				jo.put("code", Integer.valueOf(10096));
-				jo.put("error_message", "Phone doesn't exist");
+
+				if (user == null){
+					jo.put("status", "您输入的账号不存在，请先注册");
+					jo.put("code", 10605);
+					jo.put("error_message", "您输入的账号不存在，请先注册");
+					return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+				}
+			} catch (Exception e) {
+				jo.put("status", "invalid_password");
+				jo.put("code", Integer.valueOf(10007));
+				jo.put("error_message", "invalid password");
 				return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
 			}
+		
+			//---
 
-			String raw = user.getId() + user.getPassword() + timestamp;
+			String raw = user.getId() + timestamp;
 			String token = EncryptionUtil.hashMessage(raw);
 
 			System.out.println("userId--->" + user.getId());
@@ -1195,6 +1496,217 @@ public class UserServiceImpl implements UserService {
 			auth.put("access_token", token);
 			auth.put("username", user.getUsername());
 			auth.put("token_timestamp", Long.valueOf(Long.parseLong(timestamp)));
+			auth.put("token", fbToken);
+			auth.put("fbid", centre_id);
+			if(device.equals("10")){
+				auth.put("script",script);
+			}
+		}else if(!Strings.isNullOrEmpty(fbname)){
+
+			if (Strings.isNullOrEmpty(password)) {
+				jo.put("status", "invalid_password");
+				jo.put("code", Integer.valueOf(10007));
+				jo.put("error_message", "invalid password");
+				return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+			}
+
+			/*if (fbUser != null) {} else {
+				jo.put("status", "invalid_email");
+				jo.put("code", Integer.valueOf(10006));
+				jo.put("error_message", "Email doesn't exist");
+				return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+			}*/
+			
+			//---
+			
+
+
+			try {
+				param.put("username", fbname);
+				param.put("password", password);
+				param.put("device", String.valueOf(userJson.getInt("device")));
+				if(device.equals("10")){
+					param.put("remember_me", "1");
+				}
+				String params = publicParam(param);
+				String result = HttpUtil.sendPostStr(url+"/customer/account/login", params);
+				JSONObject resp_json = JSONObject.fromObject(result);
+				int code = resp_json.getInt("code");
+				//user = this.userDao.loginByPhone(zone, phone, password);
+				if(code == 10000){
+					JSONObject data = resp_json.getJSONObject("data");
+					centre_id = data.getInt("userid");
+					fbToken = data.getString("token");
+					if(device.equals("10")){
+						script = data.getString("script");
+					}
+					UserCentre userFB = userCentreDao.getUserCentreByCentreId(centre_id);
+					if(userFB != null){
+						user = userDao.get(userFB.getUser_id());
+						if(Strings.isNullOrEmpty(user.getFbname())){
+							user.setFbname(fbname);
+							userDao.update(user);
+						}
+					}else{
+						Object[] objArr = linkAccountsDao.getLinkAccountsByUUIDAndService(String.valueOf(centre_id), "fblife");
+						if(objArr != null && objArr.length > 0){
+							User linkUser = (User)objArr[1];
+							UserCentre uc = new UserCentre();
+							uc.setCentre_id(centre_id);
+							uc.setUser_id(linkUser.getId());
+							userCentreDao.save(uc);
+							user = linkUser;
+						}else{
+							String fbphone = data.getString("mobile");
+							User fb_user = new User();
+							String chars = "abcde0f12g3hi4jk5l6m7n8o9pqrstuvwxyz";
+					    	StringBuffer sb = new StringBuffer();
+					    	for(int i=0;i<10;i++){
+					    		char c = chars.charAt((int)(Math.random() * 10));
+					    		sb.append(c);
+					    	}
+					    	fb_user.setFbname(fbname);
+					    	if(!Strings.isNullOrEmpty(fbphone)){
+					    		fb_user.setZone("86");
+						    	fb_user.setPhone(fbphone);
+					    	}
+					    	fb_user.setPassword(password);
+					    	fb_user.setUsername(sb.toString());
+					    	fb_user.setSalt(initSalt().toString());
+					    	fb_user.setStatus("enabled");
+					    	fb_user.setUser_type("normal");
+							
+					    	this.userDao.save(fb_user);
+							UserCentre uc = new UserCentre();
+							uc.setCentre_id(centre_id);
+							uc.setUser_id(fb_user.getId());
+							userCentreDao.save(uc);
+							user =fb_user;
+							
+							//--
+							Configuration c = new Configuration();
+							c.setNew_admin_push(true);
+							c.setNew_comment_on_your_comment_push(true);
+							c.setNew_comment_on_your_story_push(true);
+							c.setNew_favorite_from_following_push(true);
+							c.setNew_follower_push(true);
+							c.setNew_story_from_following_push(true);
+							c.setRecommended_my_story_push(true);
+							c.setReposted_my_story_push(true);
+							
+							c.setUserId((Long) fb_user.getId());
+							
+							this.configurationDao.save(c);
+							List<User> officialUser = userDao.getUserByUserType("official");
+							if(officialUser != null && officialUser.size() > 0){
+								for(User official:officialUser){
+									Follow f = new Follow();
+									FollowId fid = new FollowId();
+									fid.setUser(fb_user);
+									fid.setFollower(official);
+									f.setPk(fid);
+									f.setCreateTime(new Date());
+									followDao.save(f);
+								}
+							}
+							List<User> userList = this.userDao.getUserByUserType();
+							List<PushNotification> pnList = new ArrayList<PushNotification>();
+							Notification n = null;
+							List<Notification> notificationList = new ArrayList<Notification>();
+							Configuration conf;
+							if ((userList != null) && (userList.size() > 0)) {
+								for (User admin : userList) {
+									n = new Notification();
+									n.setRecipientId((Long) admin.getId());
+									n.setSenderId((Long) fb_user.getId());
+									n.setNotificationType(8);
+									n.setObjectType(3);
+									n.setObjectId((Long) admin.getId());
+									n.setStatus("enabled");
+									n.setRead_already(true);
+									notificationList.add(n);
+									conf = this.configurationDao.getConfByUserId((Long) admin.getId());
+									if (conf.isNew_admin_push()) {
+										List<PushNotification> list = this.pushNotificationDao
+												.getPushNotificationByUserid(admin.getId());
+										pnList.addAll(list);
+									}
+								}
+							}
+							this.notificationDao.saveNotifications(notificationList);
+							Map<String, Integer> map = new HashMap<String, Integer>();
+							if ((pnList != null) && (pnList.size() > 0)) {
+								for (PushNotification pn : pnList) {
+									int count = this.notificationDao.getNotificationByRecipientId(pn.getUserId());
+									map.put(pn.getClientId(), Integer.valueOf(count));
+								}
+							}
+							String content = fb_user.getUsername() + "注册了";
+							JSONObject json = new JSONObject();
+							json.put("user_id",fb_user.getId());
+							GetuiModel gm = getGetuiInfo();
+							PushNotificationUtil.pushInfoAllFollow(gm.getAppId(), gm.getAppKey(), gm.getMasterSecret(), pnList, map, content,json.toString());
+							//--
+						}
+						
+					}
+					
+				}else if(code == 10001){
+					jo.put("status", "缺少参数");
+					jo.put("code", 10600);
+					jo.put("error_message", "缺少参数");
+					return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+				}else if(code == 10110){
+					jo.put("status", "您输入的账号不存在，请先注册");
+					jo.put("code", 10605);
+					jo.put("error_message", "您输入的账号不存在，请先注册");
+					return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+				}else if(code == 10111){
+					jo.put("status", "密码不存在");
+					jo.put("code", 10606);
+					jo.put("error_message", "密码不存在");
+					return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+				}else if(code == 10112){
+					jo.put("status", "用户名或密码不正确");
+					jo.put("code", 10607);
+					jo.put("error_message", "用户名或密码不正确");
+					return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+				}
+
+				if (user == null){
+					jo.put("status", "您输入的账号不存在，请先注册");
+					jo.put("code", 10605);
+					jo.put("error_message", "您输入的账号不存在，请先注册");
+					return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+				}
+			} catch (Exception e) {
+				jo.put("status", "invalid_password");
+				jo.put("code", Integer.valueOf(10007));
+				jo.put("error_message", "invalid password");
+				return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+			}
+		
+		
+			
+			//---
+
+			String raw = user.getId() + timestamp;
+			String token = EncryptionUtil.hashMessage(raw);
+
+			System.out.println("userId--->" + user.getId());
+			String avatarImage = user.getAvatarImage();
+			if(!Strings.isNullOrEmpty(avatarImage)){
+				auth.put("avatar_image",JSONObject.fromObject(avatarImage));
+			}
+			auth.put("userid", user.getId());
+			auth.put("access_token", token);
+			auth.put("username", user.getUsername());
+			auth.put("token_timestamp", Long.valueOf(Long.parseLong(timestamp)));
+			auth.put("token", fbToken);
+			auth.put("fbid", centre_id);
+			if(device.equals("10")){
+				auth.put("script",script);
+			}
 		}
 
 		System.out.println(auth.toString());
@@ -1265,29 +1777,84 @@ public class UserServiceImpl implements UserService {
 		return Response.status(Response.Status.OK).entity(jo).build();
 	}
 
-	public Response updatePassword(Long loginUserid, Long userId, PasswordModel pwdModel) {
+	public Response updatePassword(Long loginUserid, Long userId, PasswordModel pwdModel,HttpServletRequest request) {
 		log.debug("*** update password ***");
 		JSONObject json = new JSONObject();
+		String urlkey = getClass().getResource("/../../META-INF/user_centre.json").getPath();
+		JSONObject jsonObject = parseJson(urlkey);
+		String url = jsonObject.getString("url");
+		String ip = request.getRemoteAddr();
 		if (userId.equals(loginUserid)) {
-			User user = (User) this.userDao.get(loginUserid);
-
-			if (user.getPassword().toUpperCase().equals(pwdModel.getCurrent_password())) {
-				user.setPassword(pwdModel.getNew_password());
-				this.userDao.update(user);
-				String raw = user.getId() + user.getPassword() + user.getCreated_time();
-				String token = EncryptionUtil.hashMessage(raw);
-
-				System.out.println("userId--->" + user.getId());
-				json.put("userid", user.getId());
-				json.put("access_token", token);
-				json.put("token_timestamp", user.getCreated_time());
-			} else {
-				JSONObject json1 = new JSONObject();
-				json1.put("status", "invalid_original_password");
-				json1.put("code", Integer.valueOf(10004));
-				json1.put("error_message", "The original password input error");
-				return Response.status(Response.Status.BAD_REQUEST).entity(json1).build();
+			UserCentre uc = userCentreDao.getUserCentreByUserId(loginUserid);
+			int centre_id = uc.getCentre_id();
+			Map<String,String> param = new HashMap<String,String>();
+			param.put("id",String.valueOf(centre_id));
+			param.put("old_password", pwdModel.getCurrent_password());
+			param.put("password", pwdModel.getNew_password());
+			param.put("repeat_password", pwdModel.getNew_password());
+			param.put("ip", ip);
+			String params = "";
+			try {
+				params = publicParam(param);
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
+			String result = HttpUtil.sendPostStr(url+"/customer/account/update-password", params);
+			JSONObject resp_json = JSONObject.fromObject(result);
+			int code = resp_json.getInt("code");
+			//user = this.userDao.loginByPhone(zone, phone, password);
+			if(code == 10000){
+				User user = (User) this.userDao.get(loginUserid);
+				String current_pwd = Base64Utils.encodeToString(pwdModel.getCurrent_password().getBytes());
+				if (user.getPassword().toUpperCase().equals(current_pwd.toUpperCase())) {
+					user.setPassword(Base64Utils.encodeToString(pwdModel.getNew_password().getBytes()));
+					this.userDao.update(user);
+					String raw = user.getId() + user.getCreated_time().toString();
+					String token = EncryptionUtil.hashMessage(raw);
+
+					System.out.println("userId--->" + user.getId());
+					json.put("userid", user.getId());
+					json.put("access_token", token);
+					json.put("token_timestamp", user.getCreated_time());
+				}
+			}else if(code == 10001){
+				json.put("status", "缺少参数");
+				json.put("code", 10600);
+				json.put("error_message", "缺少参数");
+				return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
+			}else if(code == 10110){
+				json.put("status", "您输入的账号不存在，请先注册");
+				json.put("code", 10605);
+				json.put("error_message", "您输入的账号不存在，请先注册");
+				return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
+			}else if(code == 10115){
+				json.put("status", "原密码格式错误");
+				json.put("code", 10610);
+				json.put("error_message", "原密码格式错误");
+				return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
+			}else if(code == 10116){
+				json.put("status", "新密码格式错误");
+				json.put("code", 10611);
+				json.put("error_message", "新密码格式错误");
+				return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
+			}else if(code == 10117){
+				json.put("status", "确认密码与新密码不一致");
+				json.put("code", 10612);
+				json.put("error_message", "确认密码与新密码不一致");
+				return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
+			}else if(code == 10118){
+				json.put("status", "原密码错误");
+				json.put("code", 10613);
+				json.put("error_message", "原密码错误");
+				return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
+			}else if(code == 10120){
+				json.put("status", "密码修改失败");
+				json.put("code", 10614);
+				json.put("error_message", "密码修改失败");
+				return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
+			}
+			
 
 		}
 
@@ -2484,6 +3051,7 @@ public class UserServiceImpl implements UserService {
 		JSONObject jsonObject = JSONObject.fromObject(story.getCover_page());
 		String type = jsonObject.getString("type");
 		CoverMedia coverMedia = null;
+		
 		if (type.equals("text")) {
 			coverMedia = (TextCover) JSONObject.toBean(jsonObject, TextCover.class);
 			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
@@ -2492,9 +3060,6 @@ public class UserServiceImpl implements UserService {
 			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		} else if (type.equals("multimedia")) {
 			storyModel.setCover_media(jsonObject);
-		}else if(type.equals("video")){
-			coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		}
 
 		List<StoryElement> storyElements = new ArrayList<StoryElement>();
@@ -2682,9 +3247,6 @@ public class UserServiceImpl implements UserService {
 				storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 			} else if (type.equals("multimedia")) {
 				storyModel.setCover_media(jsonObject);
-			}else if(type.equals("video")){
-				VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-				storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 			}
 
 			storyModel.setTitle(story.getTitle());
@@ -2817,9 +3379,6 @@ public class UserServiceImpl implements UserService {
 				storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 			} else if (type.equals("multimedia")) {
 				storyModel.setCover_media(jsonObject);
-			}else if(type.equals("video")){
-				VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-				storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 			}
 
 			storyModel.setTitle(story.getTitle());
@@ -2933,9 +3492,6 @@ public class UserServiceImpl implements UserService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
-					}else if(type.equals("video")){
-						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					List<StoryElement> storyElements = new ArrayList<StoryElement>();
@@ -3138,9 +3694,6 @@ public class UserServiceImpl implements UserService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
-					}else if(type.equals("video")){
-						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					List<StoryElement> storyElements = new ArrayList<StoryElement>();
@@ -3424,9 +3977,6 @@ public class UserServiceImpl implements UserService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
-					}else if(type.equals("video")){
-						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
@@ -3552,9 +4102,6 @@ public class UserServiceImpl implements UserService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
-					}else if(type.equals("video")){
-						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
@@ -3685,9 +4232,6 @@ public class UserServiceImpl implements UserService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
-					}else if(type.equals("video")){
-						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
@@ -3848,9 +4392,6 @@ public class UserServiceImpl implements UserService {
 					storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 				} else if (type.equals("multimedia")) {
 					storyModel.setCover_media(jsonObject);
-				}else if(type.equals("video")){
-					VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-					storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 				}
 
 				storyModel.setTitle(story.getTitle());
@@ -3959,8 +4500,10 @@ public class UserServiceImpl implements UserService {
 		return commentJson;
 	}
 
-	public Response loginLinkAccounts(LinkAccounts la) {
-		JSONObject auth = new JSONObject();
+	public Response loginLinkAccounts(LinkAccounts la,HttpServletRequest request) {
+		String ip = request.getRemoteAddr();
+		String device = request.getHeader("X-Tella-Request-Device");
+		JSONObject resp = new JSONObject();
 		Object[] link = null;
 		if (la != null) {
 			String uuid = la.getUuid();
@@ -3968,34 +4511,107 @@ public class UserServiceImpl implements UserService {
 			link = this.linkAccountsDao.getLinkAccountsByUUIDAndService(uuid,service);
 			
 			if (link != null) {
+				
+				String url = getClass().getResource("/../../META-INF/user_centre.json").getPath();
+				JSONObject jsonObject = parseJson(url);
+				String urlKey = jsonObject.getString("url");
+				
 				User user = (User)link[1];
 				LinkAccounts linkAccount = (LinkAccounts)link[0];
+				linkAccount.setUnion_id(la.getUnion_id());
 				if(!la.getAuth_token().equals(linkAccount.getAuth_token()) 
 						&& la.getAuth_token() !=linkAccount.getAuth_token()){
 					linkAccount.setAuth_token(la.getAuth_token());
-					linkAccountsDao.update(linkAccount);
 				}
-				String raw = user.getId() + user.getPassword() + user.getCreated_time();
-				String token = EncryptionUtil.hashMessage(raw);
+				linkAccountsDao.update(linkAccount);
+				Map<String,String> param = new HashMap<String, String>();
+				
+				
+				param.put("device", device);
+				param.put("ip", ip);
+				String thried = la.getService();
+				if(!Strings.isNullOrEmpty(user.getPhone())){
+					param.put("mobile", user.getPhone());
+				}
+				
+				if(thried.equals("wechat")){
+					param.put("third_party_channel", "10");
+					param.put("third_party_unionid", la.getUnion_id().toString());
+				}else if(thried.equals("weibo")){
+					param.put("third_party_channel", "20");
+					param.put("third_party_unionid", la.getUuid());
+				}
+				String params = null;
+				try {
+					params = publicParam(param);
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
+				String result = HttpUtil.sendPostStr(urlKey+"/customer/account/login-third-party-beegree", params);
+				if (!Strings.isNullOrEmpty(result)) {
+					JSONObject json = JSONObject.fromObject(result);
+					int status = json.getInt("code");
+					if (status == 10000) {
+						JSONObject data = json.getJSONObject("data");
+						int centre_id = data.getInt("userid");
+						String fb_token = data.getString("token");
+						UserCentre uc = new UserCentre();
+						uc.setCentre_id(centre_id);
+						uc.setUser_id(user.getId());
+						userCentreDao.save(uc);
+						String raw = user.getId() + user.getCreated_time().toString();
+						String token = EncryptionUtil.hashMessage(raw);
 
-				System.out.println("userId--->" + user.getId());
-				auth.put("userid", user.getId());
-				auth.put("access_token", token);
-				auth.put("token_timestamp", user.getCreated_time());
-				System.out.println(auth.toString());
-				return Response.status(Response.Status.OK).entity(auth).build();
+						System.out.println("userId--->" + user.getId());
+						resp.put("userid", user.getId());
+						resp.put("access_token", token);
+						resp.put("token_timestamp", user.getCreated_time());
+						resp.put("fbid", centre_id);
+						resp.put("token", fb_token);
+						System.out.println(resp.toString());
+						return Response.status(Response.Status.OK).entity(resp).build();
+					} else if(status == 10001) {	
+						resp.put("status", "缺少参数");
+						resp.put("code", 10600);
+						resp.put("error_message", "缺少参数");
+						return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+					}else if(status == 10110) {	
+						resp.put("status", "手机号格式错误");
+						resp.put("code", 10601);
+						resp.put("error_message", "手机号格式错误");
+						return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+					}else if(status == 10111) {	
+						resp.put("status", "该手机号已注册");
+						resp.put("code", 10602);
+						resp.put("error_message", "该手机号已注册");
+						return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+					}else if(status == 10112) {	
+						resp.put("status", "验证码不正确");
+						resp.put("code", 10603);
+						resp.put("error_message", "验证码不正确");
+						return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+					}
+				} else {
+					resp.put("status", "用户中心报错");
+					resp.put("code", 10604);
+					resp.put("error_message", "用户中心报错");
+					return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+				}
+				
 			}
-			auth.put("status", "no_user");
-			auth.put("code", Integer.valueOf(10080));
-			auth.put("error_message", "Without this user.");
+			resp.put("status", "no_user");
+			resp.put("code", Integer.valueOf(10080));
+			resp.put("error_message", "Without this user.");
 
-			return Response.status(Response.Status.BAD_REQUEST).entity(auth).build();
+			return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
 		}
 
-		auth.put("status", "invalid request");
-		auth.put("code", Integer.valueOf(10010));
-		auth.put("error_message", "Invalid request payload");
-		return Response.status(Response.Status.BAD_REQUEST).entity(auth).build();
+		resp.put("status", "invalid request");
+		resp.put("code", Integer.valueOf(10010));
+		resp.put("error_message", "Invalid request payload");
+		return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
 	}
 
 	public Response bindingUser(LinkAccounts la, Long loginUserid) {
@@ -4166,9 +4782,6 @@ public class UserServiceImpl implements UserService {
 			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		} else if (type.equals("multimedia")) {
 			storyModel.setCover_media(jsonObject);
-		}else if(type.equals("video")){
-			coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		}
 
 		storyModel.setTitle(story.getTitle());
@@ -4498,95 +5111,158 @@ public class UserServiceImpl implements UserService {
 		return val;
 	}
 
-	public Response forgetPhone(HttpServletRequest request,String appVersion) throws Exception {
+	public Response forgetPhone(HttpServletRequest request,String appVersion,String device) throws Exception {
 		String phone = request.getParameter("phone");
 		String zone = request.getParameter("zone");
 		String code = request.getParameter("code");
 		String timestamp = request.getParameter("timestamp");
 		String password = request.getParameter("password");
-		String appkey = "";
-		appkey = getClass().getResource("/../../META-INF/phone.json").getPath();
-		JSONObject jsonObject = parseJson(appkey);
-		String key = jsonObject.getString("appkey");
+		 String url = getClass().getResource("/../../META-INF/user_centre.json").getPath();
+		JSONObject jsonObject = parseJson(url);
+		String urlKey = jsonObject.getString("url");
+		String ip = request.getRemoteAddr();
+		
 		if ((!Strings.isNullOrEmpty(phone)) && (!Strings.isNullOrEmpty(zone)) && (!Strings.isNullOrEmpty(code))
 				&& (!Strings.isNullOrEmpty(password))) {
 			User user = this.userDao.getUserByZoneAndPhone(zone, phone);
 			if (user != null) {
-				String param = "appkey=" + key + "&phone=" + phone + "&zone=" + zone + "&&code=" + code;
-				String result = "";
-				result = requestData("https://web.sms.mob.com/sms/verify", param);
+				Map<String,String> param = new HashMap<String, String>();
+				param.put("mobile",phone);
+				param.put("code",code);
+				param.put("ip",ip);
+				String paramMobile = publicParam(param);
+				String result = HttpUtil.sendPostStr(urlKey+"/customer/account/check-mobile-for-reset-password", paramMobile);
 				if (!Strings.isNullOrEmpty(result)) {
 					JSONObject json = JSONObject.fromObject(result);
-					String status = json.get("status").toString();
-					if (status.equals("200")) {
-						user.setPassword(password);
-						this.userDao.update(user);
-						String raw = user.getId() + user.getPassword() + timestamp;
-						String token = EncryptionUtil.hashMessage(raw);
-						JSONObject auth = new JSONObject();
-						System.out.println("userId--->" + user.getId());
-						auth.put("userid", user.getId());
-						auth.put("access_token", token);
-						auth.put("token_timestamp", Long.valueOf(Long.parseLong(timestamp)));
-						System.out.println(auth.toString());
-						return Response.status(Response.Status.OK).entity(auth).build();
+					int status = json.getInt("code");
+					if (status == 10000) {
+						Map<String,String> param_update = new HashMap<String, String>();
+						param_update.put("mobile",phone);
+						param_update.put("code",code);
+						param_update.put("password", password);
+						param_update.put("repeat_password", password);
+						param_update.put("ip", ip);
+						String passParam = publicParam(param_update);
+						String result_update = HttpUtil.sendPostStr(urlKey+"/customer/account/reset-password", passParam);
+						if(!Strings.isNullOrEmpty(result_update)){
+							JSONObject result_res = JSONObject.fromObject(result_update);
+							int code_res = result_res.getInt("code");
+							if(code_res == 10000){
+								user.setPassword(Base64Utils.encodeToString(password.getBytes()));
+								this.userDao.update(user);
+								Map<String,String> param_login = new HashMap<String, String>();
+								param_login.put("username", phone);
+								param_login.put("password", password);
+								param_login.put("device", device);
+								param_login.put("ip", ip);
+								String params_login = publicParam(param_login);
+								String res_login = HttpUtil.sendPostStr(urlKey+"/customer/account/login", params_login);
+								JSONObject resp_json = JSONObject.fromObject(res_login);
+								int code_login = resp_json.getInt("code");
+				
+								
+								if(code_login == 10000){
+									JSONObject data = resp_json.getJSONObject("data");
+									int centre_id = data.getInt("userid");
+									String fbToken = data.getString("token");
+									String raw = user.getId() + timestamp;
+									String token = EncryptionUtil.hashMessage(raw);
+									JSONObject auth = new JSONObject();
+									System.out.println("userId--->" + user.getId());
+									auth.put("userid", user.getId());
+									auth.put("access_token", token);
+									auth.put("token_timestamp", Long.valueOf(Long.parseLong(timestamp)));
+									auth.put("token", fbToken);
+									auth.put("fbid", centre_id);
+									System.out.println(auth.toString());
+									return Response.status(Response.Status.OK).entity(auth).build();
+								}else if(code_login == 10001){
+									JSONObject jo = new JSONObject();
+									jo.put("status", "缺少参数");
+									jo.put("code", 10600);
+									jo.put("error_message", "缺少参数");
+									return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+								}else if(code_login == 10004){
+									JSONObject jo = new JSONObject();
+									jo.put("status", "校验签名不通过");
+									jo.put("code", 10620);
+									jo.put("error_message", "校验签名不通过");
+									return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+								}else if(code_login == 10110){
+									JSONObject jo = new JSONObject();
+									jo.put("status", "您输入的账号不存在，请先注册");
+									jo.put("code", 10605);
+									jo.put("error_message", "您输入的账号不存在，请先注册");
+									return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+								}else if(code_login == 10111){
+									JSONObject jo = new JSONObject();
+									jo.put("status", "密码不存在");
+									jo.put("code", 10606);
+									jo.put("error_message", "密码不存在");
+									return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+								}else if(code_login == 10112){
+									JSONObject jo = new JSONObject();
+									jo.put("status", "用户名或密码不正确");
+									jo.put("code", 10607);
+									jo.put("error_message", "用户名或密码不正确");
+									return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+								}
+								
+							}else if(code_res == 10001){
+								json.put("status", "缺少参数");
+								json.put("code", 10600);
+								json.put("error_message", "缺少参数");
+								return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
+							}else if(code_res == 10110){
+								json.put("status", "您输入的账号不存在，请先注册");
+								json.put("code", 10605);
+								json.put("error_message", "您输入的账号不存在，请先注册");
+								return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
+							}else if(code_res == 10115){
+								json.put("status", "原密码格式错误");
+								json.put("code", 10610);
+								json.put("error_message", "原密码格式错误");
+								return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
+							}else if(code_res == 10116){
+								json.put("status", "新密码格式错误");
+								json.put("code", 10611);
+								json.put("error_message", "新密码格式错误");
+								return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
+							}else if(code_res == 10117){
+								json.put("status", "确认密码与新密码不一致");
+								json.put("code", 10612);
+								json.put("error_message", "确认密码与新密码不一致");
+								return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
+							}else if(code_res == 10118){
+								json.put("status", "原密码错误");
+								json.put("code", 10613);
+								json.put("error_message", "原密码错误");
+								return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
+							}else if(code_res == 10120){
+								json.put("status", "密码修改失败");
+								json.put("code", 10614);
+								json.put("error_message", "密码修改失败");
+								return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
+							}else{
+								json.put("status", "校验码不正确");
+								json.put("code", 10626);
+								json.put("error_message", "校验码不正确");
+								return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
+							}
+						}
+						
+					}else if(status == 10001){
+						json.put("status", "缺少参数");
+						json.put("code", 10651);
+						json.put("error_message", "缺少参数");
+						return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
+					}else if(status == 10110){
+						json.put("status", "手机号格式错误");
+						json.put("code", 10650);
+						json.put("error_message", "手机号格式错误");
+						return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
 					}
-					if (status.equals("512")) {
-						JSONObject j = new JSONObject();
-						j.put("status", "验证失败");
-						j.put("code", Integer.valueOf(10100));
-						j.put("error_message", "服务器拒绝访问，或�?�拒绝操�?");
-						return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
-					}
-					if (status.equals("513")) {
-						JSONObject j = new JSONObject();
-						j.put("status", "验证失败");
-						j.put("code", Integer.valueOf(10101));
-						j.put("error_message", "求Appkey不存在或被禁用�??");
-						return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
-					}
-					if (status.equals("514")) {
-						JSONObject j = new JSONObject();
-						j.put("status", "验证失败");
-						j.put("code", Integer.valueOf(10102));
-						j.put("error_message", "权限不足");
-						return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
-					}
-					if (status.equals("515")) {
-						JSONObject j = new JSONObject();
-						j.put("status", "验证失败");
-						j.put("code", Integer.valueOf(10103));
-						j.put("error_message", "服务器内部错�?");
-						return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
-					}
-					if (status.equals("517")) {
-						JSONObject j = new JSONObject();
-						j.put("status", "验证失败");
-						j.put("code", Integer.valueOf(10104));
-						j.put("error_message", "缺少必要的请求参�?");
-						return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
-					}
-					if (status.equals("518")) {
-						JSONObject j = new JSONObject();
-						j.put("status", "验证失败");
-						j.put("code", Integer.valueOf(10105));
-						j.put("error_message", "请求中用户的手机号格式不正确（包括手机的区号�?");
-						return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
-					}
-					if (status.equals("519")) {
-						JSONObject j = new JSONObject();
-						j.put("status", "验证失败");
-						j.put("code", Integer.valueOf(10106));
-						j.put("error_message", "请求发�?�验证码次数超出限制");
-						return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
-					}
-					if (status.equals("520")) {
-						JSONObject j = new JSONObject();
-						j.put("status", "验证失败");
-						j.put("code", Integer.valueOf(10107));
-						j.put("error_message", "无效验证码�??");
-						return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
-					}
+					
 				} else {
 					JSONObject j = new JSONObject();
 					j.put("status", "Invalid_phone");
@@ -4598,7 +5274,7 @@ public class UserServiceImpl implements UserService {
 				JSONObject j = new JSONObject();
 				j.put("status", "验证失败");
 				j.put("code", Integer.valueOf(10103));
-				j.put("error_message", "服务器内部错�?");
+				j.put("error_message", "服务器内部错误");
 				return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
 			}
 
@@ -4935,10 +5611,7 @@ public class UserServiceImpl implements UserService {
             JSONObject.fromObject(coverMedia));
         } else if (type.equals("multimedia")) {
           storyModel.setCover_media(jsonObject);
-        }else if(type.equals("video")){
-			VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
-		}
+        }
 
         storyModel.setTitle(story.getTitle());
         storyModel.setSummary(story.getSummary());
@@ -5318,9 +5991,6 @@ public class UserServiceImpl implements UserService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
-					}else if(type.equals("video")){
-						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
@@ -5432,9 +6102,6 @@ public class UserServiceImpl implements UserService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
-					}else if(type.equals("video")){
-						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
@@ -5573,9 +6240,6 @@ public class UserServiceImpl implements UserService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
-					}else if(type.equals("video")){
-						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
@@ -5762,9 +6426,6 @@ public class UserServiceImpl implements UserService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
-					}else if(type.equals("video")){
-						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
@@ -5916,9 +6577,6 @@ public class UserServiceImpl implements UserService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
-					}else if(type.equals("video")){
-						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
@@ -6104,9 +6762,6 @@ public class UserServiceImpl implements UserService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
-					}else if(type.equals("video")){
-						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
@@ -6277,9 +6932,6 @@ public class UserServiceImpl implements UserService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
-					}else if(type.equals("video")){
-						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
@@ -6440,9 +7092,6 @@ public class UserServiceImpl implements UserService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
-					}else if(type.equals("video")){
-						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
@@ -6588,121 +7237,107 @@ public class UserServiceImpl implements UserService {
 
 	@Override
 	public Response linkPhone(HttpServletRequest request,Long loginUserid,String appVersion) {
+		String ip = request.getRemoteAddr();
 		String phone = request.getParameter("phone");
 		String zone = request.getParameter("zone");
 		String code = request.getParameter("code");
 		String timestamp = request.getParameter("token_timestamp");
 		String password = request.getParameter("password");
-		String key = "";
+		JSONObject resp = new JSONObject();
 		if(loginUserid != null){
 			User u = userDao.get(loginUserid);
 			if(u != null){
 				if ((!Strings.isNullOrEmpty(zone)) && (!Strings.isNullOrEmpty(phone))
 						&& (!Strings.isNullOrEmpty(code))) {
-					User users = this.userDao.getUserByPhoneAndZone(zone, phone);
-					if (users != null) {
-						JSONObject jo = new JSONObject();
-						jo.put("status", "phone_exists");
-						jo.put("code", Integer.valueOf(10094));
-						jo.put("error_message", "Phone already used");
-						return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+					
+					String urlkey = getClass().getResource("/../../META-INF/user_centre.json").getPath();
+					JSONObject jsonObject = parseJson(urlkey);
+					String url = jsonObject.getString("url");
+					Map<String,String> param = new HashMap<String,String>();
+					param.put("mobile", phone);
+					param.put("code", code);
+					param.put("ip",ip);
+					String linkParam = "";
+					try {
+						linkParam = publicParam(param);
+					} catch (Exception e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
 					}
-					
-					
-					String appkey = "";
-					
-					appkey = getClass().getResource("/../../META-INF/phone.json").getPath();
-
-					JSONObject jsonObject = parseJson(appkey);
-					key = jsonObject.getString("appkey");
-
-					String param = "appkey=" + key + "&phone=" + phone + "&zone=" + zone + "&&code=" + code;
-					String result = "";
-					
-					
-					result = requestData("https://web.sms.mob.com/sms/verify", param);
-					
+					String result = HttpUtil.sendPostStr(url+"/customer/account/check-mobile-for-register", linkParam);
+					int centre_id = 0;
 					if (!Strings.isNullOrEmpty(result)) {
 						JSONObject json = JSONObject.fromObject(result);
-						String status = json.get("status").toString();
-						if (status.equals("200")) {
+						int status = json.getInt("code");
+						if (status == 10000) {
 							u.setZone(zone);
 							u.setPhone(phone);
-							u.setPassword(password);
-							userDao.update(u);
-							String raw = u.getId() + u.getPassword() + timestamp;
-							String token = EncryptionUtil.hashMessage(raw);
+							Map<String,String> registerParam = new HashMap<String, String>();
+							registerParam.put("mobile", phone);
+							registerParam.put("code", code);
+							registerParam.put("username", phone);
+							registerParam.put("password", password);
+							registerParam.put("ip",ip);
+							String registerParams = "";
+							try {
+								registerParams = publicParam(registerParam);
+							} catch (Exception e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+							String register_result = HttpUtil.sendPostStr(url+"/customer/account/register", registerParams);
+							JSONObject reg_res_json = JSONObject.fromObject(register_result);
+							int res_code = reg_res_json.getInt("code");
+							if(res_code == 10000){
+								JSONObject data = reg_res_json.getJSONObject("data");
+								centre_id = data.getInt("userid");
+							}
 							
-							JSONObject j = new JSONObject();
-							j.put("userid", u.getId());
-							j.put("access_token", token);
-							j.put("token_timestamp", Long.parseLong(timestamp));
-							return Response.status(Response.Status.OK).entity(j).build();
-						} else {
-							if (status.equals("512")) {
-								JSONObject j = new JSONObject();
-								j.put("status", "验证失败");
-								j.put("code", Integer.valueOf(10100));
-								j.put("error_message", "服务器拒绝访问，或�?�拒绝操�?");
-								return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
-							}
-							if (status.equals("513")) {
-								JSONObject j = new JSONObject();
-								j.put("status", "验证失败");
-								j.put("code", Integer.valueOf(10101));
-								j.put("error_message", "求Appkey不存在或被禁用�??");
-								return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
-							}
-							if (status.equals("514")) {
-								JSONObject j = new JSONObject();
-								j.put("status", "验证失败");
-								j.put("code", Integer.valueOf(10102));
-								j.put("error_message", "权限不足");
-								return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
-							}
-							if (status.equals("515")) {
-								JSONObject j = new JSONObject();
-								j.put("status", "验证失败");
-								j.put("code", 10103);
-								j.put("error_message", "服务器内部错�?");
-								return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
-							}
-							if (status.equals("517")) {
-								JSONObject j = new JSONObject();
-								j.put("status", "验证失败");
-								j.put("code", Integer.valueOf(10104));
-								j.put("error_message", "缺少必要的请求参�?");
-								return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
-							}
-							if (status.equals("518")) {
-								JSONObject j = new JSONObject();
-								j.put("status", "验证失败");
-								j.put("code", Integer.valueOf(10105));
-								j.put("error_message", "请求中用户的手机号格式不正确（包括手机的区号�?");
-								return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
-							}
-							if (status.equals("519")) {
-								JSONObject j = new JSONObject();
-								j.put("status", "验证失败");
-								j.put("code", Integer.valueOf(10106));
-								j.put("error_message", "请求发�?�验证码次数超出限制");
-								return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
-							}
-							if (status.equals("520")) {
-								JSONObject j = new JSONObject();
-								j.put("status", "验证失败");
-								j.put("code", Integer.valueOf(10107));
-								j.put("error_message", "无效验证码�??");
-								return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
-							}
+						} else if(status == 10001) {	
+							resp.put("status", "缺少参数");
+							resp.put("code", 10600);
+							resp.put("error_message", "缺少参数");
+							return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+						}else if(status == 10110) {	
+							resp.put("status", "手机号格式错误");
+							resp.put("code", 10601);
+							resp.put("error_message", "手机号格式错误");
+							return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+						}else if(status == 10111) {	
+							resp.put("status", "该手机号已注册");
+							resp.put("code", 10602);
+							resp.put("error_message", "该手机号已注册");
+							return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+						}else if(status == 10112) {	
+							resp.put("status", "验证码不正确");
+							resp.put("code", 10603);
+							resp.put("error_message", "验证码不正确");
+							return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
 						}
 					} else {
-						JSONObject j = new JSONObject();
-						j.put("status", "短信验证失败");
-						j.put("code", Integer.valueOf(10108));
-						j.put("error_message", "shareSDK 报错");
-						return Response.status(Response.Status.BAD_REQUEST).entity(j).build();
+						resp.put("status", "用户中心报错");
+						resp.put("code", 10604);
+						resp.put("error_message", "用户中心报错");
+						return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
 					}
+				 
+					u.setZone(zone);
+					u.setPhone(phone);
+					u.setPassword(Base64Utils.encodeToString(password.getBytes()));
+					userDao.update(u);
+					UserCentre uc = new UserCentre();
+					uc.setCentre_id(centre_id);
+					uc.setUser_id(u.getId());
+					userCentreDao.save(uc);
+					String raw = u.getId() + timestamp;
+					String token = EncryptionUtil.hashMessage(raw);
+					
+					JSONObject j = new JSONObject();
+					j.put("userid", u.getId());
+					j.put("access_token", token);
+					j.put("token_timestamp", Long.parseLong(timestamp));
+					return Response.status(Response.Status.OK).entity(j).build();
+					
 				} else {
 					JSONObject jo = new JSONObject();
 					jo.put("status", "request_invalid");
@@ -6713,19 +7348,25 @@ public class UserServiceImpl implements UserService {
 			}else{
 				JSONObject json = new JSONObject();
 				json.put("status", "no_resource");
-				json.put("code", Integer.valueOf(10011));
+				json.put("code",10011);
 				json.put("error_message", "The user does not exist");
 				return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
 			}
 			
 		}else{
 			JSONObject json = new JSONObject();
-			json.put("status", "no_resource");
-			json.put("code",10011);
-			json.put("error_message", "The user does not exist");
-			return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
+			List<User> userList = userDao.getUserByPhone(phone);
+			if(userList != null && userList.size() > 0){
+				json.put("status", "Phone_exist");
+				json.put("code", 10094);
+				json.put("error_message", "The phone is exist");
+				return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
+			}else{
+				json.put("status", "success");
+				return Response.status(Response.Status.OK).entity(json).build();
+			}
+		
 		}
-		return null;
 	}
 
 	@Override
@@ -6844,9 +7485,6 @@ public class UserServiceImpl implements UserService {
 			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		} else if (type.equals("multimedia")) {
 			storyModel.setCover_media(jsonObject);
-		}else if(type.equals("video")){
-			VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		}
 
 		storyModel.setTitle(story.getTitle());
@@ -7400,9 +8038,6 @@ public class UserServiceImpl implements UserService {
 			storyModel.put("cover_media",JSONObject.fromObject(coverMedia));
 		} else if (type.equals("multimedia")) {
 			storyModel.put("cover_media",jsonObject);
-		}else if(type.equals("video")){
-			VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-			storyModel.put("cover_media",JSONObject.fromObject(coverMedia));
 		}
 
 
@@ -8198,6 +8833,780 @@ public class UserServiceImpl implements UserService {
 			jo.put("error_message", "request is invalid");
 			return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
 		}
+	}
+
+	@Override
+	public Response get_auth(JSONObject fbInfo,HttpServletRequest request) throws Exception {
+		String ip = request.getRemoteAddr();
+		String path = getClass().getResource("/../../META-INF/user_centre.json").getPath();
+		JSONObject jsonObject = ParseFile.parseJson(path);
+		String url = jsonObject.getString("url");
+		url = url+"/customer/account/check-fd-token";
+		JSONObject resultJson = new JSONObject();
+		FBEncryption fb = new FBEncryption("20161206100527xEhf0s8Vj3j_uSMrI1eOHU--8k1LwR0o", 
+				"20161206100534Z_qxIRa6BBMophlaZMNwSVwJMGmL_ptB");
+		if(fbInfo != null){
+			String token_param = fbInfo.getString("token");
+			Map<String,String> param = new HashMap<String, String>();
+			param.put("fd_token", token_param);
+			param.put("ip",ip);
+			param.put("channel","40");
+			Map<String,String> map = fb.signature(param);
+			StringBuffer sbs = new StringBuffer();
+			Set<String> keys = map.keySet();
+			Iterator<String> iter = keys.iterator();
+			while(iter.hasNext()){
+				String key = iter.next();
+				if(key.equals("sign") || key.equals("fd_token")){
+					sbs.append(key+"="+URLEncoder.encode(map.get(key),"utf-8")+"&");
+				}else{
+					sbs.append(key+"="+map.get(key)+"&");
+				}
+				
+			}
+			String params_str = sbs.toString();
+			String params = params_str.substring(0,params_str.length()-1);
+			String respInfo = HttpUtil.sendGet(url+"?"+params);
+			JSONObject resp = JSONObject.fromObject(respInfo);
+			if(resp.getInt("code") == 10000){
+				Object[] obj = linkAccountsDao.getLinkAccountsByUUIDAndService(fbInfo.getString("fb_uid"), "fblife");
+				long timestamp = fbInfo.getLong("timestamp");
+				if(obj != null){
+					LinkAccounts linkAccounts = (LinkAccounts)obj[0];
+					Long userId = linkAccounts.getUser_id();
+					User user = userDao.get(userId);
+					String raw = user.getId().toString() + timestamp;
+					String token = EncryptionUtil.hashMessage(raw);
+
+					resultJson.put("userid", user.getId());
+					resultJson.put("access_token", token);
+					resultJson.put("token_timestamp", timestamp);
+					return Response.status(Response.Status.OK).entity(resultJson).build();
+				}else{
+					User u = new User();
+					String chars = "abcde0f12g3hi4jk5l6m7n8o9pqrstuvwxyz";
+			    	StringBuffer sb = new StringBuffer();
+			    	for(int i=0;i<10;i++){
+			    		char c = chars.charAt((int)(Math.random() * 36));
+			    		sb.append(c);
+			    	}
+					String pwd = Base64Utils.encodeToString(sb.toString().getBytes());
+					u.setPassword(pwd);
+
+					u.setUsername(fbInfo.getString("user_name"));
+					u.setSalt(initSalt().toString());
+					u.setStatus("enabled");
+					u.setUser_type("normal");
+					this.userDao.save(u);
+					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+					LinkAccounts la = new LinkAccounts();
+					la.setAuth_token(fbInfo.getString("token"));
+					if(fbInfo.containsKey("avatar_url")){
+						la.setAvatar_url(fbInfo.getString("avatar_url"));
+					}
+					la.setDescription(fbInfo.getString("user_name"));
+					la.setRefreshed_at(sdf.format(new Date()));
+					la.setService("fblife");
+					la.setUser_id(u.getId());
+					la.setUuid(fbInfo.getString("fb_uid"));
+					this.linkAccountsDao.save(la);
+				
+					String raw = u.getId().toString() + timestamp;
+					String token = EncryptionUtil.hashMessage(raw);
+
+					resultJson.put("userid", u.getId());
+					resultJson.put("access_token", token);
+					resultJson.put("token_timestamp", timestamp);
+					return Response.status(Response.Status.OK).entity(resultJson).build();
+				}
+			}else{
+				resultJson.put("status", "invalid_token");
+				resultJson.put("code", 10108);
+				resultJson.put("error_message", "token验证不正确");
+				return Response.status(Response.Status.BAD_REQUEST).entity(resultJson).build();
+			}
+		}else{
+			resultJson.put("status", "invalid_param");
+			resultJson.put("code", 10010);
+			resultJson.put("error_message", "不合法的参数");
+			return Response.status(Response.Status.BAD_REQUEST).entity(resultJson).build();
+		}
+	}
+
+	@Override
+	public Response get_code(JSONObject phoneInfo, HttpServletRequest request) throws Exception {
+		String ip = request.getRemoteAddr();
+		String path = getClass().getResource("/../../META-INF/user_centre.json").getPath();
+		JSONObject jsonObject = ParseFile.parseJson(path);
+		String url = jsonObject.getString("url");
+		JSONObject resp = new JSONObject();
+		if(phoneInfo != null){
+			String phone = phoneInfo.getString("phone");
+			Map<String,String> param = new HashMap<String, String>();
+			param.put("mobile",phone);
+			param.put("ip",ip);
+			String params = publicParam(param);
+			String result = HttpUtil.sendPostStr(url+"/customer/account/get-code-for-reset-password", params);
+			JSONObject res = JSONObject.fromObject(result);
+			int code = res.getInt("code");
+			if(res.getInt("code") == 10000){
+				resp.put("status","success");
+				return Response.status(Response.Status.OK).entity(resp).build();
+			}else if(code == 10111){
+				resp.put("status", "手机号未注册");
+				resp.put("code", 10627);
+				resp.put("error_message", "手机号未注册");
+				return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+			}else{
+				resp.put("status", "invalid_param");
+				resp.put("code", 10010);
+				resp.put("error_message", "不合法的参数");
+				return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+			}
+		}else{
+			resp.put("status", "invalid_param");
+			resp.put("code", 10010);
+			resp.put("error_message", "不合法的参数");
+			return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+		} 
+	}
+
+	@Override
+	public Response get_register_code(JSONObject phoneInfo, HttpServletRequest request) throws Exception {
+		String ip = request.getRemoteAddr();
+		String path = getClass().getResource("/../../META-INF/user_centre.json").getPath();
+		JSONObject jsonObject = ParseFile.parseJson(path);
+		String url = jsonObject.getString("url");
+		JSONObject resp = new JSONObject();
+		if(phoneInfo != null){
+			String phone = phoneInfo.getString("phone");
+			Map<String,String> param = new HashMap<String, String>();
+			param.put("mobile",phone);
+			param.put("ip",ip);
+			String params = publicParam(param);
+			String result = HttpUtil.sendPostStr(url+"/customer/account/get-code-for-register", params);
+			JSONObject res = JSONObject.fromObject(result);
+			if(res.getInt("code") == 10000){
+				resp.put("status","success");
+				return Response.status(Response.Status.OK).entity(resp).build();
+			}else if(res.getInt("code") == 10001){
+				resp.put("status", "缺少参数");
+				resp.put("code", 10627);
+				resp.put("error_message", "缺少参数");
+				return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+			}else if(res.getInt("code") == 10110){
+				resp.put("status", "手机号格式错误");
+				resp.put("code", 10628);
+				resp.put("error_message", "手机号格式错误");
+				return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+			}else if(res.getInt("code") == 10111){
+				resp.put("status", "该手机号已注册");
+				resp.put("code", 10628);
+				resp.put("error_message", "该手机号已注册");
+				return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+			}else if(res.getInt("code") == 10120){
+				resp.put("status", "该手机号已超出当日请求验证码最大次数");
+				resp.put("code", 10629);
+				resp.put("error_message", "该手机号已超出当日请求验证码最大次数");
+				return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+			}else if(res.getInt("code") == 10121){
+				resp.put("status", "验证码发送失败");
+				resp.put("code", 10630);
+				resp.put("error_message", "验证码发送失败");
+				return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+			}else{
+				resp.put("status", "invalid_param");
+				resp.put("code", 10010);
+				resp.put("error_message", "不合法的参数");
+				return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+			}
+		}else{
+			resp.put("status", "invalid_param");
+			resp.put("code", 10010);
+			resp.put("error_message", "不合法的参数");
+			return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+		} 
+	}
+	
+	@Override
+	public Response get_bind_code(JSONObject phoneInfo, HttpServletRequest request) throws Exception {
+		String ip = request.getRemoteAddr();
+		String path = getClass().getResource("/../../META-INF/user_centre.json").getPath();
+		JSONObject jsonObject = ParseFile.parseJson(path);
+		String url = jsonObject.getString("url");
+		JSONObject resp = new JSONObject();
+		if(phoneInfo != null){
+			String phone = phoneInfo.getString("phone");
+			Map<String,String> param = new HashMap<String, String>();
+			param.put("mobile",phone);
+			param.put("ip",ip);
+			String params = publicParam(param);
+			String result = HttpUtil.sendPostStr(url+"/customer/account/get-code-for-auth-mobile", params);
+			JSONObject res = JSONObject.fromObject(result);
+			if(res.getInt("code") == 10000){
+				resp.put("status","success");
+				return Response.status(Response.Status.OK).entity(resp).build();
+			}else{
+				resp.put("status", "invalid_param");
+				resp.put("code", 10010);
+				resp.put("error_message", "不合法的参数");
+				return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+			}
+		}else{
+			resp.put("status", "invalid_param");
+			resp.put("code", 10010);
+			resp.put("error_message", "不合法的参数");
+			return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+		} 
+	}
+	
+	@Override
+	public Response check_user(HttpServletRequest request) throws Exception {
+		String username = request.getParameter("username");
+		String password = request.getParameter("password");
+		JSONObject resp = new JSONObject();
+		if(!Strings.isNullOrEmpty(username) 
+				&& !Strings.isNullOrEmpty(password)){
+//			String username = userInfo.getString("username");
+//			String password = userInfo.getString("password");
+			//int centre_id = userInfo.getInt("userid");
+			User user = null;
+			Pattern pattern = Pattern.compile("^((13[0-9])|(15[^4,\\D])|(18[0,5-9]))\\d{8}$");
+			Matcher m = pattern.matcher(username);
+			String check = 
+						"^([a-z0-9A-Z]+[-|\\.]?)@([a-z0-9A-Z]+(-[a-z0-9A-Z]+)?\\.)+[a-zA-Z]{2,}$"; 
+			Pattern email = Pattern.compile(check);
+			Matcher emailM = email.matcher(username);
+			if(m.matches()){
+				user = userDao.loginByPhone("86",username, EncryptionUtil.sha256(password).toUpperCase());
+			} else if(emailM.matches()){
+				user = userDao.loginUser(username, EncryptionUtil.sha256(password).toUpperCase());
+			}
+			
+			if(user != null){
+				return Response.status(Response.Status.OK).entity("true").build();
+			}else{
+				resp.put("status", "invalid_user");
+				resp.put("code", 10007);
+				resp.put("error_message", "invalid user");
+				return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+			}
+		}else{
+			resp.put("status", "invalid_param");
+			resp.put("code", 10010);
+			resp.put("error_message", "不合法的参数");
+			return Response.status(Response.Status.BAD_REQUEST).entity(resp).build();
+		}
+	}
+
+	@Override
+	public Response check_token(JSONObject tokenInfo,HttpServletRequest request) throws Exception {
+		
+		String urlkey = getClass().getResource("/../../META-INF/user_centre.json").getPath();
+		JSONObject jsonObject = parseJson(urlkey);
+		String url = jsonObject.getString("token_url");
+		String ip = request.getRemoteAddr();
+		JSONObject res = new JSONObject();
+		if(tokenInfo != null){
+			String token = tokenInfo.getString("token");
+			Map<String,String> param = new HashMap<String, String>();
+			param.put("token",token);
+			param.put("ip",ip);
+			String params = publicParam(param);
+			String result = HttpUtil.sendGet(url+"/customer/info/get-by-token?"+params);
+			JSONObject resp = JSONObject.fromObject(result);
+			int code = resp.getInt("code");
+			if(code == 10000){
+				JSONObject centre_info = resp.getJSONObject("data");
+				int centre_id = centre_info.getInt("userid");
+				String fb_token = token;
+				UserCentre uc = userCentreDao.getUserCentreByCentreId(centre_id);
+				if(uc != null){
+					Long userid = uc.getUser_id();
+					User user = userDao.get(userid);
+					JSONObject auth = new JSONObject();
+					String raw = user.getId() + user.getCreated_time().toString();
+					String tokens = EncryptionUtil.hashMessage(raw);
+
+					System.out.println("userId--->" + user.getId());
+					String avatarImage = user.getAvatarImage();
+					if(!Strings.isNullOrEmpty(avatarImage)){
+						auth.put("avatar_image",JSONObject.fromObject(avatarImage));
+					}
+					auth.put("userid", user.getId());
+					auth.put("access_token", tokens);
+					auth.put("username", user.getUsername());
+					auth.put("token_timestamp", user.getCreated_time());
+					auth.put("fbid", centre_id);
+					auth.put("token", fb_token);
+					return Response.status(Response.Status.OK).entity(auth).build();
+				}else{
+					GetuiModel gm = getGetuiInfo();
+					if(centre_info.containsKey("mobile")){
+						
+						String phone = centre_info.getString("mobile");
+						if(!Strings.isNullOrEmpty(phone)){
+							User u = new User();
+							u.setPhone(phone);
+							u.setZone("86");
+							
+							String chars = "abcde0f12g3hi4jk5l6m7n8o9pqrstuvwxyz";
+					    	StringBuffer sb = new StringBuffer();
+					    	for(int i=0;i<10;i++){
+					    		char c = chars.charAt((int)(Math.random() * 36));
+					    		sb.append(c);
+					    	}
+							String pwd = Base64Utils.encodeToString(sb.toString().getBytes());
+							u.setPassword(pwd);
+							
+							//---
+							if(centre_info.containsKey("nickname")){
+								String nickname = centre_info.getString("nickname");
+								if(!Strings.isNullOrEmpty(nickname)){
+									u.setUsername(nickname);
+								}else{
+									u.setUsername(phone);
+								}
+							}else{
+								u.setUsername(phone);
+							}
+							
+							u.setSalt(initSalt().toString());
+							u.setStatus("enabled");
+							u.setUser_type("normal");
+							this.userDao.save(u);
+							UserCentre userCentre = new UserCentre();
+							userCentre.setCentre_id(centre_id);
+							userCentre.setUser_id(u.getId());
+							userCentreDao.save(userCentre);
+							Configuration c = new Configuration();
+							c.setNew_admin_push(true);
+							c.setNew_comment_on_your_comment_push(true);
+							c.setNew_comment_on_your_story_push(true);
+							c.setNew_favorite_from_following_push(true);
+							c.setNew_follower_push(true);
+							c.setNew_story_from_following_push(true);
+							c.setRecommended_my_story_push(true);
+							c.setReposted_my_story_push(true);
+							
+							c.setUserId((Long) u.getId());
+							
+							this.configurationDao.save(c);
+							List<User> officialUser = userDao.getUserByUserType("official");
+							if(officialUser != null && officialUser.size() > 0){
+								for(User official:officialUser){
+									Follow f = new Follow();
+									FollowId fid = new FollowId();
+									fid.setUser(u);
+									fid.setFollower(official);
+									f.setPk(fid);
+									f.setCreateTime(new Date());
+									followDao.save(f);
+								}
+							}
+							List<User> userList = this.userDao.getUserByUserType();
+							List<PushNotification> pnList = new ArrayList<PushNotification>();
+							Notification n = null;
+							List<Notification> notificationList = new ArrayList<Notification>();
+							Configuration conf;
+							if ((userList != null) && (userList.size() > 0)) {
+								for (User admin : userList) {
+									n = new Notification();
+									n.setRecipientId((Long) admin.getId());
+									n.setSenderId((Long) u.getId());
+									n.setNotificationType(8);
+									n.setObjectType(3);
+									n.setObjectId((Long) admin.getId());
+									n.setStatus("enabled");
+									n.setRead_already(true);
+									notificationList.add(n);
+									conf = this.configurationDao.getConfByUserId((Long) admin.getId());
+									if (conf.isNew_admin_push()) {
+										List<PushNotification> list = this.pushNotificationDao
+												.getPushNotificationByUserid(admin.getId());
+										pnList.addAll(list);
+									}
+								}
+							}
+							this.notificationDao.saveNotifications(notificationList);
+							Map<String, Integer> map = new HashMap<String, Integer>();
+							if ((pnList != null) && (pnList.size() > 0)) {
+								for (PushNotification pn : pnList) {
+									int count = this.notificationDao.getNotificationByRecipientId(pn.getUserId());
+									map.put(pn.getClientId(), Integer.valueOf(count));
+								}
+							}
+							String content = u.getUsername() + "注册了";
+							JSONObject json = new JSONObject();
+							json.put("user_id",u.getId());
+							PushNotificationUtil.pushInfoAllFollow(gm.getAppId(), gm.getAppKey(), gm.getMasterSecret(), pnList, map, content,json.toString());
+							
+							//--
+							JSONObject auth = new JSONObject();
+							auth.put("userid", u.getId());
+							String raw = u.getId() + u.getCreated_time().toString();
+
+							String tokens = EncryptionUtil.hashMessage(raw);
+							auth.put("access_token", tokens);
+							auth.put("token_timestamp", u.getCreated_time());
+							auth.put("username",u.getUsername());
+							auth.put("fbid",centre_id);
+							auth.put("token",fb_token);
+							String avatarImage = u.getAvatarImage();
+							if(!Strings.isNullOrEmpty(avatarImage)){
+								auth.put("avatar_image",JSONObject.fromObject(avatarImage));
+							}
+							return Response.status(Response.Status.OK).entity(auth).build();
+							
+						}else{
+
+							User u = new User();
+							String fbname = centre_info.getString("username");
+							if(!Strings.isNullOrEmpty(fbname)){
+								u.setFbname(fbname);
+								String chars = "abcde0f12g3hi4jk5l6m7n8o9pqrstuvwxyz";
+						    	StringBuffer sb = new StringBuffer();
+						    	for(int i=0;i<10;i++){
+						    		char c = chars.charAt((int)(Math.random() * 36));
+						    		sb.append(c);
+						    	}
+								String pwd = Base64Utils.encodeToString(sb.toString().getBytes());
+								u.setPassword(pwd);
+								
+								//---
+								if(centre_info.containsKey("nickname")){
+									String nickname = centre_info.getString("nickname");
+									if(!Strings.isNullOrEmpty(nickname)){
+										u.setUsername(nickname);
+									}else{
+										u.setUsername(fbname);
+									}
+								}else{
+									u.setUsername(fbname);
+								}
+								u.setSalt(initSalt().toString());
+								u.setStatus("enabled");
+								u.setUser_type("normal");
+								this.userDao.save(u);
+								UserCentre userCentre = new UserCentre();
+								userCentre.setCentre_id(centre_id);
+								userCentre.setUser_id(u.getId());
+								userCentreDao.save(uc);
+								Configuration c = new Configuration();
+								c.setNew_admin_push(true);
+								c.setNew_comment_on_your_comment_push(true);
+								c.setNew_comment_on_your_story_push(true);
+								c.setNew_favorite_from_following_push(true);
+								c.setNew_follower_push(true);
+								c.setNew_story_from_following_push(true);
+								c.setRecommended_my_story_push(true);
+								c.setReposted_my_story_push(true);
+								
+								c.setUserId((Long) u.getId());
+								
+								this.configurationDao.save(c);
+								List<User> officialUser = userDao.getUserByUserType("official");
+								if(officialUser != null && officialUser.size() > 0){
+									for(User official:officialUser){
+										Follow f = new Follow();
+										FollowId fid = new FollowId();
+										fid.setUser(u);
+										fid.setFollower(official);
+										f.setPk(fid);
+										f.setCreateTime(new Date());
+										followDao.save(f);
+									}
+								}
+								List<User> userList = this.userDao.getUserByUserType();
+								List<PushNotification> pnList = new ArrayList<PushNotification>();
+								Notification n = null;
+								List<Notification> notificationList = new ArrayList<Notification>();
+								Configuration conf;
+								if ((userList != null) && (userList.size() > 0)) {
+									for (User admin : userList) {
+										n = new Notification();
+										n.setRecipientId((Long) admin.getId());
+										n.setSenderId((Long) u.getId());
+										n.setNotificationType(8);
+										n.setObjectType(3);
+										n.setObjectId((Long) admin.getId());
+										n.setStatus("enabled");
+										n.setRead_already(true);
+										notificationList.add(n);
+										conf = this.configurationDao.getConfByUserId((Long) admin.getId());
+										if (conf.isNew_admin_push()) {
+											List<PushNotification> list = this.pushNotificationDao
+													.getPushNotificationByUserid(admin.getId());
+											pnList.addAll(list);
+										}
+									}
+								}
+								this.notificationDao.saveNotifications(notificationList);
+								Map<String, Integer> map = new HashMap<String, Integer>();
+								if ((pnList != null) && (pnList.size() > 0)) {
+									for (PushNotification pn : pnList) {
+										int count = this.notificationDao.getNotificationByRecipientId(pn.getUserId());
+										map.put(pn.getClientId(), Integer.valueOf(count));
+									}
+								}
+								String content = u.getUsername() + "注册了";
+								JSONObject json = new JSONObject();
+								json.put("user_id",u.getId());
+								PushNotificationUtil.pushInfoAllFollow(gm.getAppId(), gm.getAppKey(), gm.getMasterSecret(), pnList, map, content,json.toString());
+								
+								//--
+								JSONObject auth = new JSONObject();
+								auth.put("userid", u.getId());
+								String raw = u.getId() + u.getCreated_time().toString();
+
+								String tokens = EncryptionUtil.hashMessage(raw);
+								auth.put("access_token", tokens);
+								auth.put("token_timestamp", u.getCreated_time());
+								auth.put("username",u.getUsername());
+								auth.put("fbid",centre_id);
+								auth.put("token",fb_token);
+								String avatarImage = u.getAvatarImage();
+								if(!Strings.isNullOrEmpty(avatarImage)){
+									auth.put("avatar_image",JSONObject.fromObject(avatarImage));
+								}
+								return Response.status(Response.Status.OK).entity(auth).build();
+							}else{
+								res.put("status", "request error");
+								res.put("code", Integer.valueOf(10010));
+								res.put("error_message", "request is invalid");
+								return Response.status(Response.Status.BAD_REQUEST).entity(res).build();
+							}
+							
+						}
+					}else if(centre_info.containsKey("username")){
+						User u = new User();
+						String fbname = centre_info.getString("username");
+						if(!Strings.isNullOrEmpty(fbname)){
+							u.setFbname(fbname);
+							String chars = "abcde0f12g3hi4jk5l6m7n8o9pqrstuvwxyz";
+					    	StringBuffer sb = new StringBuffer();
+					    	for(int i=0;i<10;i++){
+					    		char c = chars.charAt((int)(Math.random() * 36));
+					    		sb.append(c);
+					    	}
+							String pwd = Base64Utils.encodeToString(sb.toString().getBytes());
+							u.setPassword(pwd);
+							
+							//---
+							if(centre_info.containsKey("nickname")){
+								String nickname = centre_info.getString("nickname");
+								if(!Strings.isNullOrEmpty(nickname)){
+									u.setUsername(nickname);
+								}else{
+									u.setUsername(fbname);
+								}
+							}else{
+								u.setUsername(fbname);
+							}
+							u.setSalt(initSalt().toString());
+							u.setStatus("enabled");
+							u.setUser_type("normal");
+							this.userDao.save(u);
+							UserCentre userCentre = new UserCentre();
+							userCentre.setCentre_id(centre_id);
+							userCentre.setUser_id(u.getId());
+							userCentreDao.save(userCentre);
+							Configuration c = new Configuration();
+							c.setNew_admin_push(true);
+							c.setNew_comment_on_your_comment_push(true);
+							c.setNew_comment_on_your_story_push(true);
+							c.setNew_favorite_from_following_push(true);
+							c.setNew_follower_push(true);
+							c.setNew_story_from_following_push(true);
+							c.setRecommended_my_story_push(true);
+							c.setReposted_my_story_push(true);
+							
+							c.setUserId((Long) u.getId());
+							
+							this.configurationDao.save(c);
+							List<User> officialUser = userDao.getUserByUserType("official");
+							if(officialUser != null && officialUser.size() > 0){
+								for(User official:officialUser){
+									Follow f = new Follow();
+									FollowId fid = new FollowId();
+									fid.setUser(u);
+									fid.setFollower(official);
+									f.setPk(fid);
+									f.setCreateTime(new Date());
+									followDao.save(f);
+								}
+							}
+							List<User> userList = this.userDao.getUserByUserType();
+							List<PushNotification> pnList = new ArrayList<PushNotification>();
+							Notification n = null;
+							List<Notification> notificationList = new ArrayList<Notification>();
+							Configuration conf;
+							if ((userList != null) && (userList.size() > 0)) {
+								for (User admin : userList) {
+									n = new Notification();
+									n.setRecipientId((Long) admin.getId());
+									n.setSenderId((Long) u.getId());
+									n.setNotificationType(8);
+									n.setObjectType(3);
+									n.setObjectId((Long) admin.getId());
+									n.setStatus("enabled");
+									n.setRead_already(true);
+									notificationList.add(n);
+									conf = this.configurationDao.getConfByUserId((Long) admin.getId());
+									if (conf.isNew_admin_push()) {
+										List<PushNotification> list = this.pushNotificationDao
+												.getPushNotificationByUserid(admin.getId());
+										pnList.addAll(list);
+									}
+								}
+							}
+							this.notificationDao.saveNotifications(notificationList);
+							Map<String, Integer> map = new HashMap<String, Integer>();
+							if ((pnList != null) && (pnList.size() > 0)) {
+								for (PushNotification pn : pnList) {
+									int count = this.notificationDao.getNotificationByRecipientId(pn.getUserId());
+									map.put(pn.getClientId(), Integer.valueOf(count));
+								}
+							}
+							String content = u.getUsername() + "注册了";
+							JSONObject json = new JSONObject();
+							json.put("user_id",u.getId());
+							PushNotificationUtil.pushInfoAllFollow(gm.getAppId(), gm.getAppKey(), gm.getMasterSecret(), pnList, map, content,json.toString());
+							
+							//--
+							JSONObject auth = new JSONObject();
+							auth.put("userid", u.getId());
+							String raw = u.getId() + u.getCreated_time().toString();
+
+							String tokens = EncryptionUtil.hashMessage(raw);
+							auth.put("access_token", tokens);
+							auth.put("token_timestamp", u.getCreated_time());
+							auth.put("username",u.getUsername());
+							auth.put("fbid",centre_id);
+							auth.put("token",fb_token);
+							String avatarImage = u.getAvatarImage();
+							if(!Strings.isNullOrEmpty(avatarImage)){
+								auth.put("avatar_image",JSONObject.fromObject(avatarImage));
+							}
+							return Response.status(Response.Status.OK).entity(auth).build();
+						}else{
+							res.put("status", "request error");
+							res.put("code", Integer.valueOf(10010));
+							res.put("error_message", "request is invalid");
+							return Response.status(Response.Status.BAD_REQUEST).entity(res).build();
+						}
+					}
+				}
+			}else if(code == 10004){
+				res.put("status", "校验码错误");
+				res.put("code", 10640);
+				res.put("error_message", "校验码错误");
+				return Response.status(Response.Status.BAD_REQUEST).entity(res).build();
+			}else if(code == 10001){
+				res.put("status", "缺少参数");
+				res.put("code", 10641);
+				res.put("error_message", "缺少参数");
+				return Response.status(Response.Status.BAD_REQUEST).entity(res).build();
+			}else if(code == 10102){
+				res.put("status", "token不存在");
+				res.put("code", 10642);
+				res.put("error_message",  "token不存在");
+				return Response.status(Response.Status.BAD_REQUEST).entity(res).build();
+			}else if(code == 10103){
+				res.put("status", "token已过期");
+				res.put("code", 10643);
+				res.put("error_message",  "token已过期");
+				return Response.status(Response.Status.BAD_REQUEST).entity(res).build();
+			}else if(code == 10120){
+				res.put("status", "系统内部错误");
+				res.put("code", 10644);
+				res.put("error_message",  "系统内部错误");
+				return Response.status(Response.Status.BAD_REQUEST).entity(res).build();
+			}else if(code == 10140){
+				res.put("status", "用户信息不存在");
+				res.put("code", 10645);
+				res.put("error_message",  "用户信息不存在r");
+				return Response.status(Response.Status.BAD_REQUEST).entity(res).build();
+			}
+		}else{
+			res.put("status", "request_invalid");
+			res.put("code", Integer.valueOf(10010));
+			res.put("error_message", "request is invalid");
+			return Response.status(Response.Status.BAD_REQUEST).entity(res).build();
+		}
+		return null;
+		
+	}
+	
+	public String publicParam(Map<String,String> param) throws Exception{
+		FBEncryption fb = new FBEncryption("20161206100527xEhf0s8Vj3j_uSMrI1eOHU--8k1LwR0o", 
+				"20161206100534Z_qxIRa6BBMophlaZMNwSVwJMGmL_ptB");
+		
+		param.put("channel","40");
+		Map<String,String> map = fb.signature(param);
+		boolean bool = fb.checkSignature(map);
+		System.out.println("bool--->>>"+bool);
+		Set<String> keys = map.keySet();
+		Iterator<String> iter = keys.iterator();
+		StringBuffer sb = new StringBuffer();
+		while(iter.hasNext()){
+			String key = iter.next();
+			sb.append(key+"="+map.get(key)+"&");
+		}
+		String res = sb.toString();
+		String result = res.substring(0,res.length()-1);
+		return result;
+	}
+
+	@Override
+	public Response error_fbtoken() {
+		JSONObject jo = new JSONObject();
+		jo.put("status", "token无效");
+		jo.put("code", 10623);
+		jo.put("error_message", "token无效");
+		return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+	}
+
+	@Override
+	public Response logout(String fbToken,String device, HttpServletRequest request) throws Exception {
+		String urlkey = getClass().getResource("/../../META-INF/user_centre.json").getPath();
+		JSONObject jsonObject = parseJson(urlkey);
+		String url = jsonObject.getString("url");
+		Map<String,String> param = new HashMap<String, String>();
+		String ip = request.getRemoteAddr();
+		param.put("ip", ip);
+		param.put("token",fbToken);
+		param.put("device", device);
+		String params = publicParam(param);
+		String result = HttpUtil.sendPostStr(url+"/customer/account/logout", params);
+		JSONObject res = JSONObject.fromObject(result);
+		int code = res.getInt("code");
+		JSONObject json = new JSONObject();
+		if(code == 10000){
+			json.put("status", "success");
+			return Response.status(Response.Status.OK).entity(json).build();
+		}
+		return null;
+	}
+
+	@Override
+	public Response fbtoken() throws Exception {
+		String urlkey = getClass().getResource("/../../META-INF/fb.json").getPath();
+		JSONObject jsonObject = parseJson(urlkey);
+		String url = jsonObject.getString("url");
+		String result = HttpUtil.sendPostStr(url+"forum.php", "mod=qiniu&action=gettoken&uid=3217");
+		
+		return Response.status(Response.Status.OK).entity(result).build();
+	}
+
+	@Override
+	public Response fbstory(JSONObject story) throws Exception {
+		String urlkey = getClass().getResource("/../../META-INF/fb.json").getPath();
+		JSONObject jsonObject = parseJson(urlkey);
+		String url = jsonObject.getString("url");
+		String result = HttpUtil.sendPostStr(url+"fb_editor/json2bbcode.php", "message="+story);
+		
+		return Response.status(Response.Status.OK).entity(result).build();
 	}
 	
 }

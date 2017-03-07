@@ -12,6 +12,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
 /**
+ * Created by 代勋 on 2016-11-24
  *
  * 依赖包SecretUtils.java下载地址：http://mvnrepository.com/artifact/commons-codec/commons-codec/1.10
  */
@@ -105,7 +106,7 @@ public class FBEncryption {
 
         Map<String, String> sortedMap = sortMapByKey(params);
         String baseStr = httpBuildQueryRFC3986(sortedMap);
-        sortedMap.put("sign", new String(org.apache.commons.codec.binary.Base64.encodeBase64(hmac_sha1(baseStr, apiSecretKey))));
+        sortedMap.put("sign", new String(org.apache.commons.codec.binary.Base64.encodeBase64(hmac_sha1(baseStr, apiSecretKey))).replace('+', '-').replace('/', '_'));
         return sortedMap;
     }
 
@@ -117,7 +118,7 @@ public class FBEncryption {
                 Map<String, String> sortedMap = sortMapByKey(params);
                 String baseStr = httpBuildQueryRFC3986(sortedMap);
 
-                String mySign = new String(org.apache.commons.codec.binary.Base64.encodeBase64(hmac_sha1(baseStr, apiSecretKey)));
+                String mySign = new String(org.apache.commons.codec.binary.Base64.encodeBase64(hmac_sha1(baseStr, apiSecretKey))).replace('+', '-').replace('/', '_');
                 if (sign.equals(mySign)) {
                     return true;
                 }
@@ -128,4 +129,3 @@ public class FBEncryption {
         }
     }
 }
-

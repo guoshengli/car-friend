@@ -24,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.google.common.base.Strings;
+import com.revolution.rest.common.FBEncryption;
 import com.revolution.rest.common.HttpUtil;
 import com.revolution.rest.common.ParseFile;
 import com.revolution.rest.common.PushNotificationUtil;
@@ -31,6 +32,7 @@ import com.revolution.rest.dao.CollectionDao;
 import com.revolution.rest.dao.CollectionStoryDao;
 import com.revolution.rest.dao.CommentDao;
 import com.revolution.rest.dao.ConfigurationDao;
+import com.revolution.rest.dao.FMapDao;
 import com.revolution.rest.dao.FollowDao;
 import com.revolution.rest.dao.LikesDao;
 import com.revolution.rest.dao.LinkAccountsDao;
@@ -41,6 +43,7 @@ import com.revolution.rest.dao.RepublishDao;
 import com.revolution.rest.dao.StoryDao;
 import com.revolution.rest.dao.StoryElementDao;
 import com.revolution.rest.dao.TimelineDao;
+import com.revolution.rest.dao.UserCentreDao;
 import com.revolution.rest.dao.UserCollectionDao;
 import com.revolution.rest.dao.UserDao;
 import com.revolution.rest.model.Collection;
@@ -48,6 +51,7 @@ import com.revolution.rest.model.CollectionStory;
 import com.revolution.rest.model.Columns;
 import com.revolution.rest.model.Comment;
 import com.revolution.rest.model.Configuration;
+import com.revolution.rest.model.FMap;
 import com.revolution.rest.model.Follow;
 import com.revolution.rest.model.Likes;
 import com.revolution.rest.model.LinkAccounts;
@@ -60,12 +64,14 @@ import com.revolution.rest.model.Story;
 import com.revolution.rest.model.StoryElement;
 import com.revolution.rest.model.Timeline;
 import com.revolution.rest.model.User;
+import com.revolution.rest.model.UserCentre;
 import com.revolution.rest.service.model.CollectionIntro;
 import com.revolution.rest.service.model.CommentModel;
 import com.revolution.rest.service.model.CommentStoryModel;
 import com.revolution.rest.service.model.CommentSummaryModel;
 import com.revolution.rest.service.model.CoverMedia;
 import com.revolution.rest.service.model.EventModel;
+import com.revolution.rest.service.model.IframeCover;
 import com.revolution.rest.service.model.ImageCover;
 import com.revolution.rest.service.model.LineCover;
 import com.revolution.rest.service.model.LinkModel;
@@ -140,6 +146,12 @@ public class StoryServiceImpl implements StoryService {
 	
 	@Autowired
 	private LinkAccountsDao linkAccountsDao;
+	
+	@Autowired
+	private UserCentreDao userCentreDao;
+	
+	@Autowired
+	private FMapDao fmapDao;
 
 	char[] table = new char[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
 
@@ -495,9 +507,6 @@ public class StoryServiceImpl implements StoryService {
 				storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 			} else if (type.equals("multimedia")) {
 				storyModel.setCover_media(jsonObject);
-			}else if(type.equals("video")){
-				VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-				storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 			}
 
 			List<StoryElementModel> storyElements = new ArrayList<StoryElementModel>();
@@ -1279,8 +1288,12 @@ public class StoryServiceImpl implements StoryService {
 		return Response.status(Response.Status.OK).entity(json).build();
 	}
 
-	public Response createLikes(Long storyId, Long loginUserid) {
+	public Response createLikes(Long storyId, Long loginUserid,HttpServletRequest request) {
 		log.debug("*** create likes ***");
+		String ip = request.getRemoteAddr();
+		String urlkey = getClass().getResource("/../../META-INF/user_centre.json").getPath();
+		JSONObject jsonObj = parseJson(urlkey);
+		String url = jsonObj.getString("fmap_url");
 
 		String path = getClass().getResource("/../../META-INF/getui.json").getPath();
 		JSONObject jsonObject = ParseFile.parseJson(path);
@@ -1327,6 +1340,33 @@ public class StoryServiceImpl implements StoryService {
 		int count = this.likesDao.likeStoryCount(storyId);
 		JSONObject jo = new JSONObject();
 		jo.put("like_count", Integer.valueOf(count));
+		
+		List<FMap> fmapList = fmapDao.getFMapList(storyId);
+		if(fmapList != null && fmapList.size() > 0){
+			UserCentre uc = userCentreDao.getUserCentreByUserId(loginUserid);
+			int centre_id = 0;
+			if(uc != null){
+				centre_id = uc.getCentre_id();
+			}else{
+				LinkAccounts la = linkAccountsDao.getLinkAccountsByUseridAndService(loginUserid, "fblife");
+				centre_id = Integer.parseInt(la.getUuid());
+			}
+			if(centre_id > 0){
+				Map<String,String> map = new HashMap<String, String>();
+				map.put("user_id", String.valueOf(centre_id));
+				map.put("story_id", String.valueOf(storyId));
+				map.put("recognition_type", "10");
+				map.put("ip",ip);
+				String params = "";
+				try {
+					params = publicParam(map);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+				HttpUtil.sendPostStr(url+"/v1/info/info-wiki/add-wiki-recognition", params);
+			}
+			
+		}
 		return Response.status(Response.Status.CREATED).entity(jo).build();
 	}
 
@@ -1744,9 +1784,6 @@ public class StoryServiceImpl implements StoryService {
 			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		} else if (type.equals("multimedia")) {
 			storyModel.setCover_media(jsonObject);
-		}else if(type.equals("video")){
-			VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		}
 
 		List<StoryElement> storyElements = new ArrayList<StoryElement>();
@@ -1976,9 +2013,6 @@ public class StoryServiceImpl implements StoryService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
-					}else if(type.equals("video")){
-						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}else if(type.equals("line")){
 						LineCover coverMedia = (LineCover) JSONObject.toBean(jsonObject, LineCover.class);
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
@@ -2013,8 +2047,15 @@ public class StoryServiceImpl implements StoryService {
 								}
 
 							}else if (types.equals("video")){
-								VideoCover videoMedia = (VideoCover) JSONObject.toBean(content, VideoCover.class);
-								element.setContent(videoMedia);
+								JSONObject media = content.getJSONObject("media");
+								if(media.containsKey("iframe_code")){
+									IframeCover iframeMedia = (IframeCover) JSONObject.toBean(content, IframeCover.class);
+									element.setContent(iframeMedia);
+								}else{
+									VideoCover videoMedia = (VideoCover) JSONObject.toBean(content, VideoCover.class);
+									element.setContent(videoMedia);
+								}
+								
 							}else if (types.equals("line")){
 								LineCover lineMedia = (LineCover) JSONObject.toBean(content, LineCover.class);
 								element.setContent(lineMedia);
@@ -2206,9 +2247,6 @@ public class StoryServiceImpl implements StoryService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
-					}else if(type.equals("video")){
-						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					List<StoryElement> storyElements = new ArrayList<StoryElement>();
@@ -2240,8 +2278,17 @@ public class StoryServiceImpl implements StoryService {
 								}
 
 							} else if (types.equals("video")){
-								VideoCover videoMedia = (VideoCover) JSONObject.toBean(content, VideoCover.class);
-								element.setContent(videoMedia);
+								
+
+								JSONObject media = content.getJSONObject("media");
+								if(media.containsKey("iframe_code")){
+									IframeCover iframeMedia = (IframeCover) JSONObject.toBean(content, IframeCover.class);
+									element.setContent(iframeMedia);
+								}else{
+									VideoCover videoMedia = (VideoCover) JSONObject.toBean(content, VideoCover.class);
+									element.setContent(videoMedia);
+								}
+								
 							} else if (types.equals("line")){
 								LineCover lineMedia = (LineCover) JSONObject.toBean(content, LineCover.class);
 								element.setContent(lineMedia);
@@ -2485,9 +2532,6 @@ public class StoryServiceImpl implements StoryService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
-					}else if(type.equals("video")){
-						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
@@ -2619,9 +2663,6 @@ public class StoryServiceImpl implements StoryService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
-					}else if(type.equals("video")){
-						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
@@ -3221,9 +3262,6 @@ public class StoryServiceImpl implements StoryService {
 			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		} else if (type.equals("multimedia")) {
 			storyModel.setCover_media(jsonObject);
-		}else if(type.equals("video")){
-			coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		}
 
 		List<StoryElement> storyElements = new ArrayList<StoryElement>();
@@ -3256,6 +3294,18 @@ public class StoryServiceImpl implements StoryService {
 						element.setContent(linkModel);
 					}
 
+				}else if(type.equals("video")){
+
+					JSONObject media = content.getJSONObject("media");
+					if(media.containsKey("iframe_code")){
+						IframeCover iframeMedia = (IframeCover) JSONObject.toBean(content, IframeCover.class);
+						element.setContent(iframeMedia);
+					}else{
+						VideoCover videoMedia = (VideoCover) JSONObject.toBean(content, VideoCover.class);
+						element.setContent(videoMedia);
+					}
+					
+				
 				}
 				storyElements.add(element);
 			}
@@ -3486,7 +3536,7 @@ public class StoryServiceImpl implements StoryService {
 			System.out.println("tag-->"+tag);
 			String splitSign = HttpUtil.splitJSON(tag);
 			String privateKey = HttpUtil.getPrivateKey(new Date());
-			splitSign = splitSign + "&" +privateKey;
+			splitSign = splitSign + "&private_key=" +privateKey;
 			System.out.println("splitSign-->"+splitSign);
 			String sign = HttpUtil.getMD5Str(splitSign);
 			System.out.println("sign-->"+sign);
@@ -3563,7 +3613,7 @@ public class StoryServiceImpl implements StoryService {
 			System.out.println("tag-->"+invitation);
 			String splitSign = HttpUtil.splitJSON(invitation);
 			String privateKey = HttpUtil.getPrivateKey(new Date());
-			splitSign = splitSign + "&" +privateKey;
+			splitSign = splitSign + "&private_key=" +privateKey;
 			System.out.println("splitSign-->"+splitSign);
 			String sign = HttpUtil.getMD5Str(splitSign);
 			System.out.println("sign-->"+sign);
@@ -3663,7 +3713,7 @@ public class StoryServiceImpl implements StoryService {
 				System.out.println("tag-->"+invitation);
 				String splitSign = HttpUtil.splitJSON(invitation);
 				String privateKey = HttpUtil.getPrivateKey(new Date());
-				splitSign = splitSign + "&" +privateKey;
+				splitSign = splitSign + "&private_key=" +privateKey;
 				System.out.println("splitSign-->"+splitSign);
 				String sign = HttpUtil.getMD5Str(splitSign);
 				System.out.println("sign-->"+sign);
@@ -3699,8 +3749,261 @@ public class StoryServiceImpl implements StoryService {
 			return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
 		}
 	}
+
+	@Override
+	public Response getVideo(JSONObject video) throws Exception {
+		JSONObject returnJson = new JSONObject();
+		if(video != null){
+			String url = video.getString("url");
+			if(url.contains("youku.com")){
+				try{
+					String iframe = HttpUtil.getYouKuVideo(url);
+					if(!Strings.isNullOrEmpty(iframe)){
+						returnJson.put("iframe_code",iframe);
+						returnJson.put("url", url);
+						return Response.status(Response.Status.OK).entity(returnJson).build();
+					}else{
+						returnJson.put("status","invalid_url");
+						returnJson.put("code",10111);
+						returnJson.put("error_message", "Invalid url parameters");
+						return Response.status(Response.Status.BAD_GATEWAY).entity(returnJson).build();
+					}
+					
+				}catch(Exception e){
+					returnJson.put("status","invalid_url");
+					returnJson.put("code",10111);
+					returnJson.put("error_message", "Invalid url parameters");
+					return Response.status(Response.Status.BAD_GATEWAY).entity(returnJson).build();
+				}
+				
+			}
+		}else{
+			returnJson.put("status", "invalid_request");
+			returnJson.put("code", 10010);
+			returnJson.put("error_message", "Invalid payload parameters");
+			return Response.status(Response.Status.BAD_REQUEST).entity(returnJson).build();
+		}
+		
+		return null;
+	}
+
+	@Override
+	public Response addStory(JSONObject storyModel, Long loginUserid, HttpServletRequest request) {
+		String ip = request.getRemoteAddr();
+		String urlkey = getClass().getResource("/../../META-INF/user_centre.json").getPath();
+		JSONObject jsonObject = parseJson(urlkey);
+		String url = jsonObject.getString("fmap_url");
+		log.debug("create story");
+		try {
+			if (storyModel != null) {
+				Story story = new Story();
+
+				if (storyModel.containsKey("title"))
+					story.setTitle(storyModel.getString("title"));
+
+				if (storyModel.containsKey("cover_media"))
+					story.setCover_page(storyModel.getString("cover_media"));
+				else {
+					story.setCover_page(null);
+				}
+
+				if (storyModel.containsKey("summary"))
+					story.setSummary(storyModel.getString("summary"));
+				else {
+					story.setSummary(null);
+				}
+				story.setRecommendation(false);
+
+				if (storyModel.containsKey("image_count")) {
+					story.setImage_count(storyModel.getInt("image_count"));
+				}
+				story.setStatus("publish");
+				story.setUpdate_time(new Date());
+				story.setLast_comment_date(new Date());
+				User user = this.userDao.get(loginUserid);
+				if (user != null) {
+					story.setUser(user);
+				}
+				JSONArray jsonArray = JSONArray.fromObject(storyModel.getString("elements"));
+				List<StoryElement> seSet = new ArrayList<StoryElement>();
+				JSONObject jo = null;
+				if ((jsonArray != null) && (jsonArray.size() > 0)) {
+					StoryElement element = null;
+					for (int i = 0; i < jsonArray.size(); i++) {
+						element = new StoryElement();
+						jo = (JSONObject) jsonArray.get(i);
+						element.setGrid_size(jo.getString("grid_size"));
+						element.setLayout_type(jo.getString("layout_type"));
+						element.setContents(jo.getString("content"));
+						element.setStoryinfo(story);
+						seSet.add(element);
+					}
+				}
+				story.setElements(seSet);
+				
+				
+				
+				
+				this.storyDao.save(story);
+				log.debug("start add activity$$$$$$$$$$$$$$$$$$$$$$$$$$$" + story.getUser().getId() + " -->"
+						+ story.getId());
+				story.setTinyURL(makeURL(story.getId()));
+				storyDao.update(story);
+				UserCentre uc = userCentreDao.getUserCentreByUserId(loginUserid);
+				int centre_id = 0;
+				if(uc != null){
+					centre_id = uc.getCentre_id();
+				}else{
+					LinkAccounts la = linkAccountsDao.getLinkAccountsByUseridAndService(loginUserid, "fblife");
+					centre_id = Integer.parseInt(la.getUuid());
+				}
+				
+				if(centre_id > 0){
+					storyModel.put("story_id", story.getId());
+					storyModel.put("author_id", centre_id);
+					storyModel.put("tiny_url", story.getTinyURL());
+					List<StoryElement> seList = story.getElements();
+					JsonConfig config = new JsonConfig();
+					config.setExcludes(new String[] { "storyinfo", "grid_size", "layout_type", "content" });
+					config.setIgnoreDefaultExcludes(false);
+					config.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
+					JSONArray ja = JSONArray.fromObject(seList,config);
+					if(storyModel.containsKey("elements")){
+						storyModel.remove("elements");
+						storyModel.put("elements",ja);
+					}else{
+						storyModel.put("elements",ja);
+					}
+					Map<String,String> param = new HashMap<String,String>();
+					param.put("user_id",String.valueOf(centre_id));
+					param.put("data",storyModel.toString());
+					param.put("ip", ip);
+					String params = publicParam(param);
+					String result = HttpUtil.sendPostStr(url+"/v1/info/info-wiki/create-wiki",params);
+					if (!Strings.isNullOrEmpty(result)) {
+						JSONObject json = JSONObject.fromObject(result);
+						int status = json.getInt("code");
+						if (status == 10000) {
+							JSONArray collection_id = null;
+							if (storyModel.containsKey("collection_id")) {
+								collection_id = storyModel.getJSONArray("collection_id");
+								if(collection_id != null && collection_id.size() > 0){
+									Object[] ids = collection_id.toArray();
+									for(Object id:ids){
+										CollectionStory cs = new CollectionStory();
+										Collection collection = collectionDao.get(Long.parseLong(id.toString()));
+										cs.setStory(story);
+										cs.setCollection(collection);
+										collectionStoryDao.save(cs);
+									}
+								}
+								
+
+							}
+							List<Follow> followList = this.followDao.getFollowersByUserId(story.getUser().getId());
+							Timeline timeline = new Timeline();
+							timeline.setCreatorId(loginUserid);
+							timeline.setTargetUserId(loginUserid);
+							timeline.setStory(story);
+							timeline.setType("post");
+							timeline.setReferenceId((Long) story.getId());
+							timeline.setCreateTime(new Date());
+							this.timelineDao.save(timeline);
+							log.debug("***add activity success***");
+							EventModel event = getEventModelListByLoginUserid(timeline, loginUserid, collection_id);
+							log.debug("***start add notification***" + JSONObject.fromObject(event));
+							if (!user.getUser_type().equals("media")) {
+								List<Notification> notificationList = new ArrayList<Notification>();
+								Notification n = null;
+								if ((followList != null) && (followList.size() > 0)) {
+									for (Follow follow : followList) {
+										Long recipientId = (Long) follow.getPk().getUser().getId();
+										n = new Notification();
+										n.setRecipientId(recipientId);
+										n.setSenderId((Long) story.getUser().getId());
+										n.setNotificationType(4);
+										n.setObjectType(1);
+										n.setObjectId((Long) story.getId());
+										n.setStatus("enabled");
+										n.setRead_already(true);
+										notificationList.add(n);
+									}
+								}
+								List<User> userList = this.userDao.getUserByUserType();
+								if ((userList != null) && (userList.size() > 0)) {
+									for (User u : userList) {
+										n = new Notification();
+										n.setRecipientId((Long) u.getId());
+										n.setSenderId((Long) story.getUser().getId());
+										n.setNotificationType(4);
+										n.setObjectType(1);
+										n.setObjectId((Long) story.getId());
+										n.setStatus("enabled");
+										n.setRead_already(true);
+										notificationList.add(n);
+									}
+								}
+								this.notificationDao.saveNotifications(notificationList);
+
+							}
+
+							log.debug("***add notification success***");
+							return Response.status(Response.Status.OK).entity(storyModel).build();
+						}else{
+							JSONObject result_json = new JSONObject();
+							result_json.put("status", "发布失败，请重试");
+							result_json.put("code", 10670);
+							result_json.put("error_message", "发布失败，请重试");
+
+							return Response.status(Response.Status.OK).entity(result_json).build();
+						}
+					}
+				}else{
+					JSONObject result_json = new JSONObject();
+					result_json.put("status", "发布失败，请重试");
+					result_json.put("code", 10670);
+					result_json.put("error_message", "发布失败，请重试");
+					return Response.status(Response.Status.OK).entity(result_json).build();
+				}
+				
+				
+			}
+
+			JSONObject jo = new JSONObject();
+			jo.put("status", "invalid_request");
+			jo.put("code", Integer.valueOf(10010));
+			jo.put("error_message", "Invalid request payload");
+			return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+		} catch (Exception e) {
+			e.printStackTrace();
+			JSONObject jo = new JSONObject();
+			jo.put("status", "invalid_request");
+			jo.put("code", Integer.valueOf(10010));
+			jo.put("error_message", "Invalid request payload");
+			return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+		}
+	
+	}
 	
 	
-	
+	public String publicParam(Map<String,String> param) throws Exception{
+		FBEncryption fb = new FBEncryption("20161206100527xEhf0s8Vj3j_uSMrI1eOHU--8k1LwR0o", 
+				"20161206100534Z_qxIRa6BBMophlaZMNwSVwJMGmL_ptB");
+		
+		param.put("channel","40");
+		Map<String,String> map = fb.signature(param);
+		boolean bool = fb.checkSignature(map);
+		System.out.println("bool--->>>"+bool);
+		Set<String> keys = map.keySet();
+		Iterator<String> iter = keys.iterator();
+		StringBuffer sb = new StringBuffer();
+		while(iter.hasNext()){
+			String key = iter.next();
+			sb.append(key+"="+map.get(key)+"&");
+		}
+		String res = sb.toString();
+		String result = res.substring(0,res.length()-1);
+		return result;
+	}
 
 }

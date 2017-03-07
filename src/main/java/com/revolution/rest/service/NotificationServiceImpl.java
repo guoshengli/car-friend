@@ -60,21 +60,22 @@ public class NotificationServiceImpl implements NotificationService {
 
 	@Autowired
 	private StoryDao storyDao;
-	
+
 	@Autowired
 	private CollectionStoryDao collectionStoryDao;
-	
+
 	@Autowired
 	private CollectionDao collectionDao;
-	
+
 	@Autowired
 	private FollowDao followDao;
-	
+
 	@Autowired
 	private UserCollectionDao userCollectionDao;
 
-	/*@Autowired
-	private ConfigurationDao configurationDao;*/
+	/*
+	 * @Autowired private ConfigurationDao configurationDao;
+	 */
 
 	@Autowired
 	private PushNotificationDao pushNotificationDao;
@@ -83,43 +84,36 @@ public class NotificationServiceImpl implements NotificationService {
 		return null;
 	}
 
-	public List<NotificationModel> getNotifications(Long userId,HttpServletRequest request) {
+	public List<NotificationModel> getNotifications(Long userId, HttpServletRequest request) {
 		log.debug("*** start get notifications ***");
 		String countStr = request.getParameter("count");
 		String sinceIdStr = request.getParameter("since_id");
 		String maxIdStr = request.getParameter("max_id");
 		int count = 20;
 		List<Notification> nList = null;
-		if(Strings.isNullOrEmpty(countStr)
-				&&Strings.isNullOrEmpty(sinceIdStr)
-				&&Strings.isNullOrEmpty(maxIdStr)){
-			nList = this.notificationDao.getNotifications(userId,count);
-		}else if(!Strings.isNullOrEmpty(countStr)
-				&&Strings.isNullOrEmpty(sinceIdStr)
-				&&Strings.isNullOrEmpty(maxIdStr)){
+		if (Strings.isNullOrEmpty(countStr) && Strings.isNullOrEmpty(sinceIdStr) && Strings.isNullOrEmpty(maxIdStr)) {
+			nList = this.notificationDao.getNotifications(userId, count);
+		} else if (!Strings.isNullOrEmpty(countStr) && Strings.isNullOrEmpty(sinceIdStr)
+				&& Strings.isNullOrEmpty(maxIdStr)) {
 			count = Integer.parseInt(countStr);
-			nList = this.notificationDao.getNotifications(userId,count);
-		}else if(Strings.isNullOrEmpty(countStr)
-				&&!Strings.isNullOrEmpty(sinceIdStr)
-				&&Strings.isNullOrEmpty(maxIdStr)){
+			nList = this.notificationDao.getNotifications(userId, count);
+		} else if (Strings.isNullOrEmpty(countStr) && !Strings.isNullOrEmpty(sinceIdStr)
+				&& Strings.isNullOrEmpty(maxIdStr)) {
 			nList = this.notificationDao.getNotificationsByPage(userId, count, Long.parseLong(sinceIdStr), 1);
-		}else if(!Strings.isNullOrEmpty(countStr)
-				&&!Strings.isNullOrEmpty(sinceIdStr)
-				&&Strings.isNullOrEmpty(maxIdStr)){
+		} else if (!Strings.isNullOrEmpty(countStr) && !Strings.isNullOrEmpty(sinceIdStr)
+				&& Strings.isNullOrEmpty(maxIdStr)) {
 			count = Integer.parseInt(countStr);
 			nList = this.notificationDao.getNotificationsByPage(userId, count, Long.parseLong(sinceIdStr), 1);
-		}else if(Strings.isNullOrEmpty(countStr)
-				&&Strings.isNullOrEmpty(sinceIdStr)
-				&&!Strings.isNullOrEmpty(maxIdStr)){
+		} else if (Strings.isNullOrEmpty(countStr) && Strings.isNullOrEmpty(sinceIdStr)
+				&& !Strings.isNullOrEmpty(maxIdStr)) {
 			nList = this.notificationDao.getNotificationsByPage(userId, count, Long.parseLong(maxIdStr), 2);
-		}else if(!Strings.isNullOrEmpty(countStr)
-				&&Strings.isNullOrEmpty(sinceIdStr)
-				&&!Strings.isNullOrEmpty(maxIdStr)){
+		} else if (!Strings.isNullOrEmpty(countStr) && Strings.isNullOrEmpty(sinceIdStr)
+				&& !Strings.isNullOrEmpty(maxIdStr)) {
 			count = Integer.parseInt(countStr);
 			nList = this.notificationDao.getNotificationsByPage(userId, count, Long.parseLong(maxIdStr), 2);
 		}
 		List<NotificationModel> notificationModelList = new ArrayList<NotificationModel>();
-		//Configuration conf = this.configurationDao.getConfByUserId(userId);
+		// Configuration conf = this.configurationDao.getConfByUserId(userId);
 		if ((nList != null) && (nList.size() > 0)) {
 			this.notificationDao.updateNotificationByLoginUserid(userId);
 			for (Notification n : nList) {
@@ -132,37 +126,37 @@ public class NotificationServiceImpl implements NotificationService {
 				JSONObject contentJson = new JSONObject();
 				User user = (User) this.userDao.get(n.getSenderId());
 				JSONObject sender = new JSONObject();
-				sender.put("id",user.getId());
-				sender.put("username",user.getUsername());
-				sender.put("introduction",user.getIntroduction());
+				sender.put("id", user.getId());
+				sender.put("username", user.getUsername());
+				sender.put("introduction", user.getIntroduction());
 				if (!Strings.isNullOrEmpty(user.getAvatarImage()))
-					sender.put("avatar_image",JSONObject.fromObject(user.getAvatarImage()));
-				
+					sender.put("avatar_image", JSONObject.fromObject(user.getAvatarImage()));
 
 				if (n.getNotificationType() == 1) {
 
 					notificationModel.setNotification_type("new_follower_push");
-					Follow follow = followDao.getFollow(userId,n.getSenderId());
-					if(follow != null){
+					Follow follow = followDao.getFollow(userId, n.getSenderId());
+					if (follow != null) {
 						sender.put("followed_by_current_user", true);
-					}else{
+					} else {
 						sender.put("followed_by_current_user", false);
 					}
 					contentModel.setSender(sender);
 					contentJson = JSONObject.fromObject(contentModel);
 					JSONObject send = JSONObject.fromObject(contentJson.get("sender"));
-					if(send.get("avatar_image") == null){
+					if (send.get("avatar_image") == null) {
 						send.remove("avatar_image");
 						contentJson.remove("sender");
-						contentJson.put("sender",send);
+						contentJson.put("sender", send);
 					}
 					contentJson.remove("comment");
 					contentJson.remove("story");
 					contentJson.remove("collection");
-				
-					/*if (conf.isNew_follower_push()) {} else {
-						notificationModel = null;
-					}*/
+
+					/*
+					 * if (conf.isNew_follower_push()) {} else {
+					 * notificationModel = null; }
+					 */
 				} else if (n.getNotificationType() == 2) {
 
 					List<String> delArr = new ArrayList<String>();
@@ -185,7 +179,6 @@ public class NotificationServiceImpl implements NotificationService {
 							if (Strings.isNullOrEmpty(story.getTitle())) {
 								delArr.add("title");
 							}
-
 
 							if (Strings.isNullOrEmpty(story.getSummary()))
 								delArr.add("summary");
@@ -210,10 +203,11 @@ public class NotificationServiceImpl implements NotificationService {
 					} else {
 						notificationModel = null;
 					}
-				
-					/*if (conf.isNew_favorite_from_following_push()) {} else {
-						notificationModel = null;
-					}*/
+
+					/*
+					 * if (conf.isNew_favorite_from_following_push()) {} else {
+					 * notificationModel = null; }
+					 */
 				} else if (n.getNotificationType() == 3) {
 
 					notificationModel.setNotification_type("reposted_my_story_push");
@@ -237,7 +231,6 @@ public class NotificationServiceImpl implements NotificationService {
 								delArr.add("title");
 							}
 
-
 							if (Strings.isNullOrEmpty(story.getSummary()))
 								delArr.add("summary");
 						} else {
@@ -259,10 +252,11 @@ public class NotificationServiceImpl implements NotificationService {
 						contentJson.remove("comment");
 						contentJson.remove("collection");
 					}
-				
-					/*if (conf.isReposted_my_story_push()) {} else {
-						notificationModel = null;
-					}*/
+
+					/*
+					 * if (conf.isReposted_my_story_push()) {} else {
+					 * notificationModel = null; }
+					 */
 				} else if (n.getNotificationType() == 4) {
 
 					notificationModel.setNotification_type("new_story_from_following_push");
@@ -288,7 +282,6 @@ public class NotificationServiceImpl implements NotificationService {
 								delArr.add("title");
 							}
 
-
 							if (Strings.isNullOrEmpty(story.getSummary())) {
 								delArr.add("summary");
 							}
@@ -309,10 +302,10 @@ public class NotificationServiceImpl implements NotificationService {
 						}
 					}
 
-				
-					/*if (conf.isNew_story_from_following_push()) {} else {
-						notificationModel = null;
-					}*/
+					/*
+					 * if (conf.isNew_story_from_following_push()) {} else {
+					 * notificationModel = null; }
+					 */
 				} else if (n.getNotificationType() == 5) {
 
 					notificationModel.setNotification_type("new_comment_on_your_story_push");
@@ -322,20 +315,21 @@ public class NotificationServiceImpl implements NotificationService {
 					if (comment != null) {
 						CommentModel cm = getCommentModel(comment);
 						List<String> delArr_comment = new ArrayList<String>();
-						if(cm.getComment_image() == null){
+						if (cm.getComment_image() == null) {
 							delArr_comment.add("comment_image");
 						}
 						JsonConfig config_comment = new JsonConfig();
-						config_comment.setExcludes((String[]) delArr_comment.toArray(new String[delArr_comment.size()]));
+						config_comment
+								.setExcludes((String[]) delArr_comment.toArray(new String[delArr_comment.size()]));
 						config_comment.setIgnoreDefaultExcludes(false);
 						config_comment.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
 
-						JSONObject commentJson = JSONObject.fromObject(cm,config_comment);
+						JSONObject commentJson = JSONObject.fromObject(cm, config_comment);
 						if (commentJson.getJSONObject("target_user") == null) {
 							commentJson.remove("target_user");
 						}
-						
-						if(commentJson.getJSONObject("comment_image") == null){
+
+						if (commentJson.getJSONObject("comment_image") == null) {
 							commentJson.remove("comment_image");
 						}
 
@@ -351,7 +345,6 @@ public class NotificationServiceImpl implements NotificationService {
 						if (Strings.isNullOrEmpty(s.getTitle())) {
 							delArr.add("title");
 						}
-
 
 						if (Strings.isNullOrEmpty(s.getSummary())) {
 							delArr.add("summary");
@@ -371,12 +364,12 @@ public class NotificationServiceImpl implements NotificationService {
 					} else {
 						notificationModel = null;
 					}
-				
-					/*if (conf.isNew_comment_on_your_story_push()) {} else {
-						notificationModel = null;
-					}*/
+
+					/*
+					 * if (conf.isNew_comment_on_your_story_push()) {} else {
+					 * notificationModel = null; }
+					 */
 				} else if (n.getNotificationType() == 6) {
-					
 
 					notificationModel.setNotification_type("new_comment_on_your_comment_push");
 					contentModel.setSender(sender);
@@ -384,7 +377,7 @@ public class NotificationServiceImpl implements NotificationService {
 					Comment comment = (Comment) this.commentDao.get(n.getObjectId());
 					CommentModel cm = getCommentModel(comment);
 					List<String> delArr_comment = new ArrayList<String>();
-					if(cm.getComment_image() == null){
+					if (cm.getComment_image() == null) {
 						delArr_comment.add("comment_image");
 					}
 					JsonConfig config_comment = new JsonConfig();
@@ -392,13 +385,11 @@ public class NotificationServiceImpl implements NotificationService {
 					config_comment.setIgnoreDefaultExcludes(false);
 					config_comment.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
 
-					JSONObject commentJson = JSONObject.fromObject(cm,config_comment);
+					JSONObject commentJson = JSONObject.fromObject(cm, config_comment);
 					if (commentJson.getJSONObject("target_user") == null) {
 						commentJson.remove("target_user");
 					}
-					
-					
-					
+
 					contentModel.setComment(commentJson);
 					Story s = comment.getStory();
 					if (s.getStatus().equals("publish")) {
@@ -431,11 +422,11 @@ public class NotificationServiceImpl implements NotificationService {
 					} else {
 						notificationModel = null;
 					}
-				
-					
-					/*if (conf.isNew_comment_on_your_comment_push()) {} else {
-						notificationModel = null;
-					}*/
+
+					/*
+					 * if (conf.isNew_comment_on_your_comment_push()) {} else {
+					 * notificationModel = null; }
+					 */
 
 				} else if (n.getNotificationType() == 7) {
 
@@ -456,7 +447,6 @@ public class NotificationServiceImpl implements NotificationService {
 								delArr.add("title");
 							}
 
-
 							if (Strings.isNullOrEmpty(story.getSummary())) {
 								delArr.add("summary");
 							}
@@ -464,7 +454,7 @@ public class NotificationServiceImpl implements NotificationService {
 							config.setExcludes((String[]) delArr.toArray(new String[delArr.size()]));
 							config.setIgnoreDefaultExcludes(false);
 							config.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
-							JSONObject sJson = JSONObject.fromObject(storyIntro,config);
+							JSONObject sJson = JSONObject.fromObject(storyIntro, config);
 							contentModel.setStory(sJson);
 							contentJson = JSONObject.fromObject(contentModel);
 							contentJson.remove("collection");
@@ -475,18 +465,18 @@ public class NotificationServiceImpl implements NotificationService {
 						}
 					}
 
-				
-					/*if (conf.isRecommended_my_story_push()) {} else {
-						notificationModel = null;
-					}*/
+					/*
+					 * if (conf.isRecommended_my_story_push()) {} else {
+					 * notificationModel = null; }
+					 */
 				}
 				if (n.getNotificationType() == 8) {
 
 					notificationModel.setNotification_type("new_user_push");
-					Follow follow = followDao.getFollow(userId,n.getSenderId());
-					if(follow != null){
+					Follow follow = followDao.getFollow(userId, n.getSenderId());
+					if (follow != null) {
 						sender.put("followed_by_current_user", true);
-					}else{
+					} else {
 						sender.put("followed_by_current_user", false);
 					}
 					contentModel.setSender(sender);
@@ -494,28 +484,28 @@ public class NotificationServiceImpl implements NotificationService {
 					contentJson.remove("comment");
 					contentJson.remove("story");
 					contentJson.remove("collection");
-				
-					/*if (conf.isNew_follower_push()) {} else {
-						notificationModel = null;
-					}*/
-				}
-				
-				if(n.getNotificationType() == 15){
 
+					/*
+					 * if (conf.isNew_follower_push()) {} else {
+					 * notificationModel = null; }
+					 */
+				}
+
+				if (n.getNotificationType() == 15) {
 
 					notificationModel.setNotification_type("story_move_to_collection");
-					Follow follow = followDao.getFollow(userId,n.getSenderId());
-					if(follow != null){
+					Follow follow = followDao.getFollow(userId, n.getSenderId());
+					if (follow != null) {
 						sender.put("followed_by_current_user", true);
-					}else{
+					} else {
 						sender.put("followed_by_current_user", false);
 					}
 					List<String> delArr = new ArrayList<String>();
 					contentModel.setSender(sender);
 					CollectionStory cs = collectionStoryDao.getCollectionStoryByStoryId(n.getObjectId());
-					Story s = storyDao.getStoryByIdAndStatus(n.getObjectId(),"publish");
+					Story s = storyDao.getStoryByIdAndStatus(n.getObjectId(), "publish");
 					if (n.getObjectType() == 1) {
-						if(cs != null && s != null){
+						if (cs != null && s != null) {
 							Collection c = cs.getCollection();
 							StoryIntro storyIntro = new StoryIntro();
 							storyIntro.setId((Long) s.getId());
@@ -526,7 +516,6 @@ public class NotificationServiceImpl implements NotificationService {
 							if (Strings.isNullOrEmpty(s.getTitle())) {
 								delArr.add("title");
 							}
-
 
 							if (Strings.isNullOrEmpty(s.getSummary())) {
 								delArr.add("summary");
@@ -540,25 +529,24 @@ public class NotificationServiceImpl implements NotificationService {
 							if (storyIntro.getCover_media() != null) {
 								contentModel.setStory(JSONObject.fromObject(storyIntro, config));
 							}
-							
-							JSONObject collectionJson = getCollectionInfo(c,userId);
+
+							JSONObject collectionJson = getCollectionInfo(c, userId);
 							contentModel.setCollection(collectionJson);
-						}else{
+						} else {
 							notificationModel = null;
 						}
 					}
-					
+
 					contentJson = JSONObject.fromObject(contentModel);
 					contentJson.remove("comment");
-					/*if (conf.isNew_follower_push()) {} else {
-						notificationModel = null;
-					}*/
-				
-				}
-				
-				
-				if(n.getNotificationType() == 16){
+					/*
+					 * if (conf.isNew_follower_push()) {} else {
+					 * notificationModel = null; }
+					 */
 
+				}
+
+				if (n.getNotificationType() == 16) {
 
 					notificationModel.setNotification_type("recommended_my_story_slide_push");
 
@@ -578,7 +566,6 @@ public class NotificationServiceImpl implements NotificationService {
 								delArr.add("title");
 							}
 
-
 							if (Strings.isNullOrEmpty(story.getSummary())) {
 								delArr.add("summary");
 							}
@@ -586,7 +573,7 @@ public class NotificationServiceImpl implements NotificationService {
 							config.setExcludes((String[]) delArr.toArray(new String[delArr.size()]));
 							config.setIgnoreDefaultExcludes(false);
 							config.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
-							JSONObject sJson = JSONObject.fromObject(storyIntro,config);
+							JSONObject sJson = JSONObject.fromObject(storyIntro, config);
 							contentModel.setStory(sJson);
 							contentJson = JSONObject.fromObject(contentModel);
 							contentJson.remove("collection");
@@ -597,14 +584,12 @@ public class NotificationServiceImpl implements NotificationService {
 						}
 					}
 
-				
-					/*if (conf.isRecommended_my_story_push()) {} else {
-						notificationModel = null;
-					}*/
-				
-				
+					/*
+					 * if (conf.isRecommended_my_story_push()) {} else {
+					 * notificationModel = null; }
+					 */
+
 				}
-				
 
 				if (notificationModel != null) {
 					notificationModel.setContent(contentJson);
@@ -634,12 +619,12 @@ public class NotificationServiceImpl implements NotificationService {
 		}
 		userIntro.put("avatar_image", avatarJson);
 		commentModel.setAuthor(userIntro);
-		if(!Strings.isNullOrEmpty(comment.getComment_image())){
+		if (!Strings.isNullOrEmpty(comment.getComment_image())) {
 			commentModel.setComment_image(JSONObject.fromObject(comment.getComment_image()));
-		}else{
+		} else {
 			commentModel.setComment_image(null);
 		}
-		
+
 		if (comment.getTarget_user_id() != null) {
 			User targetUser = (User) this.userDao.get(comment.getTarget_user_id());
 			JSONObject targetUserJson = new JSONObject();
@@ -658,73 +643,64 @@ public class NotificationServiceImpl implements NotificationService {
 		String client_id = json.getString("client_id");
 		String device_type = json.getString("device_type");
 		String device_token = null;
-		if(json.containsKey("device_token")){
+		if (json.containsKey("device_token")) {
 			device_token = json.getString("device_token");
 		}
 		JSONObject returnJson = new JSONObject();
 
-		if ((!Strings.isNullOrEmpty(client_id)) 
-				&& (!Strings.isNullOrEmpty(device_type))
+		if ((!Strings.isNullOrEmpty(client_id)) && (!Strings.isNullOrEmpty(device_type))
 				&& (!Strings.isNullOrEmpty(device_token))) {
 			PushNotification pushNotification = new PushNotification();
-			if(loginUserid != null && loginUserid > 0){
+			if (loginUserid != null && loginUserid > 0) {
 				pushNotificationDao.delPushNotificationByUserId(loginUserid);
 				PushNotification pn = pushNotificationDao.getPushNotificationByDeviceToken(device_token);
-				if(pn != null){
+				if (pn != null) {
 					pn.setClientId(client_id);
 					pn.setDeviceToken(device_token);
 					pn.setUserId(loginUserid);
 					pn.setDeviceType(device_type);
 					pushNotificationDao.update(pn);
-				}else{
+				} else {
 					pushNotification.setUserId(loginUserid);
 					pushNotification.setClientId(client_id);
 					pushNotification.setDeviceType(device_type);
-					if(json.containsKey("device_token")){
+					if (json.containsKey("device_token")) {
 						pushNotification.setDeviceToken(device_token);
 					}
-					
+
 					this.pushNotificationDao.save(pushNotification);
 				}
-				
-			}else{
+
+			} else {
 				pushNotification.setUserId(0l);
 				pushNotification.setClientId(client_id);
 				pushNotification.setDeviceType(device_type);
-				if(json.containsKey("device_token")){
+				if (json.containsKey("device_token")) {
 					pushNotification.setDeviceToken(device_token);
 				}
-				
+
 				this.pushNotificationDao.save(pushNotification);
 			}
-			/*if (pn != null) {
-				//this.pushNotificationDao.delete((Long) pn.getId());
-				if(loginUserid != null && loginUserid > 0){
-					pn.setUserId(loginUserid);
-				}else{
-					pn.setUserId(0l);
-				}
-				
-				//pushNotification.setClientId(client_id);
-				if(json.containsKey("device_token")){
-					pn.setDeviceToken(device_token);
-				}
-				
-				this.pushNotificationDao.update(pn);
-			} else {
-				if(loginUserid != null && loginUserid > 0){
-					pushNotification.setUserId(loginUserid);
-				}else{
-					pushNotification.setUserId(0l);
-				}
-				pushNotification.setClientId(client_id);
-				pushNotification.setDeviceType(device_type);
-				if(json.containsKey("device_token")){
-					pushNotification.setDeviceToken(device_token);
-				}
-				
-				this.pushNotificationDao.save(pushNotification);
-			}*/
+			/*
+			 * if (pn != null) { //this.pushNotificationDao.delete((Long)
+			 * pn.getId()); if(loginUserid != null && loginUserid > 0){
+			 * pn.setUserId(loginUserid); }else{ pn.setUserId(0l); }
+			 * 
+			 * //pushNotification.setClientId(client_id);
+			 * if(json.containsKey("device_token")){
+			 * pn.setDeviceToken(device_token); }
+			 * 
+			 * this.pushNotificationDao.update(pn); } else { if(loginUserid !=
+			 * null && loginUserid > 0){
+			 * pushNotification.setUserId(loginUserid); }else{
+			 * pushNotification.setUserId(0l); }
+			 * pushNotification.setClientId(client_id);
+			 * pushNotification.setDeviceType(device_type);
+			 * if(json.containsKey("device_token")){
+			 * pushNotification.setDeviceToken(device_token); }
+			 * 
+			 * this.pushNotificationDao.save(pushNotification); }
+			 */
 			returnJson.put("status", "success");
 			return Response.status(Response.Status.CREATED).entity(returnJson).build();
 		}
@@ -759,36 +735,29 @@ public class NotificationServiceImpl implements NotificationService {
 		String maxIdStr = request.getParameter("max_id");
 		int count = 20;
 		List<Notification> nList = null;
-		if(Strings.isNullOrEmpty(countStr)
-				&&Strings.isNullOrEmpty(sinceIdStr)
-				&&Strings.isNullOrEmpty(maxIdStr)){
-			nList = this.notificationDao.getNotificationsCollection(userId,count);
-		}else if(!Strings.isNullOrEmpty(countStr)
-				&&Strings.isNullOrEmpty(sinceIdStr)
-				&&Strings.isNullOrEmpty(maxIdStr)){
+		if (Strings.isNullOrEmpty(countStr) && Strings.isNullOrEmpty(sinceIdStr) && Strings.isNullOrEmpty(maxIdStr)) {
+			nList = this.notificationDao.getNotificationsCollection(userId, count);
+		} else if (!Strings.isNullOrEmpty(countStr) && Strings.isNullOrEmpty(sinceIdStr)
+				&& Strings.isNullOrEmpty(maxIdStr)) {
 			count = Integer.parseInt(countStr);
-			nList = this.notificationDao.getNotificationsCollection(userId,count);
-		}else if(Strings.isNullOrEmpty(countStr)
-				&&!Strings.isNullOrEmpty(sinceIdStr)
-				&&Strings.isNullOrEmpty(maxIdStr)){
+			nList = this.notificationDao.getNotificationsCollection(userId, count);
+		} else if (Strings.isNullOrEmpty(countStr) && !Strings.isNullOrEmpty(sinceIdStr)
+				&& Strings.isNullOrEmpty(maxIdStr)) {
 			nList = this.notificationDao.getNotificationsByPageCollection(userId, count, Long.parseLong(sinceIdStr), 1);
-		}else if(!Strings.isNullOrEmpty(countStr)
-				&&!Strings.isNullOrEmpty(sinceIdStr)
-				&&Strings.isNullOrEmpty(maxIdStr)){
+		} else if (!Strings.isNullOrEmpty(countStr) && !Strings.isNullOrEmpty(sinceIdStr)
+				&& Strings.isNullOrEmpty(maxIdStr)) {
 			count = Integer.parseInt(countStr);
 			nList = this.notificationDao.getNotificationsByPageCollection(userId, count, Long.parseLong(sinceIdStr), 1);
-		}else if(Strings.isNullOrEmpty(countStr)
-				&&Strings.isNullOrEmpty(sinceIdStr)
-				&&!Strings.isNullOrEmpty(maxIdStr)){
+		} else if (Strings.isNullOrEmpty(countStr) && Strings.isNullOrEmpty(sinceIdStr)
+				&& !Strings.isNullOrEmpty(maxIdStr)) {
 			nList = this.notificationDao.getNotificationsByPageCollection(userId, count, Long.parseLong(maxIdStr), 2);
-		}else if(!Strings.isNullOrEmpty(countStr)
-				&&Strings.isNullOrEmpty(sinceIdStr)
-				&&!Strings.isNullOrEmpty(maxIdStr)){
+		} else if (!Strings.isNullOrEmpty(countStr) && Strings.isNullOrEmpty(sinceIdStr)
+				&& !Strings.isNullOrEmpty(maxIdStr)) {
 			count = Integer.parseInt(countStr);
 			nList = this.notificationDao.getNotificationsByPageCollection(userId, count, Long.parseLong(maxIdStr), 2);
 		}
 		List<NotificationModel> notificationModelList = new ArrayList<NotificationModel>();
-		//Configuration conf = this.configurationDao.getConfByUserId(userId);
+		// Configuration conf = this.configurationDao.getConfByUserId(userId);
 		if ((nList != null) && (nList.size() > 0)) {
 			this.notificationDao.updateNotificationByLoginUserid(userId);
 			for (Notification n : nList) {
@@ -801,27 +770,27 @@ public class NotificationServiceImpl implements NotificationService {
 				JSONObject contentJson = new JSONObject();
 				User user = (User) this.userDao.get(n.getSenderId());
 				JSONObject sender = new JSONObject();
-				sender.put("id",user.getId());
-				sender.put("username",user.getUsername());
-				sender.put("introduction",user.getIntroduction());
+				sender.put("id", user.getId());
+				sender.put("username", user.getUsername());
+				sender.put("introduction", user.getIntroduction());
 				if (!Strings.isNullOrEmpty(user.getAvatarImage()))
-					sender.put("avatar_image",JSONObject.fromObject(user.getAvatarImage()));
+					sender.put("avatar_image", JSONObject.fromObject(user.getAvatarImage()));
 				if (n.getNotificationType() == 9) {
 
 					notificationModel.setNotification_type("new_story_from_collection_push");
-					Follow follow = followDao.getFollow(userId,n.getSenderId());
-					if(follow != null){
+					Follow follow = followDao.getFollow(userId, n.getSenderId());
+					if (follow != null) {
 						sender.put("followed_by_current_user", true);
-					}else{
+					} else {
 						sender.put("followed_by_current_user", false);
 					}
 					List<String> delArr = new ArrayList<String>();
 					contentModel.setSender(sender);
 					CollectionStory cs = collectionStoryDao.getCollectionStoryByStoryId(n.getObjectId());
-					Story s = storyDao.getStoryByIdAndStatus(n.getObjectId(),"publish");
+					Story s = storyDao.getStoryByIdAndStatus(n.getObjectId(), "publish");
 					String audit = "";
 					if (n.getObjectType() == 1) {
-						if(cs != null && s != null){
+						if (cs != null && s != null) {
 							Collection c = cs.getCollection();
 							StoryIntro storyIntro = new StoryIntro();
 							storyIntro.setId((Long) s.getId());
@@ -832,7 +801,6 @@ public class NotificationServiceImpl implements NotificationService {
 							if (Strings.isNullOrEmpty(s.getTitle())) {
 								delArr.add("title");
 							}
-
 
 							if (Strings.isNullOrEmpty(s.getSummary())) {
 								delArr.add("summary");
@@ -846,39 +814,40 @@ public class NotificationServiceImpl implements NotificationService {
 							if (storyIntro.getCover_media() != null) {
 								contentModel.setStory(JSONObject.fromObject(storyIntro, config));
 							}
-							
-							JSONObject collectionJson = getCollectionInfo(c,userId);
+
+							JSONObject collectionJson = getCollectionInfo(c, userId);
 							contentModel.setCollection(collectionJson);
-						}else{
+						} else {
 							notificationModel = null;
 						}
 					}
-					
+
 					contentJson = JSONObject.fromObject(contentModel);
 					contentJson.remove("comment");
-					if(!Strings.isNullOrEmpty(audit)){
-						contentJson.put("audit",audit);
+					if (!Strings.isNullOrEmpty(audit)) {
+						contentJson.put("audit", audit);
 					}
-					/*if (conf.isNew_follower_push()) {} else {
-						notificationModel = null;
-					}*/
+					/*
+					 * if (conf.isNew_follower_push()) {} else {
+					 * notificationModel = null; }
+					 */
 				}
-				
+
 				if (n.getNotificationType() == 10) {
 
 					notificationModel.setNotification_type("delete_story_from_collection_push");
-					Follow follow = followDao.getFollow(userId,n.getSenderId());
-					if(follow != null){
+					Follow follow = followDao.getFollow(userId, n.getSenderId());
+					if (follow != null) {
 						sender.put("followed_by_current_user", true);
-					}else{
+					} else {
 						sender.put("followed_by_current_user", false);
 					}
 					List<String> delArr = new ArrayList<String>();
 					contentModel.setSender(sender);
-					Story s = storyDao.getStoryByIdAndStatus(n.getObjectId(),"publish");
+					Story s = storyDao.getStoryByIdAndStatus(n.getObjectId(), "publish");
 					if (n.getObjectType() == 1) {
-						if(s != null){
-							
+						if (s != null) {
+
 							StoryIntro storyIntro = new StoryIntro();
 							storyIntro.setId((Long) s.getId());
 							storyIntro.setTitle(s.getTitle());
@@ -888,7 +857,6 @@ public class NotificationServiceImpl implements NotificationService {
 							if (Strings.isNullOrEmpty(s.getTitle())) {
 								delArr.add("title");
 							}
-
 
 							if (Strings.isNullOrEmpty(s.getSummary())) {
 								delArr.add("summary");
@@ -902,36 +870,37 @@ public class NotificationServiceImpl implements NotificationService {
 							if (storyIntro.getCover_media() != null) {
 								contentModel.setStory(JSONObject.fromObject(storyIntro, config));
 							}
-							
-						}else{
+
+						} else {
 							notificationModel = null;
 						}
 					}
-					
+
 					contentJson = JSONObject.fromObject(contentModel);
 					contentJson.remove("comment");
 					contentJson.remove("collection");
-					/*if (conf.isNew_follower_push()) {} else {
-						notificationModel = null;
-					}*/
+					/*
+					 * if (conf.isNew_follower_push()) {} else {
+					 * notificationModel = null; }
+					 */
 				}
-				
+
 				if (n.getNotificationType() == 11) {
 
 					notificationModel.setNotification_type("new_story_from_collection_review_push");
-					Follow follow = followDao.getFollow(userId,n.getSenderId());
-					if(follow != null){
+					Follow follow = followDao.getFollow(userId, n.getSenderId());
+					if (follow != null) {
 						sender.put("followed_by_current_user", true);
-					}else{
+					} else {
 						sender.put("followed_by_current_user", false);
 					}
 					List<String> delArr = new ArrayList<String>();
 					contentModel.setSender(sender);
 					CollectionStory cs = collectionStoryDao.getCollectionStoryByStoryId(n.getObjectId());
-					Story s = storyDao.getStoryByIdAndStatus(n.getObjectId(),"publish");
+					Story s = storyDao.getStoryByIdAndStatus(n.getObjectId(), "publish");
 					String audit = "";
 					if (n.getObjectType() == 1) {
-						if(cs != null && s != null){
+						if (cs != null && s != null) {
 							Collection c = cs.getCollection();
 							StoryIntro storyIntro = new StoryIntro();
 							storyIntro.setId((Long) s.getId());
@@ -942,7 +911,6 @@ public class NotificationServiceImpl implements NotificationService {
 							if (Strings.isNullOrEmpty(s.getTitle())) {
 								delArr.add("title");
 							}
-
 
 							if (Strings.isNullOrEmpty(s.getSummary())) {
 								delArr.add("summary");
@@ -956,41 +924,41 @@ public class NotificationServiceImpl implements NotificationService {
 							if (storyIntro.getCover_media() != null) {
 								contentModel.setStory(JSONObject.fromObject(storyIntro, config));
 							}
-							
-							JSONObject collectionJson = getCollectionInfo(c,userId);
+
+							JSONObject collectionJson = getCollectionInfo(c, userId);
 							contentModel.setCollection(collectionJson);
-						}else{
+						} else {
 							notificationModel = null;
 						}
 					}
-					
+
 					contentJson = JSONObject.fromObject(contentModel);
 					contentJson.remove("comment");
-					if(!Strings.isNullOrEmpty(audit)){
-						contentJson.put("audit",audit);
+					if (!Strings.isNullOrEmpty(audit)) {
+						contentJson.put("audit", audit);
 					}
-					/*if (conf.isNew_follower_push()) {} else {
-						notificationModel = null;
-					}*/
+					/*
+					 * if (conf.isNew_follower_push()) {} else {
+					 * notificationModel = null; }
+					 */
 				}
-				
-				
+
 				if (n.getNotificationType() == 12) {
 
 					notificationModel.setNotification_type("collection_review_agree_push");
-					Follow follow = followDao.getFollow(userId,n.getSenderId());
-					if(follow != null){
+					Follow follow = followDao.getFollow(userId, n.getSenderId());
+					if (follow != null) {
 						sender.put("followed_by_current_user", true);
-					}else{
+					} else {
 						sender.put("followed_by_current_user", false);
 					}
 					List<String> delArr = new ArrayList<String>();
 					contentModel.setSender(sender);
 					CollectionStory cs = collectionStoryDao.getCollectionStoryByStoryId(n.getObjectId());
-					Story s = storyDao.getStoryByIdAndStatus(n.getObjectId(),"publish");
+					Story s = storyDao.getStoryByIdAndStatus(n.getObjectId(), "publish");
 					String audit = "";
 					if (n.getObjectType() == 1) {
-						if(cs != null && s != null){
+						if (cs != null && s != null) {
 							StoryIntro storyIntro = new StoryIntro();
 							storyIntro.setId((Long) s.getId());
 							storyIntro.setTitle(s.getTitle());
@@ -1000,7 +968,6 @@ public class NotificationServiceImpl implements NotificationService {
 							if (Strings.isNullOrEmpty(s.getTitle())) {
 								delArr.add("title");
 							}
-
 
 							if (Strings.isNullOrEmpty(s.getSummary())) {
 								delArr.add("summary");
@@ -1014,39 +981,40 @@ public class NotificationServiceImpl implements NotificationService {
 							if (storyIntro.getCover_media() != null) {
 								contentModel.setStory(JSONObject.fromObject(storyIntro, config));
 							}
-							
-						}else{
+
+						} else {
 							notificationModel = null;
 						}
 					}
-					
+
 					contentJson = JSONObject.fromObject(contentModel);
 					contentJson.remove("collection");
 					contentJson.remove("comment");
-					if(!Strings.isNullOrEmpty(audit)){
+					if (!Strings.isNullOrEmpty(audit)) {
 						contentJson.put("audit", audit);
 					}
-					/*if (conf.isNew_follower_push()) {} else {
-						notificationModel = null;
-					}*/
+					/*
+					 * if (conf.isNew_follower_push()) {} else {
+					 * notificationModel = null; }
+					 */
 				}
-				
+
 				if (n.getNotificationType() == 13) {
 
 					notificationModel.setNotification_type("collection_review_reject_push");
-					Follow follow = followDao.getFollow(userId,n.getSenderId());
-					if(follow != null){
+					Follow follow = followDao.getFollow(userId, n.getSenderId());
+					if (follow != null) {
 						sender.put("followed_by_current_user", true);
-					}else{
+					} else {
 						sender.put("followed_by_current_user", false);
 					}
 					List<String> delArr = new ArrayList<String>();
 					contentModel.setSender(sender);
 					CollectionStory cs = collectionStoryDao.getCollectionStoryByStoryId(n.getObjectId());
-					Story s = storyDao.getStoryByIdAndStatus(n.getObjectId(),"publish");
+					Story s = storyDao.getStoryByIdAndStatus(n.getObjectId(), "publish");
 					String audit = "";
 					if (n.getObjectType() == 1) {
-						if(cs != null && s != null){
+						if (cs != null && s != null) {
 							Collection c = cs.getCollection();
 							StoryIntro storyIntro = new StoryIntro();
 							storyIntro.setId((Long) s.getId());
@@ -1058,7 +1026,6 @@ public class NotificationServiceImpl implements NotificationService {
 								delArr.add("title");
 							}
 
-
 							if (Strings.isNullOrEmpty(s.getSummary())) {
 								delArr.add("summary");
 							}
@@ -1071,28 +1038,28 @@ public class NotificationServiceImpl implements NotificationService {
 							if (storyIntro.getCover_media() != null) {
 								contentModel.setStory(JSONObject.fromObject(storyIntro, config));
 							}
-							
+
 							CollectionNotification cn = new CollectionNotification();
 							cn.setId(c.getId());
 							cn.setCollection_name(c.getCollectionName());
 							JSONObject collectionJson = JSONObject.fromObject(cn);
 							contentModel.setCollection(collectionJson);
-						}else{
+						} else {
 							notificationModel = null;
 						}
 					}
-					
+
 					contentJson = JSONObject.fromObject(contentModel);
 					contentJson.remove("collection");
 					contentJson.remove("comment");
-					if(!Strings.isNullOrEmpty(audit)){
+					if (!Strings.isNullOrEmpty(audit)) {
 						contentJson.put("audit", audit);
 					}
-					/*if (conf.isNew_follower_push()) {} else {
-						notificationModel = null;
-					}*/
+					/*
+					 * if (conf.isNew_follower_push()) {} else {
+					 * notificationModel = null; }
+					 */
 				}
-				
 
 				if (notificationModel != null) {
 					notificationModel.setContent(contentJson);
@@ -1103,32 +1070,31 @@ public class NotificationServiceImpl implements NotificationService {
 
 		log.debug("*** notification list ***" + JSONArray.fromObject(notificationModelList));
 		return notificationModelList;
-	
-	}
-	
-	public JSONObject getCollectionInfo(Collection collection,Long loginUserid){
 
-			CollectionNotification ci = new CollectionNotification();
-			ci.setId((Long) collection.getId());
-			ci.setCollection_name(collection.getCollectionName());
-			ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
-			ci.setInfo(collection.getInfo());
-			User author = collection.getUser();//userDao.get(collection.getAuthorId());
+	}
+
+	public JSONObject getCollectionInfo(Collection collection, Long loginUserid) {
+
+		CollectionNotification ci = new CollectionNotification();
+		ci.setId((Long) collection.getId());
+		ci.setCollection_name(collection.getCollectionName());
+		ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
+		ci.setInfo(collection.getInfo());
+		User author = collection.getUser();// userDao.get(collection.getAuthorId());
 		JSONObject json = new JSONObject();
-		json.put("id",author.getId());
-		json.put("username",author.getUsername());
+		json.put("id", author.getId());
+		json.put("username", author.getUsername());
 		ci.setAuthor(json);
 		JsonConfig configs = new JsonConfig();
 		List<String> delArray = new ArrayList<String>();
-		
-		UserCollection uc = userCollectionDao.getUserCollectionByCollectionId(collection.getId(),loginUserid);
-		if(uc != null){
+
+		UserCollection uc = userCollectionDao.getUserCollectionByCollectionId(collection.getId(), loginUserid);
+		if (uc != null) {
 			ci.setIs_followed_by_current_user(true);
-		}else{
+		} else {
 			ci.setIs_followed_by_current_user(false);
 		}
-		
-		
+
 		JSONObject collectionJson = null;
 		if ((delArray != null) && (delArray.size() > 0)) {
 			configs.setExcludes((String[]) delArray.toArray(new String[delArray.size()]));
@@ -1139,7 +1105,7 @@ public class NotificationServiceImpl implements NotificationService {
 		} else {
 			collectionJson = JSONObject.fromObject(ci);
 		}
-		
+
 		return collectionJson;
 	}
 
@@ -1153,41 +1119,36 @@ public class NotificationServiceImpl implements NotificationService {
 		List<Follow> follows = followDao.getFollowingsByUserId(loginUserid);
 		String userids = "";
 		List<NotificationModel> notificationModelList = new ArrayList<NotificationModel>();
-		if(follows != null && follows.size() > 0){
-			for(Follow f:follows){
-				userids += f.getPk().getFollower().getId()+",";
+		if (follows != null && follows.size() > 0) {
+			for (Follow f : follows) {
+				userids += f.getPk().getFollower().getId() + ",";
 			}
-			userids = userids.substring(0,userids.length()-1);
-			if(Strings.isNullOrEmpty(countStr)
-					&&Strings.isNullOrEmpty(sinceIdStr)
-					&&Strings.isNullOrEmpty(maxIdStr)){
+			userids = userids.substring(0, userids.length() - 1);
+			if (Strings.isNullOrEmpty(countStr) && Strings.isNullOrEmpty(sinceIdStr)
+					&& Strings.isNullOrEmpty(maxIdStr)) {
 				nList = this.notificationDao.getNotificationsFollowers(userids, count);
-			}else if(!Strings.isNullOrEmpty(countStr)
-					&&Strings.isNullOrEmpty(sinceIdStr)
-					&&Strings.isNullOrEmpty(maxIdStr)){
+			} else if (!Strings.isNullOrEmpty(countStr) && Strings.isNullOrEmpty(sinceIdStr)
+					&& Strings.isNullOrEmpty(maxIdStr)) {
 				count = Integer.parseInt(countStr);
 				nList = this.notificationDao.getNotificationsFollowers(userids, count);
-			}else if(Strings.isNullOrEmpty(countStr)
-					&&!Strings.isNullOrEmpty(sinceIdStr)
-					&&Strings.isNullOrEmpty(maxIdStr)){
-				nList = this.notificationDao.getNotificationsFollowers(userids, count, Long.parseLong(sinceIdStr),1);
-			}else if(!Strings.isNullOrEmpty(countStr)
-					&&!Strings.isNullOrEmpty(sinceIdStr)
-					&&Strings.isNullOrEmpty(maxIdStr)){
+			} else if (Strings.isNullOrEmpty(countStr) && !Strings.isNullOrEmpty(sinceIdStr)
+					&& Strings.isNullOrEmpty(maxIdStr)) {
+				nList = this.notificationDao.getNotificationsFollowers(userids, count, Long.parseLong(sinceIdStr), 1);
+			} else if (!Strings.isNullOrEmpty(countStr) && !Strings.isNullOrEmpty(sinceIdStr)
+					&& Strings.isNullOrEmpty(maxIdStr)) {
 				count = Integer.parseInt(countStr);
-				nList = this.notificationDao.getNotificationsFollowers(userids, count, Long.parseLong(sinceIdStr),1);
-			}else if(Strings.isNullOrEmpty(countStr)
-					&&Strings.isNullOrEmpty(sinceIdStr)
-					&&!Strings.isNullOrEmpty(maxIdStr)){
-				nList = this.notificationDao.getNotificationsFollowers(userids, count, Long.parseLong(maxIdStr),2);
-			}else if(!Strings.isNullOrEmpty(countStr)
-					&&Strings.isNullOrEmpty(sinceIdStr)
-					&&!Strings.isNullOrEmpty(maxIdStr)){
+				nList = this.notificationDao.getNotificationsFollowers(userids, count, Long.parseLong(sinceIdStr), 1);
+			} else if (Strings.isNullOrEmpty(countStr) && Strings.isNullOrEmpty(sinceIdStr)
+					&& !Strings.isNullOrEmpty(maxIdStr)) {
+				nList = this.notificationDao.getNotificationsFollowers(userids, count, Long.parseLong(maxIdStr), 2);
+			} else if (!Strings.isNullOrEmpty(countStr) && Strings.isNullOrEmpty(sinceIdStr)
+					&& !Strings.isNullOrEmpty(maxIdStr)) {
 				count = Integer.parseInt(countStr);
-				nList = this.notificationDao.getNotificationsFollowers(userids, count, Long.parseLong(maxIdStr),2);
+				nList = this.notificationDao.getNotificationsFollowers(userids, count, Long.parseLong(maxIdStr), 2);
 			}
-			
-			//Configuration conf = this.configurationDao.getConfByUserId(userId);
+
+			// Configuration conf =
+			// this.configurationDao.getConfByUserId(userId);
 			if ((nList != null) && (nList.size() > 0)) {
 				for (Notification n : nList) {
 					NotificationModel notificationModel = new NotificationModel();
@@ -1199,12 +1160,11 @@ public class NotificationServiceImpl implements NotificationService {
 					JSONObject contentJson = new JSONObject();
 					User user = (User) this.userDao.get(n.getSenderId());
 					JSONObject sender = new JSONObject();
-					sender.put("id",user.getId());
-					sender.put("username",user.getUsername());
-					sender.put("introduction",user.getIntroduction());
+					sender.put("id", user.getId());
+					sender.put("username", user.getUsername());
+					sender.put("introduction", user.getIntroduction());
 					if (!Strings.isNullOrEmpty(user.getAvatarImage()))
-						sender.put("avatar_image",JSONObject.fromObject(user.getAvatarImage()));
-					
+						sender.put("avatar_image", JSONObject.fromObject(user.getAvatarImage()));
 
 					if (n.getNotificationType() == 3) {
 
@@ -1219,11 +1179,11 @@ public class NotificationServiceImpl implements NotificationService {
 								storyIntro.setId((Long) story.getId());
 								storyIntro.setTitle(story.getTitle());
 								Set<Collection> cSet = story.getCollections();
-								if(cSet != null && cSet.size() > 0){
+								if (cSet != null && cSet.size() > 0) {
 									List<JSONObject> collectionListJson = new ArrayList<JSONObject>();
 									if (cSet != null && cSet.size() > 0) {
 										Iterator<Collection> iter = cSet.iterator();
-										while(iter.hasNext()){
+										while (iter.hasNext()) {
 											Collection collection = iter.next();
 											CollectionIntro ci = new CollectionIntro();
 											ci.setId((Long) collection.getId());
@@ -1234,25 +1194,29 @@ public class NotificationServiceImpl implements NotificationService {
 											JSONObject author = new JSONObject();
 											author.put("id", u.getId());
 											author.put("username", u.getUsername());
-											if(!Strings.isNullOrEmpty(u.getAvatarImage())){
-												author.put("avatar_image",JSONObject.fromObject(u.getAvatarImage()));
+											if (!Strings.isNullOrEmpty(u.getAvatarImage())) {
+												author.put("avatar_image", JSONObject.fromObject(u.getAvatarImage()));
 											}
 											ci.setAuthor(author);
 											JsonConfig configs = new JsonConfig();
 											List<String> delArray = new ArrayList<String>();
-											
-											int follow_collection_count = userCollectionDao.getCollectionByCount(collection.getId());
+
+											int follow_collection_count = userCollectionDao
+													.getCollectionByCount(collection.getId());
 											ci.setFollowers_count(follow_collection_count);
-											/*Set<User> uSet = collection.getUsers();
-											if(uSet != null && uSet.size() > 0){
-												ci.setFollowers_count(uSet.size());
-											}else{
-												ci.setFollowers_count(0);
-											}*/
+											/*
+											 * Set<User> uSet =
+											 * collection.getUsers(); if(uSet !=
+											 * null && uSet.size() > 0){
+											 * ci.setFollowers_count(uSet.size()
+											 * ); }else{
+											 * ci.setFollowers_count(0); }
+											 */
 
 											JSONObject collectionJson = null;
 											if ((delArray != null) && (delArray.size() > 0)) {
-												configs.setExcludes((String[]) delArray.toArray(new String[delArray.size()]));
+												configs.setExcludes(
+														(String[]) delArray.toArray(new String[delArray.size()]));
 												configs.setIgnoreDefaultExcludes(false);
 												configs.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
 
@@ -1263,10 +1227,10 @@ public class NotificationServiceImpl implements NotificationService {
 
 											collectionListJson.add(collectionJson);
 										}
-										
+
 										storyIntro.setCollection(collectionListJson);
 									}
-								}else{
+								} else {
 									delArr.add("collection");
 								}
 								if (!Strings.isNullOrEmpty(story.getCover_page()))
@@ -1300,10 +1264,11 @@ public class NotificationServiceImpl implements NotificationService {
 							contentJson.remove("comment");
 							contentJson.remove("collection");
 						}
-					
-						/*if (conf.isReposted_my_story_push()) {} else {
-							notificationModel = null;
-						}*/
+
+						/*
+						 * if (conf.isReposted_my_story_push()) {} else {
+						 * notificationModel = null; }
+						 */
 					} else if (n.getNotificationType() == 4) {
 
 						notificationModel.setNotification_type("new_story_from_following_push");
@@ -1316,10 +1281,10 @@ public class NotificationServiceImpl implements NotificationService {
 								storyIntro.setId((Long) story.getId());
 								storyIntro.setTitle(story.getTitle());
 								Set<Collection> cSet = story.getCollections();
-								if(cSet != null && cSet.size() > 0){
+								if (cSet != null && cSet.size() > 0) {
 									List<JSONObject> collectionListJson = new ArrayList<JSONObject>();
 									Iterator<Collection> iter = cSet.iterator();
-									while(iter.hasNext()){
+									while (iter.hasNext()) {
 										Collection collection = iter.next();
 										CollectionIntro ci = new CollectionIntro();
 										ci.setId((Long) collection.getId());
@@ -1330,25 +1295,28 @@ public class NotificationServiceImpl implements NotificationService {
 										JSONObject author = new JSONObject();
 										author.put("id", u.getId());
 										author.put("username", u.getUsername());
-										if(!Strings.isNullOrEmpty(u.getAvatarImage())){
-											author.put("avatar_image",JSONObject.fromObject(u.getAvatarImage()));
+										if (!Strings.isNullOrEmpty(u.getAvatarImage())) {
+											author.put("avatar_image", JSONObject.fromObject(u.getAvatarImage()));
 										}
 										ci.setAuthor(author);
 										JsonConfig configs = new JsonConfig();
 										List<String> delArray = new ArrayList<String>();
-										
-										int follow_collection_count = userCollectionDao.getCollectionByCount(collection.getId());
+
+										int follow_collection_count = userCollectionDao
+												.getCollectionByCount(collection.getId());
 										ci.setFollowers_count(follow_collection_count);
-										/*Set<User> uSet = collection.getUsers();
-										if(uSet != null && uSet.size() > 0){
-											ci.setFollowers_count(uSet.size());
-										}else{
-											ci.setFollowers_count(0);
-										}*/
+										/*
+										 * Set<User> uSet =
+										 * collection.getUsers(); if(uSet !=
+										 * null && uSet.size() > 0){
+										 * ci.setFollowers_count(uSet.size());
+										 * }else{ ci.setFollowers_count(0); }
+										 */
 
 										JSONObject collectionJson = null;
 										if ((delArray != null) && (delArray.size() > 0)) {
-											configs.setExcludes((String[]) delArray.toArray(new String[delArray.size()]));
+											configs.setExcludes(
+													(String[]) delArray.toArray(new String[delArray.size()]));
 											configs.setIgnoreDefaultExcludes(false);
 											configs.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
 
@@ -1359,11 +1327,10 @@ public class NotificationServiceImpl implements NotificationService {
 
 										collectionListJson.add(collectionJson);
 									}
-									
+
 									storyIntro.setCollection(collectionListJson);
-								
-									
-								}else{
+
+								} else {
 									delArr.add("collection");
 								}
 
@@ -1378,7 +1345,6 @@ public class NotificationServiceImpl implements NotificationService {
 								if (Strings.isNullOrEmpty(story.getTitle())) {
 									delArr.add("title");
 								}
-
 
 								if (Strings.isNullOrEmpty(story.getSummary())) {
 									delArr.add("summary");
@@ -1400,12 +1366,11 @@ public class NotificationServiceImpl implements NotificationService {
 							}
 						}
 
-					
-						/*if (conf.isNew_story_from_following_push()) {} else {
-							notificationModel = null;
-						}*/
+						/*
+						 * if (conf.isNew_story_from_following_push()) {} else {
+						 * notificationModel = null; }
+						 */
 					} else if (n.getNotificationType() == 14) {
-						
 
 						notificationModel.setNotification_type("create_collection_push");
 						contentModel.setSender(sender);
@@ -1419,11 +1384,8 @@ public class NotificationServiceImpl implements NotificationService {
 						} else {
 							notificationModel = null;
 						}
-					
 
-					} 
-					
-					
+					}
 
 					if (notificationModel != null) {
 						notificationModel.setContent(contentJson);
@@ -1433,7 +1395,7 @@ public class NotificationServiceImpl implements NotificationService {
 			}
 		}
 		return notificationModelList;
-	
+
 	}
 
 	@Override
@@ -1441,64 +1403,63 @@ public class NotificationServiceImpl implements NotificationService {
 		List<Follow> follows = followDao.getFollowingsByUserId(loginUserid);
 		String userids = "";
 		JSONObject json = new JSONObject();
-		if(follows != null && follows.size() > 0){
-			for(Follow f:follows){
-				userids += f.getPk().getFollower().getId()+",";
+		if (follows != null && follows.size() > 0) {
+			for (Follow f : follows) {
+				userids += f.getPk().getFollower().getId() + ",";
 			}
-			userids = userids.substring(0,userids.length()-1);
+			userids = userids.substring(0, userids.length() - 1);
 			Notification n = notificationDao.getNotificationsFollowers(userids);
-			if(n != null){
-				
-				json.put("notification_id",n.getId());
+			if (n != null) {
+
+				json.put("notification_id", n.getId());
 				return Response.status(Response.Status.OK).entity(json).build();
-			}else{
+			} else {
 				return null;
 			}
-		}else{
+		} else {
 			return null;
 		}
 	}
-	
-	public JSONObject getCollectionJSON(Collection collection){
-		 CollectionIntro ci = new CollectionIntro();
-	         ci.setId((Long)collection.getId());
-	         ci.setCollection_name(collection.getCollectionName());
-	         ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
-	         ci.setInfo(collection.getInfo());
-				User u = collection.getUser();//userDao.get(collection.getAuthorId());
-				JSONObject author = new JSONObject();
-				author.put("id", u.getId());
-				author.put("username", u.getUsername());
-				if(!Strings.isNullOrEmpty(u.getAvatarImage())){
-					author.put("avatar_image",u.getAvatarImage());
-				}
-				ci.setAuthor(author);
-				JsonConfig configs = new JsonConfig();
-				List<String> delArray = new ArrayList<String>();
-				
-				
-				JSONObject collectionJ = null;
-				if ((delArray != null) && (delArray.size() > 0)) {
-					configs.setExcludes((String[]) delArray.toArray(new String[delArray.size()]));
-					configs.setIgnoreDefaultExcludes(false);
-					configs.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
 
-					collectionJ = JSONObject.fromObject(ci, configs);
-				} else {
-					collectionJ = JSONObject.fromObject(ci);
-				}
-          return collectionJ;
+	public JSONObject getCollectionJSON(Collection collection) {
+		CollectionIntro ci = new CollectionIntro();
+		ci.setId((Long) collection.getId());
+		ci.setCollection_name(collection.getCollectionName());
+		ci.setCover_image(JSONObject.fromObject(collection.getCover_image()));
+		ci.setInfo(collection.getInfo());
+		User u = collection.getUser();// userDao.get(collection.getAuthorId());
+		JSONObject author = new JSONObject();
+		author.put("id", u.getId());
+		author.put("username", u.getUsername());
+		if (!Strings.isNullOrEmpty(u.getAvatarImage())) {
+			author.put("avatar_image", u.getAvatarImage());
+		}
+		ci.setAuthor(author);
+		JsonConfig configs = new JsonConfig();
+		List<String> delArray = new ArrayList<String>();
+
+		JSONObject collectionJ = null;
+		if ((delArray != null) && (delArray.size() > 0)) {
+			configs.setExcludes((String[]) delArray.toArray(new String[delArray.size()]));
+			configs.setIgnoreDefaultExcludes(false);
+			configs.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
+
+			collectionJ = JSONObject.fromObject(ci, configs);
+		} else {
+			collectionJ = JSONObject.fromObject(ci);
+		}
+		return collectionJ;
 	}
 
 	@Override
 	public Response collection_dynamics_lastid(Long loginUserid, HttpServletRequest request) {
 		Notification n = notificationDao.getNotificationsCollectionLastId(loginUserid, 1);
 		JSONObject json = new JSONObject();
-		if(n != null){
-			json.put("notification_id",n.getId());
+		if (n != null) {
+			json.put("notification_id", n.getId());
 			return Response.status(Response.Status.OK).entity(json).build();
-		}else{
-			json.put("notification_id","");
+		} else {
+			json.put("notification_id", "");
 			return Response.status(Response.Status.OK).entity(json).build();
 		}
 	}

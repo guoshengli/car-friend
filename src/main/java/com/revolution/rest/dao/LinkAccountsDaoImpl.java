@@ -53,4 +53,30 @@ public class LinkAccountsDaoImpl extends BaseDaoImpl<LinkAccounts, Long>implemen
 		}
 		return la;
 	}
+
+	@Override
+	public LinkAccounts getLinkAccountsByAuthtoken(String auth_token) {
+		Session session = getSessionFactory().getCurrentSession();
+		String hql = "from LinkAccounts where auth_token=?";
+		Query query = session.createQuery(hql).setString(0, auth_token);
+		List<LinkAccounts> list = query.list();
+		LinkAccounts la = null;
+		if(list != null && list.size() > 0){
+			la = list.get(0);
+		}
+		return la;
+	}
+
+	@Override
+	public LinkAccounts getLinkAccountsByUseridAndService(Long userid, String service) {
+		Session session = getSessionFactory().getCurrentSession();
+		String hql = "from LinkAccounts la where la.user_id=? and la.service=?";
+		Query query = session.createQuery(hql).setLong(0, userid).setString(1, service);
+		List<LinkAccounts> list = query.list();
+		LinkAccounts la = null;
+		if ((list != null) && (list.size() > 0)) {
+			la =  list.get(0);
+		}
+		return la;
+	}
 }

@@ -16,6 +16,8 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
+import org.apache.http.HttpRequest;
+
 import com.revolution.rest.model.Configuration;
 import com.revolution.rest.model.LinkAccounts;
 import com.revolution.rest.service.model.EventModel;
@@ -34,7 +36,7 @@ public abstract interface UserService
   @Path("/appsignup")
   @POST
   @Consumes({"application/json"})
-  public abstract Response create(JSONObject paramJSONObject,@HeaderParam("X-Tella-Request-AppVersion") String appVersion);
+  public abstract Response create(JSONObject paramJSONObject,@HeaderParam("X-Tella-Request-AppVersion") String appVersion,@Context HttpServletRequest request);
 
   @Path("/phone")
   @GET
@@ -52,7 +54,7 @@ public abstract interface UserService
   @Path("/login")
   @POST
   @Consumes({"application/json"})
-  public abstract Response userLogin(JSONObject userJson);
+  public abstract Response userLogin(JSONObject userJson,@Context HttpServletRequest request)throws Exception;
 
   @Path("/{userId}")
   @PUT
@@ -62,7 +64,7 @@ public abstract interface UserService
   @Path("/{userId}/pwd")
   @PUT
   @Consumes({"application/json"})
-  public abstract Response updatePassword(@HeaderParam("X-Tella-Request-Userid") Long paramLong1, @PathParam("userId") Long paramLong2, PasswordModel paramPasswordModel);
+  public abstract Response updatePassword(@HeaderParam("X-Tella-Request-Userid") Long paramLong1, @PathParam("userId") Long paramLong2, PasswordModel paramPasswordModel, @Context HttpServletRequest request);
 
   @Path("/{userId}")
   @DELETE
@@ -140,7 +142,7 @@ public abstract interface UserService
 
   @Path("/login/linked_account")
   @POST
-  public abstract Response loginLinkAccounts(LinkAccounts paramLinkAccounts);
+  public abstract Response loginLinkAccounts(LinkAccounts paramLinkAccounts,@Context HttpServletRequest request);
 
   @Path("/link_account")
   @POST
@@ -174,7 +176,7 @@ public abstract interface UserService
 
   @Path("/forgot/phone")
   @GET
-  public abstract Response forgetPhone(@Context HttpServletRequest paramHttpServletRequest,@HeaderParam("X-Tella-Request-AppVersion") String appVersion)
+  public abstract Response forgetPhone(@Context HttpServletRequest paramHttpServletRequest,@HeaderParam("X-Tella-Request-AppVersion") String appVersion,@HeaderParam("X-Tella-Request-Device") String device)
     throws Exception;
 
   @Path("/search")
@@ -242,6 +244,54 @@ public abstract interface UserService
   @Path("/{userId}/privatechat")
   @GET
   public Response getAllChat(@PathParam("userId") Long userId,@HeaderParam("X-Tella-Request-Userid") Long loginUserid);
+  
+  @Path("/get_auth")
+  @POST
+  public Response get_auth(JSONObject fbInfo,@Context HttpServletRequest request)throws Exception;
+  
+  //获取手机验证码
+  @Path("/get_code")
+  @POST
+  public Response get_code(JSONObject phoneInfo,@Context HttpServletRequest request)throws Exception;
+  
+  //获取手机验证码
+  @Path("/get_register_code")
+  @POST
+  public Response get_register_code(JSONObject phoneInfo,@Context HttpServletRequest request)throws Exception;
+  
+  //获取绑定手机验证码
+  @Path("/get_bind_code")
+  @POST
+  public Response get_bind_code(JSONObject phoneInfo,@Context HttpServletRequest request)throws Exception;
+  
+  
+  //验证用户名和密码是否正确
+  @Path("/check_user")
+  @GET
+  public Response check_user(@Context HttpServletRequest request)throws Exception;
+  
+  //验证用户中心token
+  @Path("/check_token")
+  @POST
+  public Response check_token(JSONObject tokenInfo,@Context HttpServletRequest request)throws Exception;
+  
+  @Path("/error/error_fbtoken")
+  @GET
+  public abstract Response error_fbtoken();
+  
+  //退出登录
+  @Path("/logout")
+  @POST
+  public Response logout(@HeaderParam("X-Tella-Request-FbToken") String fbToken,@HeaderParam("X-Tella-Request-Device") String device,@Context HttpServletRequest request)throws Exception;
+  
+//获得一族七牛token
+  @Path("/fbtoken")
+  @POST
+  public Response fbtoken()throws Exception;
+  
+  @Path("/fbstory")
+  @POST
+  public Response fbstory(JSONObject story)throws Exception;
   
 }
 

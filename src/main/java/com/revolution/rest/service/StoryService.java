@@ -34,6 +34,11 @@ public abstract interface StoryService
   @Consumes({"application/json"})
   public abstract Response createStory(JSONObject paramJSONObject, @HeaderParam("X-Tella-Request-Userid") Long paramLong, @Context HttpServletRequest paramHttpServletRequest);
 
+  @Path("/add_story")
+  @POST
+  @Consumes({"application/json"})
+  public abstract Response addStory(JSONObject paramJSONObject, @HeaderParam("X-Tella-Request-Userid") Long paramLong, @Context HttpServletRequest paramHttpServletRequest);
+
   @Path("/{storyId}/unpublish")
   @PUT
   public abstract Response unpublishStory(@PathParam("storyId") Long paramLong1, @HeaderParam("X-Tella-Request-Userid") Long paramLong2);
@@ -83,7 +88,7 @@ public abstract interface StoryService
 
   @Path("/{storyId}/likes")
   @POST
-  public abstract Response createLikes(@PathParam("storyId") Long paramLong1, @HeaderParam("X-Tella-Request-Userid") Long paramLong2);
+  public abstract Response createLikes(@PathParam("storyId") Long paramLong1, @HeaderParam("X-Tella-Request-Userid") Long paramLong2,@Context HttpServletRequest request);
 
   @Path("/{storyId}/likes")
   @DELETE
@@ -144,6 +149,12 @@ public abstract interface StoryService
   @Path("/{storyId}/synchroniseEdit")
   @POST
   public Response synchroniseEditStory(@HeaderParam("X-Tella-Request-Userid") Long loginUserid,JSONObject invitation,@PathParam("storyId")Long storyId)throws Exception;
+  
+  @Path("/video")
+  @POST
+  public Response getVideo(JSONObject video)throws Exception;
+  
+  
   
 }
 

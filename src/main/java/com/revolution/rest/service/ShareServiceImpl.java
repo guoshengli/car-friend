@@ -41,7 +41,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response;
 
-import org.apache.commons.codec.binary.Base64; 
+import org.apache.commons.codec.binary.Base64;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Base64Utils;
@@ -86,6 +86,8 @@ import com.revolution.rest.service.model.CommentSummaryModel;
 import com.revolution.rest.service.model.CoverMedia;
 import com.revolution.rest.service.model.EventModel;
 import com.revolution.rest.service.model.GetuiModel;
+import com.revolution.rest.service.model.IframeCover;
+import com.revolution.rest.service.model.IframeMedia;
 import com.revolution.rest.service.model.ImageCover;
 import com.revolution.rest.service.model.LineCover;
 import com.revolution.rest.service.model.LinkAccountWebModel;
@@ -259,10 +261,7 @@ public class ShareServiceImpl implements ShareService {
 				storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 			} else if (type.equals("multimedia")) {
 				storyModel.setCover_media(jsonObject);
-			} else if (type.equals("video")){
-				VideoCover videoMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-				storyModel.setCover_media(JSONObject.fromObject(videoMedia));
-			}
+			} 
 
 			List<StoryElement> storyElements = new ArrayList<StoryElement>();
 			List<StoryElement> seSet = story.getElements();
@@ -295,8 +294,15 @@ public class ShareServiceImpl implements ShareService {
 			        	   }
 			        	  
 			           } else if (types.equals("video")){
-							VideoCover videoMedia = (VideoCover) JSONObject.toBean(content, VideoCover.class);
-							element.setContent(videoMedia);
+			        	   JSONObject media = content.getJSONObject("media");
+			        	   if(media.containsKey("iframe_code")){
+								IframeCover iframeMedia = (IframeCover) JSONObject.toBean(content, IframeCover.class);
+								element.setContent(iframeMedia);
+							}else{
+								VideoCover videoMedia = (VideoCover) JSONObject.toBean(content, VideoCover.class);
+								element.setContent(videoMedia);
+							}
+							
 						} else if (types.equals("line")){
 							LineCover lineMedia = (LineCover) JSONObject.toBean(content, LineCover.class);
 							element.setContent(lineMedia);
@@ -534,6 +540,7 @@ public class ShareServiceImpl implements ShareService {
 					recommendations.add(intro);
 				}
 				storyModel.setRecommendation(recommendations);
+				System.out.println("------------>>>>>>>>"+JSONObject.fromObject(storyModel).toString());
 			}
 			return Response.status(Response.Status.OK).entity(storyModel).build();
 		}
@@ -1212,9 +1219,6 @@ public class ShareServiceImpl implements ShareService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
-					}else if(type.equals("video")){
-						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
@@ -1398,9 +1402,6 @@ public class ShareServiceImpl implements ShareService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
-					}else if(type.equals("video")){
-						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
@@ -1584,9 +1585,6 @@ public class ShareServiceImpl implements ShareService {
 						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					} else if (type.equals("multimedia")) {
 						storyModel.setCover_media(jsonObject);
-					}else if(type.equals("video")){
-						VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-						storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 					}
 
 					storyModel.setTitle(story.getTitle());
@@ -1734,9 +1732,6 @@ public class ShareServiceImpl implements ShareService {
 			storyModel.put("cover_media",JSONObject.fromObject(coverMedia));
 		} else if (type.equals("multimedia")) {
 			storyModel.put("cover_media",jsonObject);
-		}else if(type.equals("video")){
-			VideoCover coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-			storyModel.put("cover_media",JSONObject.fromObject(coverMedia));
 		}
 
 
@@ -1943,6 +1938,7 @@ public class ShareServiceImpl implements ShareService {
 		JSONObject jsonObject = JSONObject.fromObject(story.getCover_page());
 		String type = jsonObject.getString("type");
 		CoverMedia coverMedia = null;
+		IframeCover iframeCover = null;
 		if (type.equals("text")) {
 			coverMedia = (TextCover) JSONObject.toBean(jsonObject, TextCover.class);
 			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
@@ -1951,9 +1947,6 @@ public class ShareServiceImpl implements ShareService {
 			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		} else if (type.equals("multimedia")) {
 			storyModel.setCover_media(jsonObject);
-		} else if (type.equals("video")) {
-			coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		}
 
 		if (!Strings.isNullOrEmpty(story.getTitle()))

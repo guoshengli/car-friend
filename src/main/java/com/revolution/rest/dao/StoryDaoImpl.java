@@ -441,4 +441,14 @@ public class StoryDaoImpl extends BaseDaoImpl<Story, Long>implements StoryDao {
 		Query query = session.createQuery(hql).setString(0, resource).setLong(1, storyId);
 		query.executeUpdate();
 	}
+
+	@Override
+	public List<Story> getStoryListByIds(String ids) {
+		String hql = "from Story where 1=1 and id in (?)";
+		Session session = getSessionFactory().getCurrentSession();
+		Query query = session.createQuery(hql);
+		query.setString(0, ids);
+		List<Story> list = query.list();
+		return list;
+	}
 }

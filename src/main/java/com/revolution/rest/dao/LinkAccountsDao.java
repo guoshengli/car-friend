@@ -10,6 +10,10 @@ public interface LinkAccountsDao extends BaseDao<LinkAccounts, Long> {
 	public Object[] getLinkAccountsByUUIDAndService(String uuid,String service);
 
 	public List<LinkAccounts> getLinkAccountsByUserid(Long paramLong);
+	
+	public LinkAccounts getLinkAccountsByAuthtoken(String auth_token);
 
 	public void deleteLinkAccountsByServiceAndUserid(String paramString, Long paramLong);
+	
+	public LinkAccounts getLinkAccountsByUseridAndService(Long userid,String service);
 }

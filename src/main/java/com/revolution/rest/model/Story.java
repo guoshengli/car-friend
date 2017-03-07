@@ -19,7 +19,7 @@ import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import javax.persistence.Transient;
-import javax.xml.bind.annotation.XmlTransient;
+import javax.xml.bind.annotation.XmlElement;
 
 import org.hibernate.annotations.Generated;
 import org.hibernate.annotations.GenerationTime;
@@ -90,37 +90,36 @@ import com.revolution.rest.service.model.CoverMedia;
    @Column(name="fid")
    private Long fid;
    
- 
    @OneToMany(mappedBy="storyinfo", cascade={javax.persistence.CascadeType.ALL}, fetch=FetchType.LAZY)
    private List<StoryElement> elements = new ArrayList<StoryElement>();
  
    @OneToMany(mappedBy="story", cascade=CascadeType.ALL)
    private Set<Comment> comments;
  
-   @XmlTransient
+   
    @OneToMany(mappedBy="story", cascade={javax.persistence.CascadeType.ALL},fetch=FetchType.LAZY)
    private Set<Timeline> timelines;
  
-   @XmlTransient
+   
    @ManyToOne(fetch=FetchType.LAZY)
    @JoinColumn(name="author_id")
    private User user;
  
-   @XmlTransient
+   
    @ManyToMany(fetch=FetchType.LAZY)
    @JoinTable(name="collection_story", joinColumns={@JoinColumn(name="story_id")}, inverseJoinColumns={@JoinColumn(name="collection_id")})
    private Set<Collection> collections;
    
-   @XmlTransient
+   
    @ManyToMany(fetch=FetchType.LAZY)
    @JoinTable(name="columns_story", joinColumns={@JoinColumn(name="story_id")}, inverseJoinColumns={@JoinColumn(name="columns_id")})
    private Set<Columns> columns;
    
-   @XmlTransient
+   
    @ManyToMany(mappedBy="repost_story", fetch=FetchType.LAZY)
    private Set<User> repost_users;
    
-   @XmlTransient
+   
    @ManyToMany(mappedBy="like_story", fetch=FetchType.LAZY)
    private Set<User> like_users;
  
@@ -192,12 +191,12 @@ import com.revolution.rest.service.model.CoverMedia;
      this.viewTimes = viewTimes;
    }
  
-   @XmlTransient
+   
    public List<StoryElement> getElements() {
      return this.elements;
    }
  
-   @XmlTransient
+   
    public void setElements(List<StoryElement> elements) {
      this.elements = elements;
    }
@@ -206,7 +205,7 @@ import com.revolution.rest.service.model.CoverMedia;
      return this.comments;
    }
  
-   @XmlTransient
+   
    public void setComments(Set<Comment> comments) {
      this.comments = comments;
    }
@@ -228,7 +227,7 @@ import com.revolution.rest.service.model.CoverMedia;
      this.comments_enabled = comments_enabled;
    }
  
-   @XmlTransient
+   
    public User getUser() {
      return this.user;
    }
@@ -237,12 +236,12 @@ import com.revolution.rest.service.model.CoverMedia;
      this.user = user;
    }
  
-   @XmlTransient
+   
    public Set<Collection> getCollections() {
      return this.collections;
    }
  
-   @XmlTransient
+   
    public void setCollections(Set<Collection> collections) {
      this.collections = collections;
    }

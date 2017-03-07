@@ -36,10 +36,30 @@ public class servletDemo1 extends HttpServlet {
     }
 
     public static void main(String[] args) throws Exception {
+    	String str = "{"
+				+ "\"carId\" : \"100\","
+				+ "\"serviceName\" : \"testPage.php\","
+			    +"\"systemParameterInfo\" : {"
+			    + "\"appVersion\" : \"1.0\","
+			    + "\"clientInfo\" : {"
+			    + "\"clientIp\" : \"169.254.223.2\","
+			    + "\"deviceBrand\" : \"Apple\","
+			    + "\"deviceId\" : \"F70A0056-302C-4BA0-8264-400E4FFAB266\","
+			    + "\"deviceMode\" : \"Simulator\","
+			    + "\"os\" : \"iOS 9.2\","
+			    + "\"screenHeight\" : \"736.000000\","
+			    + "\"screenWidth\" : \"414.000000\","
+			    + "},"
+			    + "\"refId\" : \"AppStore\","
+			    + "\"reqTime\" : \"1458121175\","
+			    + "\"version\" : \"1.0.0\","
+			    + "}"
+			    + "}";
 
-    	String str = "{123,345}";
-    	str = str.substring(1,str.length()-1);
-    	System.out.println(str);
+    	JSONObject json = JSONObject.fromObject(str);
+    	JSONObject systemParameterInfo = json.getJSONObject("systemParameterInfo");
+    	systemParameterInfo.put("clientInfo", "aaa");
+    	System.out.println(json.toString());
     }
 	
 

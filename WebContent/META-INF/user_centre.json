@@ -1,0 +1,5 @@
+{
+	"url":"http://dev.u.api.fblife.com",
+	"token_url":"http://dev.token.fblife.com",
+	"fmap_url":"https://dev-map-api.fblife.com"
+}

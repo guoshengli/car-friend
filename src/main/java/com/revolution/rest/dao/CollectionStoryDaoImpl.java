@@ -393,15 +393,17 @@ public class CollectionStoryDaoImpl extends BaseDaoImpl<CollectionStory, Long>im
 	@Override
 	public List<Story> getStoriesByCollectionIdAndRecommand(Long collectionId, Long storyId, int count, int identify,String type) {
 		Story story = getStoryByStoryid(storyId);
+		CollectionStory cStory = getCollectionStoryByCollectionIdAndStoryId(collectionId, storyId);
 		List<Story> storyList = null;
 		String hql = "";
 		if (story != null) {
 			storyList = new ArrayList<Story>();
+			
 			Session session = getSessionFactory().getCurrentSession();
 			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-			String create_time = sdf.format(story.getRecommend_date());
+			String create_time = sdf.format(cStory.getCreate_time());
 			if(identify == 1){
-				hql = "select cs.story from CollectionStory cs where cs.collection.id = ? and cs.story.id != ? and cs.story.recommend_date <= ? and cs.story.status=? "
+				hql = "select cs.story from CollectionStory cs where cs.collection.id = ? and cs.story.id != ? and cs.create_time <= ? and cs.story.status=? "
 						+ "and cs.story.recommendation = true order by cs.create_time desc";
 				Query query = session.createQuery(hql);
 				query.setLong(0,collectionId);
@@ -411,7 +413,7 @@ public class CollectionStoryDaoImpl extends BaseDaoImpl<CollectionStory, Long>im
 				query.setMaxResults(count);
 				storyList = query.list();
 			}else if(identify == 2){
-				hql = "select cs.story from CollectionStory cs where cs.collection.id = ? and cs.story.id != ? and cs.story.recommend_date <= ? and cs.story.status=? "
+				hql = "select cs.story from CollectionStory cs where cs.collection.id = ? and cs.story.id != ? and cs.create_time <= ? and cs.story.status=? "
 						+ "and cs.story.recommendation = true order by cs.create_time desc";
 				Query query = session.createQuery(hql);
 				query.setLong(0,collectionId);

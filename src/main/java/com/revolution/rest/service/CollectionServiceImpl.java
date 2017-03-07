@@ -43,6 +43,7 @@ import com.revolution.rest.service.model.CollectionIntro;
 import com.revolution.rest.service.model.CollectionIntroLast;
 import com.revolution.rest.service.model.CollectionModel;
 import com.revolution.rest.service.model.CoverMedia;
+import com.revolution.rest.service.model.IframeCover;
 import com.revolution.rest.service.model.ImageCover;
 import com.revolution.rest.service.model.LinkModel;
 import com.revolution.rest.service.model.LinkModels;
@@ -393,9 +394,6 @@ public class CollectionServiceImpl implements CollectionService {
 			coverMedia = (TextCover) JSONObject.toBean(jsonObject, TextCover.class);
 		else if (type.equals("image")) {
 			coverMedia = (ImageCover) JSONObject.toBean(jsonObject, ImageCover.class);
-		} else if (type.equals("video")) {
-			coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		}
 
 		storyModel.setCover_media(JSONObject.fromObject(coverMedia));
@@ -579,9 +577,6 @@ public class CollectionServiceImpl implements CollectionService {
 			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		} else if (type.equals("multimedia")) {
 			storyModel.setCover_media(jsonObject);
-		} else if (type.equals("video")) {
-			coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		}
 		Collection collection = null;
 		/*
@@ -726,9 +721,6 @@ public class CollectionServiceImpl implements CollectionService {
 			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		} else if (type.equals("multimedia")) {
 			storyModel.setCover_media(jsonObject);
-		} else if (type.equals("video")) {
-			coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		}
 
 		if (!Strings.isNullOrEmpty(story.getTitle()))

@@ -29,7 +29,6 @@ public class Collection extends BaseEntity<Long>implements Serializable {
 	@Column(name = "status")
 	private String status;
 
-	@XmlTransient
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "authorId")
 	private User user;
@@ -43,11 +42,9 @@ public class Collection extends BaseEntity<Long>implements Serializable {
 	@Column(name = "view_count")
 	private int view_count;
 
-	@XmlTransient
 	@ManyToMany(mappedBy = "collections", fetch = FetchType.LAZY)
 	private Set<Story> stories;
 
-	@XmlTransient
 	@ManyToMany(mappedBy = "collections", fetch = FetchType.LAZY)
 	private Set<User> users;
 
@@ -79,12 +76,10 @@ public class Collection extends BaseEntity<Long>implements Serializable {
 		this.status = status;
 	}
 
-	@XmlTransient
 	public Set<Story> getStories() {
 		return this.stories;
 	}
 
-	@XmlTransient
 	public void setStories(Set<Story> stories) {
 		this.stories = stories;
 	}

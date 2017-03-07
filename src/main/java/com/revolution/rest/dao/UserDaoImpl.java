@@ -287,5 +287,30 @@ public List<User> getUserRandom() {
     List<User> list = query.list();
     return list;
 }
+
+@Override
+public User getUserByFbname(String fbname) {
+	String hql = "from User where fbname=?";
+    Session session = getSessionFactory().getCurrentSession();
+    Query query = session.createQuery(hql);
+    query.setString(0, fbname);
+    List<User> list = query.list();
+    User user = null;
+    if ((list != null) && (list.size() > 0)) {
+      user = (User)list.get(0);
+    }
+    return user;
+}
+
+@Override
+public List<User> getUserByFbnameAndPhone(String fbname, String phone) {
+	String hql = "from User where fbname=? or phone = ? and status='enabled'";
+    Session session = getSessionFactory().getCurrentSession();
+    Query query = session.createQuery(hql);
+    query.setString(0, fbname);
+    query.setString(1, phone);
+    List<User> list = query.list();
+    return list;
+}
  }
 

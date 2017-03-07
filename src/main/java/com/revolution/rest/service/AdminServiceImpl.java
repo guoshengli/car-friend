@@ -77,6 +77,7 @@ import com.revolution.rest.service.model.ColumnsModel;
 import com.revolution.rest.service.model.CommentModel;
 import com.revolution.rest.service.model.CoverMedia;
 import com.revolution.rest.service.model.FeedbackModel;
+import com.revolution.rest.service.model.IframeCover;
 import com.revolution.rest.service.model.ImageCover;
 import com.revolution.rest.service.model.ImageMedia;
 import com.revolution.rest.service.model.InterestModel;
@@ -608,9 +609,6 @@ public class AdminServiceImpl implements AdminService {
 			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		} else if (type.equals("multimedia")) {
 			storyModel.setCover_media(jsonObject);
-		} else if (type.equals("video")) {
-			coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		}
 
 		List<StoryElement> seSet = story.getElements();
@@ -770,9 +768,6 @@ public class AdminServiceImpl implements AdminService {
 			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		} else if (type.equals("multimedia")) {
 			storyModel.setCover_media(jsonObject);
-		} else if (type.equals("video")) {
-			coverMedia = (VideoCover) JSONObject.toBean(jsonObject, VideoCover.class);
-			storyModel.setCover_media(JSONObject.fromObject(coverMedia));
 		}
 
 		List<StoryElement> seSet = story.getElements();

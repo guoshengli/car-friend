@@ -14,7 +14,6 @@ import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
-import javax.xml.bind.annotation.XmlTransient;
 
 import org.hibernate.annotations.Generated;
 import org.hibernate.annotations.GenerationTime;
@@ -25,7 +24,9 @@ import org.hibernate.annotations.GenerationTime;
    implements Serializable
  {
    private static final long serialVersionUID = 7042495344488712849L;
- 
+   @Column(name="fbname")
+   private String fbname;
+   
    @Column(name="username")
    private String username;
  
@@ -76,41 +77,41 @@ import org.hibernate.annotations.GenerationTime;
    @Column(name="gender")
    private String gender;
  
-   @XmlTransient
+   
    @OneToMany(mappedBy="user", cascade={javax.persistence.CascadeType.ALL}, fetch=FetchType.LAZY)
    private Set<Story> stories;
    
-   @XmlTransient
+   
    @OneToMany(mappedBy="user", cascade={javax.persistence.CascadeType.ALL}, fetch=FetchType.LAZY)
    private Set<Collection> collection;
  
    @OneToMany(mappedBy="user", cascade={javax.persistence.CascadeType.ALL}, fetch=FetchType.LAZY)
    private Set<Comment> comments;
  
-   @XmlTransient
+   
    @OneToMany(mappedBy="pk.follower", cascade={javax.persistence.CascadeType.ALL}, fetch=FetchType.LAZY)
    private Set<Follow> followings;
  
-   @XmlTransient
+   
    @OneToMany(mappedBy="pk.user", cascade={javax.persistence.CascadeType.ALL}, fetch=FetchType.LAZY)
    private Set<Follow> followers;
  
  
-   @XmlTransient
+   
    @OneToMany(mappedBy="user", cascade={javax.persistence.CascadeType.ALL}, fetch=FetchType.LAZY)
    private Set<PublisherInfo> publisherInfos;
    
-   @XmlTransient
+   
    @ManyToMany(fetch=FetchType.LAZY)
    @JoinTable(name="user_collection", joinColumns={@JoinColumn(name="user_id")}, inverseJoinColumns={@JoinColumn(name="collection_id")})
    private Set<Collection> collections;
    
-   @XmlTransient
+   
    @ManyToMany(fetch=FetchType.LAZY)
    @JoinTable(name="user_story", joinColumns={@JoinColumn(name="user_id")}, inverseJoinColumns={@JoinColumn(name="story_id")})
    private Set<Story> repost_story;
    
-   @XmlTransient
+   
    @ManyToMany(fetch=FetchType.LAZY)
    @JoinTable(name="likes", joinColumns={@JoinColumn(name="user_id")}, inverseJoinColumns={@JoinColumn(name="story_id")})
    private Set<Story> like_story;
@@ -212,27 +213,27 @@ import org.hibernate.annotations.GenerationTime;
      this.email_verified = email_verified;
    }
  
-   @XmlTransient
+   
    public Set<Story> getStories() {
      return this.stories;
    }
  
-   @XmlTransient
+   
    public void setStories(Set<Story> stories) {
      this.stories = stories;
    }
  
-   @XmlTransient
+   
    public Set<Comment> getComments() {
      return this.comments;
    }
  
-   @XmlTransient
+   
    public void setComments(Set<Comment> comments) {
      this.comments = comments;
    }
  
-   @XmlTransient
+   
    public Set<Follow> getFollowings()
    {
      return this.followings;
@@ -242,7 +243,7 @@ import org.hibernate.annotations.GenerationTime;
      this.followings = followings;
    }
  
-   @XmlTransient
+   
    public Set<Follow> getFollowers() {
      return this.followers;
    }
@@ -326,5 +327,14 @@ import org.hibernate.annotations.GenerationTime;
 		this.collection = collection;
 	}
 
+	public String getFbname() {
+		return fbname;
+	}
+
+	public void setFbname(String fbname) {
+		this.fbname = fbname;
+	}
+
+	
 	   
  }

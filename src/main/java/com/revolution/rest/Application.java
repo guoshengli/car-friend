@@ -12,6 +12,7 @@ import com.revolution.rest.service.ColumnsServiceImpl;
 import com.revolution.rest.service.CommentServiceImpl;
 import com.revolution.rest.service.ConfigurationServiceImpl;
 import com.revolution.rest.service.DiscoverServiceImpl;
+import com.revolution.rest.service.FMapServiceImpl;
 import com.revolution.rest.service.FollowServiceImpl;
 import com.revolution.rest.service.HtmlServiceImpl;
 import com.revolution.rest.service.LikesServiceImpl;
@@ -47,6 +48,7 @@ import com.revolution.rest.service.UserServiceImpl;
      register(ShareServiceImpl.class);
      register(BasicParamServiceImpl.class);
      register(HtmlServiceImpl.class);
+     register(FMapServiceImpl.class);
      
    }
  }

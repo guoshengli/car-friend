@@ -13,7 +13,6 @@ import java.io.Serializable;
  import javax.persistence.ManyToOne;
  import javax.persistence.Table;
  import javax.persistence.Transient;
- import javax.xml.bind.annotation.XmlTransient;
 
  
  @Entity
@@ -34,7 +33,7 @@ import java.io.Serializable;
    @Column(name="layout_type")
    private String layout_type;
  
-   @XmlTransient
+   
    @ManyToOne(fetch=FetchType.LAZY)
    @JoinColumn(name="story_id", updatable=false)
    private Story storyinfo;
@@ -67,12 +66,12 @@ import java.io.Serializable;
      this.contents = contents;
    }
    @JsonBackReference
-   @XmlTransient
+   
    public Story getStoryinfo() {
      return this.storyinfo;
    }
    @JsonBackReference
-   @XmlTransient
+   
    public void setStoryinfo(Story storyinfo) {
      this.storyinfo = storyinfo;
    }

@@ -19,6 +19,8 @@ public  interface UserDao extends BaseDao<User, Long>
   public  User getUserByZoneAndPhone(String paramString1, String paramString2);
 
   public  User getUserByUserName(String paramString);
+  
+  public  User getUserByFbname(String fbname);
 
   public  List<User> getRandomUser();
 
@@ -43,5 +45,7 @@ public  interface UserDao extends BaseDao<User, Long>
   public List<User> getUserByPhone(String phone);
   
   public List<User> getUserRandom();
+  
+  public List<User> getUserByFbnameAndPhone(String fbname,String phone);
 }
 
