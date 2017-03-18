@@ -216,7 +216,10 @@ public class UserServiceImpl implements UserService {
 	public Response create(JSONObject user,String appVersion,HttpServletRequest request) {
 		User u = new User();
 		int centre_id = 0;
-		String ip = request.getRemoteAddr();
+		String ip = request.getHeader("X-Real-IP");
+		if(Strings.isNullOrEmpty(ip)){
+			ip = request.getRemoteAddr();
+		}
 		String urlkey = getClass().getResource("/../../META-INF/user_centre.json").getPath();
 		JSONObject jsonObject = parseJson(urlkey);
 		String url = jsonObject.getString("url");
@@ -1186,7 +1189,10 @@ public class UserServiceImpl implements UserService {
 
 	public Response userLogin(JSONObject userJson,HttpServletRequest request)throws Exception {
 		User user = null;
-		String ip = request.getRemoteAddr();
+		String ip = request.getHeader("X-Real-IP");
+		if(Strings.isNullOrEmpty(ip)){
+			ip = request.getRemoteAddr();
+		}
 		String email = userJson.containsKey("email")?userJson.getString("email"):null;
 		String fbname = userJson.containsKey("fbname")?userJson.getString("fbname"):null;
 		String password = userJson.containsKey("password")?userJson.getString("password"):null;
@@ -1356,14 +1362,14 @@ public class UserServiceImpl implements UserService {
 						u.setZone(zone);
 						u.setPhone(phone);
 						u.setFbname(fbusername);
-						String chars = "abcde0f12g3hi4jk5l6m7n8o9pqrstuvwxyz";
+						/*String chars = "abcde0f12g3hi4jk5l6m7n8o9pqrstuvwxyz";
 				    	StringBuffer sb = new StringBuffer();
 				    	for(int i=0;i<10;i++){
 				    		char c = chars.charAt((int)(Math.random() * 10));
 				    		sb.append(c);
-				    	}
+				    	}*/
 				    	u.setPassword(password);
-				    	u.setUsername(sb.toString());
+				    	u.setUsername(fbusername);
 				    	u.setSalt(initSalt().toString());
 				    	u.setStatus("enabled");
 				    	u.setUser_type("normal");
@@ -1559,19 +1565,19 @@ public class UserServiceImpl implements UserService {
 						}else{
 							String fbphone = data.getString("mobile");
 							User fb_user = new User();
-							String chars = "abcde0f12g3hi4jk5l6m7n8o9pqrstuvwxyz";
+							/*String chars = "abcde0f12g3hi4jk5l6m7n8o9pqrstuvwxyz";
 					    	StringBuffer sb = new StringBuffer();
 					    	for(int i=0;i<10;i++){
 					    		char c = chars.charAt((int)(Math.random() * 10));
 					    		sb.append(c);
-					    	}
+					    	}*/
 					    	fb_user.setFbname(fbname);
 					    	if(!Strings.isNullOrEmpty(fbphone)){
 					    		fb_user.setZone("86");
 						    	fb_user.setPhone(fbphone);
 					    	}
 					    	fb_user.setPassword(password);
-					    	fb_user.setUsername(sb.toString());
+					    	fb_user.setUsername(fbname);
 					    	fb_user.setSalt(initSalt().toString());
 					    	fb_user.setStatus("enabled");
 					    	fb_user.setUser_type("normal");
@@ -1783,7 +1789,10 @@ public class UserServiceImpl implements UserService {
 		String urlkey = getClass().getResource("/../../META-INF/user_centre.json").getPath();
 		JSONObject jsonObject = parseJson(urlkey);
 		String url = jsonObject.getString("url");
-		String ip = request.getRemoteAddr();
+		String ip = request.getHeader("X-Real-IP");
+		if(Strings.isNullOrEmpty(ip)){
+			ip = request.getRemoteAddr();
+		}
 		if (userId.equals(loginUserid)) {
 			UserCentre uc = userCentreDao.getUserCentreByUserId(loginUserid);
 			int centre_id = uc.getCentre_id();
@@ -4501,7 +4510,10 @@ public class UserServiceImpl implements UserService {
 	}
 
 	public Response loginLinkAccounts(LinkAccounts la,HttpServletRequest request) {
-		String ip = request.getRemoteAddr();
+		String ip = request.getHeader("X-Real-IP");
+		if(Strings.isNullOrEmpty(ip)){
+			ip = request.getRemoteAddr();
+		}
 		String device = request.getHeader("X-Tella-Request-Device");
 		JSONObject resp = new JSONObject();
 		Object[] link = null;
@@ -5120,7 +5132,10 @@ public class UserServiceImpl implements UserService {
 		 String url = getClass().getResource("/../../META-INF/user_centre.json").getPath();
 		JSONObject jsonObject = parseJson(url);
 		String urlKey = jsonObject.getString("url");
-		String ip = request.getRemoteAddr();
+		String ip = request.getHeader("X-Real-IP");
+		if(Strings.isNullOrEmpty(ip)){
+			ip = request.getRemoteAddr();
+		}
 		
 		if ((!Strings.isNullOrEmpty(phone)) && (!Strings.isNullOrEmpty(zone)) && (!Strings.isNullOrEmpty(code))
 				&& (!Strings.isNullOrEmpty(password))) {
@@ -7237,7 +7252,10 @@ public class UserServiceImpl implements UserService {
 
 	@Override
 	public Response linkPhone(HttpServletRequest request,Long loginUserid,String appVersion) {
-		String ip = request.getRemoteAddr();
+		String ip = request.getHeader("X-Real-IP");
+		if(Strings.isNullOrEmpty(ip)){
+			ip = request.getRemoteAddr();
+		}
 		String phone = request.getParameter("phone");
 		String zone = request.getParameter("zone");
 		String code = request.getParameter("code");
@@ -8436,9 +8454,6 @@ public class UserServiceImpl implements UserService {
 		}else{
 			userid = userId;
 		}
-		
-		
-		
 		JSONObject json = new JSONObject();
 
 		if ((Strings.isNullOrEmpty(countStr)) && (Strings.isNullOrEmpty(sinceIdStr))
@@ -8837,7 +8852,10 @@ public class UserServiceImpl implements UserService {
 
 	@Override
 	public Response get_auth(JSONObject fbInfo,HttpServletRequest request) throws Exception {
-		String ip = request.getRemoteAddr();
+		String ip = request.getHeader("X-Real-IP");
+		if(Strings.isNullOrEmpty(ip)){
+			ip = request.getRemoteAddr();
+		}
 		String path = getClass().getResource("/../../META-INF/user_centre.json").getPath();
 		JSONObject jsonObject = ParseFile.parseJson(path);
 		String url = jsonObject.getString("url");
@@ -8935,7 +8953,10 @@ public class UserServiceImpl implements UserService {
 
 	@Override
 	public Response get_code(JSONObject phoneInfo, HttpServletRequest request) throws Exception {
-		String ip = request.getRemoteAddr();
+		String ip = request.getHeader("X-Real-IP");
+		if(Strings.isNullOrEmpty(ip)){
+			ip = request.getRemoteAddr();
+		}
 		String path = getClass().getResource("/../../META-INF/user_centre.json").getPath();
 		JSONObject jsonObject = ParseFile.parseJson(path);
 		String url = jsonObject.getString("url");
@@ -8973,7 +8994,10 @@ public class UserServiceImpl implements UserService {
 
 	@Override
 	public Response get_register_code(JSONObject phoneInfo, HttpServletRequest request) throws Exception {
-		String ip = request.getRemoteAddr();
+		String ip = request.getHeader("X-Real-IP");
+		if(Strings.isNullOrEmpty(ip)){
+			ip = request.getRemoteAddr();
+		}
 		String path = getClass().getResource("/../../META-INF/user_centre.json").getPath();
 		JSONObject jsonObject = ParseFile.parseJson(path);
 		String url = jsonObject.getString("url");
@@ -9030,7 +9054,10 @@ public class UserServiceImpl implements UserService {
 	
 	@Override
 	public Response get_bind_code(JSONObject phoneInfo, HttpServletRequest request) throws Exception {
-		String ip = request.getRemoteAddr();
+		String ip = request.getHeader("X-Real-IP");
+		if(Strings.isNullOrEmpty(ip)){
+			ip = request.getRemoteAddr();
+		}
 		String path = getClass().getResource("/../../META-INF/user_centre.json").getPath();
 		JSONObject jsonObject = ParseFile.parseJson(path);
 		String url = jsonObject.getString("url");
@@ -9105,7 +9132,10 @@ public class UserServiceImpl implements UserService {
 		String urlkey = getClass().getResource("/../../META-INF/user_centre.json").getPath();
 		JSONObject jsonObject = parseJson(urlkey);
 		String url = jsonObject.getString("token_url");
-		String ip = request.getRemoteAddr();
+		String ip = request.getHeader("X-Real-IP");
+		if(Strings.isNullOrEmpty(ip)){
+			ip = request.getRemoteAddr();
+		}
 		JSONObject res = new JSONObject();
 		if(tokenInfo != null){
 			String token = tokenInfo.getString("token");
@@ -9143,7 +9173,7 @@ public class UserServiceImpl implements UserService {
 				}else{
 					GetuiModel gm = getGetuiInfo();
 					if(centre_info.containsKey("mobile")){
-						
+						String fbname = centre_info.getString("username");
 						String phone = centre_info.getString("mobile");
 						if(!Strings.isNullOrEmpty(phone)){
 							User u = new User();
@@ -9160,7 +9190,10 @@ public class UserServiceImpl implements UserService {
 							u.setPassword(pwd);
 							
 							//---
-							if(centre_info.containsKey("nickname")){
+							if(!Strings.isNullOrEmpty(fbname)){
+								u.setUsername(fbname);
+								u.setFbname(fbname);
+							}else if(centre_info.containsKey("nickname")){
 								String nickname = centre_info.getString("nickname");
 								if(!Strings.isNullOrEmpty(nickname)){
 									u.setUsername(nickname);
@@ -9261,7 +9294,7 @@ public class UserServiceImpl implements UserService {
 						}else{
 
 							User u = new User();
-							String fbname = centre_info.getString("username");
+							
 							if(!Strings.isNullOrEmpty(fbname)){
 								u.setFbname(fbname);
 								String chars = "abcde0f12g3hi4jk5l6m7n8o9pqrstuvwxyz";
@@ -9291,7 +9324,7 @@ public class UserServiceImpl implements UserService {
 								UserCentre userCentre = new UserCentre();
 								userCentre.setCentre_id(centre_id);
 								userCentre.setUser_id(u.getId());
-								userCentreDao.save(uc);
+								userCentreDao.save(userCentre);
 								Configuration c = new Configuration();
 								c.setNew_admin_push(true);
 								c.setNew_comment_on_your_comment_push(true);
@@ -9529,9 +9562,9 @@ public class UserServiceImpl implements UserService {
 				return Response.status(Response.Status.BAD_REQUEST).entity(res).build();
 			}
 		}else{
-			res.put("status", "request_invalid");
+			res.put("status", "request_invalid"+ip);
 			res.put("code", Integer.valueOf(10010));
-			res.put("error_message", "request is invalid");
+			res.put("error_message", "request is invalid"+ip);
 			return Response.status(Response.Status.BAD_REQUEST).entity(res).build();
 		}
 		return null;
@@ -9573,7 +9606,10 @@ public class UserServiceImpl implements UserService {
 		JSONObject jsonObject = parseJson(urlkey);
 		String url = jsonObject.getString("url");
 		Map<String,String> param = new HashMap<String, String>();
-		String ip = request.getRemoteAddr();
+		String ip = request.getHeader("X-Real-IP");
+		if(Strings.isNullOrEmpty(ip)){
+			ip = request.getRemoteAddr();
+		}
 		param.put("ip", ip);
 		param.put("token",fbToken);
 		param.put("device", device);

@@ -1290,7 +1290,10 @@ public class StoryServiceImpl implements StoryService {
 
 	public Response createLikes(Long storyId, Long loginUserid,HttpServletRequest request) {
 		log.debug("*** create likes ***");
-		String ip = request.getRemoteAddr();
+		String ip = request.getHeader("X-Real-IP");
+		if(Strings.isNullOrEmpty(ip)){
+			ip = request.getRemoteAddr();
+		}
 		String urlkey = getClass().getResource("/../../META-INF/user_centre.json").getPath();
 		JSONObject jsonObj = parseJson(urlkey);
 		String url = jsonObj.getString("fmap_url");
@@ -3634,9 +3637,9 @@ public class StoryServiceImpl implements StoryService {
 				json.put("status","success");
 				return Response.status(Response.Status.OK).entity(json).build();
 			}else{
-				json.put("status", rspInfo.getString("rspType"));
+				json.put("status", rspInfo.getString("rspType")+invitation_copy);
 				json.put("code", rspInfo.getString("rspCode"));
-				json.put("error_message", rspInfo.getString("rspDesc"));
+				json.put("error_message", rspInfo.getString("rspDesc")+invitation_copy);
 				return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
 			}
 			
@@ -3789,191 +3792,195 @@ public class StoryServiceImpl implements StoryService {
 
 	@Override
 	public Response addStory(JSONObject storyModel, Long loginUserid, HttpServletRequest request) {
-		String ip = request.getRemoteAddr();
+		String ip = request.getHeader("X-Real-IP");
+		if(Strings.isNullOrEmpty(ip)){
+			ip = request.getRemoteAddr();
+		}
 		String urlkey = getClass().getResource("/../../META-INF/user_centre.json").getPath();
 		JSONObject jsonObject = parseJson(urlkey);
 		String url = jsonObject.getString("fmap_url");
+		String params = "";
+		String result = "";
 		log.debug("create story");
 		try {
-			if (storyModel != null) {
-				Story story = new Story();
 
-				if (storyModel.containsKey("title"))
-					story.setTitle(storyModel.getString("title"));
+			Story story = new Story();
 
-				if (storyModel.containsKey("cover_media"))
-					story.setCover_page(storyModel.getString("cover_media"));
-				else {
-					story.setCover_page(null);
-				}
+			if (storyModel.containsKey("title"))
+				story.setTitle(storyModel.getString("title"));
 
-				if (storyModel.containsKey("summary"))
-					story.setSummary(storyModel.getString("summary"));
-				else {
-					story.setSummary(null);
-				}
-				story.setRecommendation(false);
+			if (storyModel.containsKey("cover_media"))
+				story.setCover_page(storyModel.getString("cover_media"));
+			else {
+				story.setCover_page(null);
+			}
 
-				if (storyModel.containsKey("image_count")) {
-					story.setImage_count(storyModel.getInt("image_count"));
+			if (storyModel.containsKey("summary"))
+				story.setSummary(storyModel.getString("summary"));
+			else {
+				story.setSummary(null);
+			}
+			story.setRecommendation(false);
+
+			if (storyModel.containsKey("image_count")) {
+				story.setImage_count(storyModel.getInt("image_count"));
+			}
+			story.setStatus("publish");
+			story.setUpdate_time(new Date());
+			story.setLast_comment_date(new Date());
+			User user = this.userDao.get(loginUserid);
+			if (user != null) {
+				story.setUser(user);
+			}
+			JSONArray jsonArray = JSONArray.fromObject(storyModel.getString("elements"));
+			List<StoryElement> seSet = new ArrayList<StoryElement>();
+			JSONObject jo = null;
+			if ((jsonArray != null) && (jsonArray.size() > 0)) {
+				StoryElement element = null;
+				for (int i = 0; i < jsonArray.size(); i++) {
+					element = new StoryElement();
+					jo = (JSONObject) jsonArray.get(i);
+					element.setGrid_size(jo.getString("grid_size"));
+					element.setLayout_type(jo.getString("layout_type"));
+					element.setContents(jo.getString("content"));
+					element.setStoryinfo(story);
+					seSet.add(element);
 				}
-				story.setStatus("publish");
-				story.setUpdate_time(new Date());
-				story.setLast_comment_date(new Date());
-				User user = this.userDao.get(loginUserid);
-				if (user != null) {
-					story.setUser(user);
-				}
-				JSONArray jsonArray = JSONArray.fromObject(storyModel.getString("elements"));
-				List<StoryElement> seSet = new ArrayList<StoryElement>();
-				JSONObject jo = null;
-				if ((jsonArray != null) && (jsonArray.size() > 0)) {
-					StoryElement element = null;
-					for (int i = 0; i < jsonArray.size(); i++) {
-						element = new StoryElement();
-						jo = (JSONObject) jsonArray.get(i);
-						element.setGrid_size(jo.getString("grid_size"));
-						element.setLayout_type(jo.getString("layout_type"));
-						element.setContents(jo.getString("content"));
-						element.setStoryinfo(story);
-						seSet.add(element);
-					}
-				}
-				story.setElements(seSet);
-				
-				
-				
-				
-				this.storyDao.save(story);
-				log.debug("start add activity$$$$$$$$$$$$$$$$$$$$$$$$$$$" + story.getUser().getId() + " -->"
-						+ story.getId());
-				story.setTinyURL(makeURL(story.getId()));
-				storyDao.update(story);
-				UserCentre uc = userCentreDao.getUserCentreByUserId(loginUserid);
-				int centre_id = 0;
-				if(uc != null){
-					centre_id = uc.getCentre_id();
+			}
+			story.setElements(seSet);
+			
+			
+			
+			
+			this.storyDao.save(story);
+			log.debug("start add activity$$$$$$$$$$$$$$$$$$$$$$$$$$$" + story.getUser().getId() + " -->"
+					+ story.getId());
+			story.setTinyURL(makeURL(story.getId()));
+			storyDao.update(story);
+			UserCentre uc = userCentreDao.getUserCentreByUserId(loginUserid);
+			int centre_id = 0;
+			if(uc != null){
+				centre_id = uc.getCentre_id();
+			}else{
+				LinkAccounts la = linkAccountsDao.getLinkAccountsByUseridAndService(loginUserid, "fblife");
+				centre_id = Integer.parseInt(la.getUuid());
+			}
+			
+			if(centre_id > 0){
+				storyModel.put("story_id", story.getId());
+				storyModel.put("author_id", centre_id);
+				storyModel.put("tiny_url", story.getTinyURL());
+				List<StoryElement> seList = story.getElements();
+				JsonConfig config = new JsonConfig();
+				config.setExcludes(new String[] { "storyinfo", "grid_size", "layout_type", "content" });
+				config.setIgnoreDefaultExcludes(false);
+				config.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
+				JSONArray ja = JSONArray.fromObject(seList,config);
+				if(storyModel.containsKey("elements")){
+					storyModel.remove("elements");
+					storyModel.put("elements",ja);
 				}else{
-					LinkAccounts la = linkAccountsDao.getLinkAccountsByUseridAndService(loginUserid, "fblife");
-					centre_id = Integer.parseInt(la.getUuid());
+					storyModel.put("elements",ja);
 				}
+				Map<String,String> param = new HashMap<String,String>();
+				param.put("user_id",String.valueOf(centre_id));
+				param.put("data",storyModel.toString());
+				param.put("ip", ip);
+				params = publicParam(param);
+				result = HttpUtil.sendPostStr(url+"/v1/info/info-wiki/create-wiki",params);
 				
-				if(centre_id > 0){
-					storyModel.put("story_id", story.getId());
-					storyModel.put("author_id", centre_id);
-					storyModel.put("tiny_url", story.getTinyURL());
-					List<StoryElement> seList = story.getElements();
-					JsonConfig config = new JsonConfig();
-					config.setExcludes(new String[] { "storyinfo", "grid_size", "layout_type", "content" });
-					config.setIgnoreDefaultExcludes(false);
-					config.setCycleDetectionStrategy(CycleDetectionStrategy.LENIENT);
-					JSONArray ja = JSONArray.fromObject(seList,config);
-					if(storyModel.containsKey("elements")){
-						storyModel.remove("elements");
-						storyModel.put("elements",ja);
-					}else{
-						storyModel.put("elements",ja);
-					}
-					Map<String,String> param = new HashMap<String,String>();
-					param.put("user_id",String.valueOf(centre_id));
-					param.put("data",storyModel.toString());
-					param.put("ip", ip);
-					String params = publicParam(param);
-					String result = HttpUtil.sendPostStr(url+"/v1/info/info-wiki/create-wiki",params);
-					if (!Strings.isNullOrEmpty(result)) {
-						JSONObject json = JSONObject.fromObject(result);
-						int status = json.getInt("code");
-						if (status == 10000) {
-							JSONArray collection_id = null;
-							if (storyModel.containsKey("collection_id")) {
-								collection_id = storyModel.getJSONArray("collection_id");
-								if(collection_id != null && collection_id.size() > 0){
-									Object[] ids = collection_id.toArray();
-									for(Object id:ids){
-										CollectionStory cs = new CollectionStory();
-										Collection collection = collectionDao.get(Long.parseLong(id.toString()));
-										cs.setStory(story);
-										cs.setCollection(collection);
-										collectionStoryDao.save(cs);
-									}
+				if (!Strings.isNullOrEmpty(result)) {
+					JSONObject json = JSONObject.fromObject(result);
+					int status = json.getInt("code");
+					if (status == 10000) {
+						JSONArray collection_id = null;
+						if (storyModel.containsKey("collection_id")) {
+							collection_id = storyModel.getJSONArray("collection_id");
+							if(collection_id != null && collection_id.size() > 0){
+								Object[] ids = collection_id.toArray();
+								for(Object id:ids){
+									CollectionStory cs = new CollectionStory();
+									Collection collection = collectionDao.get(Long.parseLong(id.toString()));
+									cs.setStory(story);
+									cs.setCollection(collection);
+									collectionStoryDao.save(cs);
 								}
-								
-
 							}
-							List<Follow> followList = this.followDao.getFollowersByUserId(story.getUser().getId());
-							Timeline timeline = new Timeline();
-							timeline.setCreatorId(loginUserid);
-							timeline.setTargetUserId(loginUserid);
-							timeline.setStory(story);
-							timeline.setType("post");
-							timeline.setReferenceId((Long) story.getId());
-							timeline.setCreateTime(new Date());
-							this.timelineDao.save(timeline);
-							log.debug("***add activity success***");
-							EventModel event = getEventModelListByLoginUserid(timeline, loginUserid, collection_id);
-							log.debug("***start add notification***" + JSONObject.fromObject(event));
-							if (!user.getUser_type().equals("media")) {
-								List<Notification> notificationList = new ArrayList<Notification>();
-								Notification n = null;
-								if ((followList != null) && (followList.size() > 0)) {
-									for (Follow follow : followList) {
-										Long recipientId = (Long) follow.getPk().getUser().getId();
-										n = new Notification();
-										n.setRecipientId(recipientId);
-										n.setSenderId((Long) story.getUser().getId());
-										n.setNotificationType(4);
-										n.setObjectType(1);
-										n.setObjectId((Long) story.getId());
-										n.setStatus("enabled");
-										n.setRead_already(true);
-										notificationList.add(n);
-									}
-								}
-								List<User> userList = this.userDao.getUserByUserType();
-								if ((userList != null) && (userList.size() > 0)) {
-									for (User u : userList) {
-										n = new Notification();
-										n.setRecipientId((Long) u.getId());
-										n.setSenderId((Long) story.getUser().getId());
-										n.setNotificationType(4);
-										n.setObjectType(1);
-										n.setObjectId((Long) story.getId());
-										n.setStatus("enabled");
-										n.setRead_already(true);
-										notificationList.add(n);
-									}
-								}
-								this.notificationDao.saveNotifications(notificationList);
+							
 
-							}
-
-							log.debug("***add notification success***");
-							return Response.status(Response.Status.OK).entity(storyModel).build();
-						}else{
-							JSONObject result_json = new JSONObject();
-							result_json.put("status", "发布失败，请重试");
-							result_json.put("code", 10670);
-							result_json.put("error_message", "发布失败，请重试");
-
-							return Response.status(Response.Status.OK).entity(result_json).build();
 						}
+						List<Follow> followList = this.followDao.getFollowersByUserId(story.getUser().getId());
+						Timeline timeline = new Timeline();
+						timeline.setCreatorId(loginUserid);
+						timeline.setTargetUserId(loginUserid);
+						timeline.setStory(story);
+						timeline.setType("post");
+						timeline.setReferenceId((Long) story.getId());
+						timeline.setCreateTime(new Date());
+						this.timelineDao.save(timeline);
+						log.debug("***add activity success***");
+						EventModel event = getEventModelListByLoginUserid(timeline, loginUserid, collection_id);
+						log.debug("***start add notification***" + JSONObject.fromObject(event));
+						if (!user.getUser_type().equals("media")) {
+							List<Notification> notificationList = new ArrayList<Notification>();
+							Notification n = null;
+							if ((followList != null) && (followList.size() > 0)) {
+								for (Follow follow : followList) {
+									Long recipientId = (Long) follow.getPk().getUser().getId();
+									n = new Notification();
+									n.setRecipientId(recipientId);
+									n.setSenderId((Long) story.getUser().getId());
+									n.setNotificationType(4);
+									n.setObjectType(1);
+									n.setObjectId((Long) story.getId());
+									n.setStatus("enabled");
+									n.setRead_already(true);
+									notificationList.add(n);
+								}
+							}
+							List<User> userList = this.userDao.getUserByUserType();
+							if ((userList != null) && (userList.size() > 0)) {
+								for (User u : userList) {
+									n = new Notification();
+									n.setRecipientId((Long) u.getId());
+									n.setSenderId((Long) story.getUser().getId());
+									n.setNotificationType(4);
+									n.setObjectType(1);
+									n.setObjectId((Long) story.getId());
+									n.setStatus("enabled");
+									n.setRead_already(true);
+									notificationList.add(n);
+								}
+							}
+							this.notificationDao.saveNotifications(notificationList);
+
+						}
+
+						log.debug("***add notification success***");
+						return Response.status(Response.Status.OK).entity(storyModel).build();
+					}else{
+						JSONObject result_json = new JSONObject();
+						result_json.put("status", "发布失败，请重试");
+						result_json.put("code", 10670);
+						result_json.put("error_message", "发布失败，请重试");
+
+						return Response.status(Response.Status.OK).entity(result_json).build();
 					}
 				}else{
 					JSONObject result_json = new JSONObject();
-					result_json.put("status", "发布失败，请重试");
-					result_json.put("code", 10670);
-					result_json.put("error_message", "发布失败，请重试");
-					return Response.status(Response.Status.OK).entity(result_json).build();
+					result_json.put("status", "用户中心没有数据返回"+params);
+					result_json.put("code", 10678);
+					result_json.put("error_message", "用户中心没有数据返回"+result);
+					return Response.status(Response.Status.BAD_REQUEST).entity(result_json).build();
 				}
-				
-				
+			}else{
+				JSONObject result_json = new JSONObject();
+				result_json.put("status", "发布失败，请重试");
+				result_json.put("code", 10670);
+				result_json.put("error_message", "发布失败，请重试");
+				return Response.status(Response.Status.OK).entity(result_json).build();
 			}
 
-			JSONObject jo = new JSONObject();
-			jo.put("status", "invalid_request");
-			jo.put("code", Integer.valueOf(10010));
-			jo.put("error_message", "Invalid request payload");
-			return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
 		} catch (Exception e) {
 			e.printStackTrace();
 			JSONObject jo = new JSONObject();

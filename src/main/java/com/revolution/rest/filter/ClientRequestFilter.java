@@ -61,6 +61,7 @@ public class ClientRequestFilter extends OncePerRequestFilter implements Filter 
 		String requestURI = request.getRequestURI();
 		log.debug("Applying access filter...");
 		log.info("REQUEST URI: " + requestURI);
+		
 		response.setCharacterEncoding("utf-8");
 		response.addHeader("Access-Control-Allow-Origin", "*");
 		response.addHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE, PUT");
@@ -70,7 +71,11 @@ public class ClientRequestFilter extends OncePerRequestFilter implements Filter 
 		String uri = request.getRequestURI();
 		String regex = "[0-9]+";
 		String method = request.getMethod();
-		String ip = request.getRemoteAddr();
+		String ip = request.getHeader("X-Real-IP");
+		if(Strings.isNullOrEmpty(ip)){
+			ip = request.getRemoteAddr();
+		}
+		log.info("REQUEST IP:------------->>>>>>>>>>>>> " + ip);
 		String device = request.getHeader("X-Tella-Request-Device");
 		String urlPath = getClass().getResource("/../../META-INF/user_centre.json").getPath();
 		JSONObject jsonObject = ParseFile.parseJson(urlPath);
@@ -150,23 +155,23 @@ public class ClientRequestFilter extends OncePerRequestFilter implements Filter 
 					filterChain.doFilter(request, response);
 				} else if (code == 10001) {
 					JSONObject jo = new JSONObject();
-					jo.put("status", "token invalid");
+					jo.put("status", "token invalid"+ip);
 					jo.put("code", 10623);
-					jo.put("error_message", "token invalid");
+					jo.put("error_message", "token invalid"+ip);
 					PrintWriter writer = response.getWriter();
 					writer.write(jo.toString());
 				} else if (code == 10002) {
 					JSONObject jo = new JSONObject();
-					jo.put("status", "token invalid");
+					jo.put("status", "token invalid"+ip);
 					jo.put("code", 10623);
-					jo.put("error_message", "token invalid");
+					jo.put("error_message", "token invalid"+ip);
 					PrintWriter writer = response.getWriter();
 					writer.write(jo.toString());
 				}else if (code == 10110) {
 					JSONObject jo = new JSONObject();
-					jo.put("status", "token invalid");
+					jo.put("status", "token invalid"+ip);
 					jo.put("code", 10623);
-					jo.put("error_message", "token invalid");
+					jo.put("error_message", "token invalid"+ip);
 					PrintWriter writer = response.getWriter();
 					writer.write(jo.toString());
 				}
