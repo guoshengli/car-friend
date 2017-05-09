@@ -24,7 +24,7 @@ public class StoryLastModel implements Serializable {
 	private JSONObject author;
 	private List<JSONObject> comments;
 	private List<StoryIntros> recommendation;
-	private List<JSONObject> collection;
+	private List<JSONObject> collections;
 	private int image_count;
 	private String summary;
 	private String resource;
@@ -143,13 +143,13 @@ public class StoryLastModel implements Serializable {
 	public void setRecommendation(List<StoryIntros> recommendation) {
 		this.recommendation = recommendation;
 	}
-
-	public List<JSONObject> getCollection() {
-		return collection;
+	
+	public List<JSONObject> getCollections() {
+		return collections;
 	}
 
-	public void setCollection(List<JSONObject> collection) {
-		this.collection = collection;
+	public void setCollections(List<JSONObject> collections) {
+		this.collections = collections;
 	}
 
 	public int getImage_count() {

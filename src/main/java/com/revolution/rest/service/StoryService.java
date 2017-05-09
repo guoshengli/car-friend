@@ -16,11 +16,9 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
-import org.springframework.web.bind.annotation.RequestBody;
 
 import com.revolution.rest.model.Story;
 import com.revolution.rest.service.model.CommentModel;
-import com.revolution.rest.service.model.ReplyComment;
 import com.revolution.rest.service.model.ReplyCommentModel;
 import com.revolution.rest.service.model.UserIntro;
 
@@ -89,6 +87,10 @@ public abstract interface StoryService
   @Path("/{storyId}/likes")
   @POST
   public abstract Response createLikes(@PathParam("storyId") Long paramLong1, @HeaderParam("X-Tella-Request-Userid") Long paramLong2,@Context HttpServletRequest request);
+  
+  @Path("/add_like")
+  @POST
+  public abstract Response createLike(JSONObject json,@Context HttpServletRequest request);
 
   @Path("/{storyId}/likes")
   @DELETE
@@ -144,11 +146,16 @@ public abstract interface StoryService
   
   @Path("/{storyId}/synchronise")
   @POST
-  public Response synchroniseStory(@HeaderParam("X-Tella-Request-Userid") Long loginUserid,JSONObject invitation,@PathParam("storyId")Long storyId)throws Exception;
+  public Response synchroniseStory(@HeaderParam("X-Tella-Request-Userid") Long loginUserid,@HeaderParam("X-Tella-Request-FbToken") String fbToken,JSONObject invitation,@PathParam("storyId")Long storyId)throws Exception;
   
-  @Path("/{storyId}/synchroniseEdit")
+  @Path("/invitation")
   @POST
-  public Response synchroniseEditStory(@HeaderParam("X-Tella-Request-Userid") Long loginUserid,JSONObject invitation,@PathParam("storyId")Long storyId)throws Exception;
+  public Response getFbInvitation(@HeaderParam("X-Tella-Request-Userid") Long loginUserid,@HeaderParam("X-Tella-Request-FbToken") String fbToken,JSONObject invitation)throws Exception;
+  
+  @Path("/synchroniseEdit")
+  @POST
+  @Consumes({"application/json"})
+  public Response synchroniseEditStory(@HeaderParam("X-Tella-Request-Userid") Long loginUserid,@HeaderParam("X-Tella-Request-FbToken") String fbToken,JSONObject invitation)throws Exception;
   
   @Path("/video")
   @POST

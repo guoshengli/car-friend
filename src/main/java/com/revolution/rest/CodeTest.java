@@ -6,25 +6,28 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.io.RandomAccessFile;
+import java.math.BigInteger;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLDecoder;
-import java.nio.channels.FileChannel;
-import java.nio.channels.Selector;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -32,18 +35,18 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
-import org.springframework.util.Base64Utils;
 
 import com.gexin.rp.sdk.base.IPushResult;
 import com.gexin.rp.sdk.base.impl.SingleMessage;
 import com.gexin.rp.sdk.base.impl.Target;
 import com.gexin.rp.sdk.http.IGtPush;
 import com.gexin.rp.sdk.template.NotificationTemplate;
-import com.revolution.rest.common.EncryptionUtil;
+import com.revolution.rest.common.HttpUtil;
 import com.revolution.rest.dao.NotificationDao;
 import com.revolution.rest.dao.PushNotificationDao;
 import com.revolution.rest.model.PushNotification;
 
+import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 
 public class CodeTest {
@@ -732,12 +735,18 @@ public class CodeTest {
 	// ---------------------------------------------------------
 
 	public static void main(String[] args) throws Exception {
-		String check = 
-				"^([a-z0-9A-Z]+[-|\\.]?)@([a-z0-9A-Z]+(-[a-z0-9A-Z]+)?\\.)+[a-zA-Z]{2,}$"; 
-		Pattern p = Pattern.compile(check);
-		Matcher m = p.matcher("100@1.com");
-		System.out.println("----"+m.matches());
+		String s = "这是一段中文字符串"; 
+		byte[] b = s.getBytes("UTF-8"); 
+		
+		String n = new String(b,"UTF-8");
+		System.out.println(b.toString());
 	}
+	
+	/**
+	 * 
+	 * 
+	 * @param input
+	 */
 
 	public static void letterToNum(String input) {
 		for (byte b : input.getBytes()) {

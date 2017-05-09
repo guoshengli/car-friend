@@ -50,5 +50,7 @@ public abstract interface StoryDao extends BaseDao<Story, Long>
   public void updateStoryResource(Long storyId,String resource);
   
   public List<Story> getStoryListByIds(String ids);
+  
+  public Story getStoryByTidAndPid(Long tid,Long pid);
 }
 

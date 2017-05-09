@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
@@ -588,7 +589,7 @@ public class StoryServiceImpl implements StoryService {
 					collectionListJson.add(collectionJson);
 				}
 				
-				storyModel.setCollection(collectionListJson);
+				storyModel.setCollections(collectionListJson);
 			}
 			
 
@@ -1326,17 +1327,19 @@ public class StoryServiceImpl implements StoryService {
 			this.notificationDao.save(notification);
 		}
 		Configuration conf = this.configurationDao.getConfByUserId((Long) story.getUser().getId());
-		if (conf.isNew_favorite_from_following_push()) {
-			int counts = this.notificationDao.getNotificationByRecipientId((Long) story.getUser().getId());
-			List<PushNotification> list = this.pushNotificationDao
-					.getPushNotificationByUserid((Long) story.getUser().getId());
-			try {
-				String content = user.getUsername() + "喜欢了我的故事";
-				JSONObject json = new JSONObject();
-				json.put("story_id", story.getId());
-				PushNotificationUtil.pushInfo(appId, appKey, masterSecret, list, counts, content, json.toString());
-			} catch (Exception e) {
-				e.printStackTrace();
+		if(conf != null){
+			if (conf.isNew_favorite_from_following_push()) {
+				int counts = this.notificationDao.getNotificationByRecipientId((Long) story.getUser().getId());
+				List<PushNotification> list = this.pushNotificationDao
+						.getPushNotificationByUserid((Long) story.getUser().getId());
+				try {
+					String content = user.getUsername() + "喜欢了我的故事";
+					JSONObject json = new JSONObject();
+					json.put("story_id", story.getId());
+					PushNotificationUtil.pushInfo(appId, appKey, masterSecret, list, counts, content, json.toString());
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 			}
 		}
 
@@ -3558,11 +3561,12 @@ public class StoryServiceImpl implements StoryService {
 	}
 
 	@Override
-	public Response synchroniseStory(Long loginUserid, JSONObject invitation,Long storyId) throws Exception {
+	public Response synchroniseStory(Long loginUserid,String fbToken, JSONObject invitation,Long storyId) throws Exception {
 		
 		JSONObject json = new JSONObject();
-		List<LinkAccounts> lam = linkAccountsDao.getLinkAccountsByUserid(loginUserid);
-		if(lam != null && lam.size() > 0){
+		User user = userDao.get(loginUserid);
+		//List<LinkAccounts> lam = linkAccountsDao.getLinkAccountsByUserid(loginUserid);
+		if(user != null){
 			//e族域名url
 			String content = getClass().getResource("/../../META-INF/fb.json").getPath();
 			JSONObject contentJson = ParseFile.parseJson(content);
@@ -3573,59 +3577,100 @@ public class StoryServiceImpl implements StoryService {
 			JSONObject qiniuJson = ParseFile.parseJson(qiniu);
 			JSONObject media = JSONObject.fromObject(qiniuJson.getString("meta"));
 			String image_url = media.getString("get_img_url");
+			String video_url = media.getString("get_video_url");
 			image_url = image_url.substring(0, image_url.lastIndexOf("/")+1);
+			video_url = video_url.substring(0, video_url.lastIndexOf("/")+1);
 			Story story = storyDao.get(storyId);
 			String title = story.getTitle();
 			List<StoryElement> seList = story.getElements();
-			StringBuffer message = new StringBuffer();
+			JSONObject message = new JSONObject();
 			String cover_page = story.getCover_page();
+			List<JSONObject> elementJsonList = new ArrayList<JSONObject>();
 			if(!Strings.isNullOrEmpty(cover_page)){
+				JSONObject cover_json = new JSONObject();
 				JSONObject coverJson = JSONObject.fromObject(cover_page);
 				String type = coverJson.getString("type");
 				if(type.equals("image")){
 					JSONObject mediaJson = JSONObject.fromObject(coverJson.get("media"));
 					String cover_url = mediaJson.getString("name");
 					cover_url = image_url+cover_url;
-					message.append("[img]"+cover_url+"[/img]");
+					mediaJson.put("url", cover_url);
+					mediaJson.put("aid", "0");
+					mediaJson.put("comment", "");
+					coverJson.put("media", mediaJson);
+					cover_json.put("content",coverJson);
+					cover_json.put("grid_size", "{2,2}");
+					cover_json.put("layout_type", "block");
+					elementJsonList.add(cover_json);
 				}
 			}
+			
+			
 			if(seList != null && seList.size() > 0){
 				for(StoryElement se:seList){
 					if(se.getContents() != null){
+						JSONObject eleJson = new JSONObject();
 						JSONObject cmJson = JSONObject.fromObject(se.getContents());
 						String type = cmJson.getString("type");
 						if(type.equals("image")){
 							JSONObject mediaJson = JSONObject.fromObject(cmJson.getString("media"));
 							String image = mediaJson.getString("name");
 							String imagePath = image_url+image;
-							message.append("[img]"+imagePath+"[/img]");
-						}else if(type.equals("text")){
+							mediaJson.put("url",imagePath);
+							mediaJson.put("aid", "0");
+							if(!mediaJson.containsKey("comment")){
+								mediaJson.put("comment", "");
+							}
+							cmJson.put("media", mediaJson);
+						}else if(type.equals("video")){
 							JSONObject mediaJson = JSONObject.fromObject(cmJson.getString("media"));
-							String plain_text = mediaJson.getString("plain_text");
-							message.append(plain_text);
+							if(mediaJson.containsKey("name")){
+								String videoUrl = video_url+mediaJson.getString("name");
+								mediaJson.put("url_play", videoUrl);
+								mediaJson.put("vid", "0");
+								if(!mediaJson.containsKey("comment")){
+									mediaJson.put("comment", "");
+								}
+								cmJson.put("media", mediaJson);
+							}else{
+								mediaJson.put("vid", "0");
+								if(!mediaJson.containsKey("comment")){
+									mediaJson.put("comment", "");
+								}
+								cmJson.put("media", mediaJson);
+							}
 						}
+						
+						eleJson.put("content", cmJson);
+						
+						eleJson.put("grid_size", se.getGrid_size());
+						eleJson.put("layout_type", se.getLayout_type());
+						elementJsonList.add(eleJson);
 					}
 				}
 			}
 			
-			
-			LinkAccounts la = lam.get(0);
-			String authcode = la.getAuth_token();
+			message.put("elements", elementJsonList);
+			String authcode = fbToken;
 			invitation.put("serviceName", "fd_postthread");
+			invitation.put("authcode", authcode);
+			invitation.put("subject", title);
+			invitation.put("reqTime", new Date().getTime());
+			//			invitation.put("message", message);
 			JSONObject invitation_copy = JSONObject.fromObject(invitation.toString());
 			System.out.println("tag-->"+invitation);
-			String splitSign = HttpUtil.splitJSON(invitation);
+			String splitSign = HttpUtil.splitJSONCopy(invitation);
 			String privateKey = HttpUtil.getPrivateKey(new Date());
 			splitSign = splitSign + "&private_key=" +privateKey;
 			System.out.println("splitSign-->"+splitSign);
 			String sign = HttpUtil.getMD5Str(splitSign);
 			System.out.println("sign-->"+sign);
-			invitation_copy.put("authcode", authcode);
+//			invitation_copy.put("authcode", authcode);
 			invitation_copy.put("sign",sign);
-			invitation_copy.put("subject", title);
-			invitation_copy.put("message", message.toString());
+//			invitation_copy.put("subject", title);
+			invitation_copy.put("message", message);
 			System.out.println("tag-->>>>>"+invitation_copy.toString());
-			String responseData = HttpUtil.sendPost(url+"bbsapinew/fd_postthread.php", invitation_copy);
+			String responseData = HttpUtil.sendPostStr(url+"bbsapinew/fd_postthread.php", invitation_copy.toString());
 			JSONObject responseJson = JSONObject.fromObject(responseData);
 			JSONObject rspInfo = responseJson.getJSONObject("rspInfo");
 			if(rspInfo.getInt("rspCode") == 1000){
@@ -3637,9 +3682,9 @@ public class StoryServiceImpl implements StoryService {
 				json.put("status","success");
 				return Response.status(Response.Status.OK).entity(json).build();
 			}else{
-				json.put("status", rspInfo.getString("rspType")+invitation_copy);
+				json.put("status", rspInfo.getString("rspType"));
 				json.put("code", rspInfo.getString("rspCode"));
-				json.put("error_message", rspInfo.getString("rspDesc")+invitation_copy);
+				json.put("error_message", rspInfo.getString("rspDesc"));
 				return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
 			}
 			
@@ -3653,104 +3698,147 @@ public class StoryServiceImpl implements StoryService {
 	}
 
 	@Override
-	public Response synchroniseEditStory(Long loginUserid, JSONObject invitation, Long storyId) throws Exception {
+	public Response synchroniseEditStory(Long loginUserid,String fbToken, JSONObject invitation) throws Exception {
 		JSONObject json = new JSONObject();
-		List<LinkAccounts> lam = linkAccountsDao.getLinkAccountsByUserid(loginUserid);
-		if(lam != null && lam.size() > 0){
-			Story story = storyDao.get(storyId);
-			if(story.getPid() != null 
-					&& story.getPid() > 0){
-				System.out.println("update------->>>>>>>>>>>>>>>>");
-				
-				//e族域名url
-				String content = getClass().getResource("/../../META-INF/fb.json").getPath();
-				JSONObject contentJson = ParseFile.parseJson(content);
-				String url = contentJson.getString("url");
-				
-				//七牛信息
-				String qiniu = getClass().getResource("/../../META-INF/qiniu.json").getPath();
-				JSONObject qiniuJson = ParseFile.parseJson(qiniu);
-				JSONObject media = qiniuJson.getJSONObject("meta");
-				String image_url = media.getString("get_img_url");
-				image_url = image_url.substring(0, image_url.lastIndexOf("/")+1);
-				
-				String title = story.getTitle();
-				List<StoryElement> seList = story.getElements();
-				StringBuffer message = new StringBuffer();
-				String cover_page = story.getCover_page();
-				if(!Strings.isNullOrEmpty(cover_page)){
-					JSONObject coverJson = JSONObject.fromObject(cover_page);
-					String type = coverJson.getString("type");
+
+		System.out.println("update------->>>>>>>>>>>>>>>>");
+		
+		//e族域名url
+		String content = getClass().getResource("/../../META-INF/fb.json").getPath();
+		JSONObject contentJson = ParseFile.parseJson(content);
+		String url = contentJson.getString("url");
+		
+		//七牛信息
+		String qiniu = getClass().getResource("/../../META-INF/qiniu.json").getPath();
+		JSONObject qiniuJson = ParseFile.parseJson(qiniu);
+		JSONObject media = qiniuJson.getJSONObject("meta");
+		String image_url = media.getString("get_img_url");
+		image_url = image_url.substring(0, image_url.lastIndexOf("/")+1);
+		String video_url = media.getString("get_video_url");
+		video_url = video_url.substring(0, video_url.lastIndexOf("/")+1);
+		
+		JSONObject storyModel = JSONObject.fromObject(invitation.get("storyDraftModel"));
+		
+		String title = storyModel.getString("title");
+		JSONObject message = new JSONObject();
+		String cover_page = storyModel.getString("cover_media");
+		List<JSONObject> elementJsonList = new ArrayList<JSONObject>();
+		if(!Strings.isNullOrEmpty(cover_page)){
+			JSONObject cover_json = new JSONObject();
+			JSONObject coverJson = JSONObject.fromObject(cover_page);
+			String type = coverJson.getString("type");
+			if(type.equals("image")){
+				JSONObject mediaJson = JSONObject.fromObject(coverJson.get("media"));
+				String cover_url = mediaJson.getString("name");
+				cover_url = image_url+cover_url;
+				mediaJson.put("url", cover_url);
+				mediaJson.put("aid", "0");
+				mediaJson.put("comment", "");
+				coverJson.put("media", mediaJson);
+				cover_json.put("content",coverJson);
+				cover_json.put("grid_size", "{2,2}");
+				cover_json.put("layout_type", "block");
+				elementJsonList.add(cover_json);
+			}
+		}
+		
+		JSONArray seList = JSONArray.fromObject(storyModel.getString("elements"));
+		if(seList != null && seList.size() > 0){
+			for(Object se:seList){
+				JSONObject ele = JSONObject.fromObject(se);
+				if(ele.getString("content") != null){
+					JSONObject eleJson = new JSONObject();
+					JSONObject cmJson = JSONObject.fromObject(ele.getString("content"));
+					String type = cmJson.getString("type");
 					if(type.equals("image")){
-						JSONObject mediaJson = JSONObject.fromObject(coverJson.get("media"));
-						String cover_url = mediaJson.getString("name");
-						cover_url = image_url+cover_url;
-						message.append("[img]"+cover_url+"[/img]");
-					}
-				}
-				if(seList != null && seList.size() > 0){
-					for(StoryElement se:seList){
-						if(se.getContents() != null){
-							String cm = se.getContents();
-							JSONObject cmJson = JSONObject.fromObject(cm);
-							String type = cmJson.getString("type");
-							if(type.equals("image")){
-								JSONObject mediaJson = cmJson.getJSONObject("media");
-								String image = mediaJson.getString("name");
+						JSONObject mediaJson = JSONObject.fromObject(cmJson.getString("media"));
+						if(mediaJson.containsKey("name")){
+							String image = mediaJson.getString("name");
+							if(!Strings.isNullOrEmpty(image)){
 								String imagePath = image_url+image;
-								message.append("[img]"+imagePath+"[/img]");
-							}else if(type.equals("text")){
-								JSONObject mediaJson = cmJson.getJSONObject("media");
-								String plain_text = mediaJson.getString("plain_text");
-								message.append(plain_text);
+								mediaJson.put("url",imagePath);
+							}
+						}else{
+							String image = mediaJson.getString("url");
+							if(!Strings.isNullOrEmpty(image)){
+								mediaJson.put("url",image);
 							}
 						}
+						
+						mediaJson.put("aid", "0");
+						if(!mediaJson.containsKey("comment")){
+							mediaJson.put("comment", "");
+						}
+						cmJson.put("media", mediaJson);
+					}else if(type.equals("video")){
+						JSONObject mediaJson = JSONObject.fromObject(cmJson.getString("media"));
+						if(mediaJson.containsKey("name")){
+							String videoUrl = video_url+mediaJson.getString("name");
+							mediaJson.put("url_play", videoUrl);
+							mediaJson.put("vid", "0");
+							if(!mediaJson.containsKey("comment")){
+								mediaJson.put("comment", "");
+							}
+							cmJson.put("media", mediaJson);
+						}else{
+							mediaJson.put("vid", "0");
+							if(!mediaJson.containsKey("comment")){
+								mediaJson.put("comment", "");
+							}
+							cmJson.put("media", mediaJson);
+						}
 					}
+					
+					eleJson.put("content", cmJson);
+					
+					eleJson.put("grid_size", ele.getString("grid_size"));
+					eleJson.put("layout_type", ele.getString("layout_type"));
+					elementJsonList.add(eleJson);
 				}
-				
-				
-				LinkAccounts la = lam.get(0);
-				String authcode = la.getAuth_token();
-				invitation.put("serviceName", "fd_editthread");
-				JSONObject invitation_copy = JSONObject.fromObject(invitation.toString());
-				System.out.println("tag-->"+invitation);
-				String splitSign = HttpUtil.splitJSON(invitation);
-				String privateKey = HttpUtil.getPrivateKey(new Date());
-				splitSign = splitSign + "&private_key=" +privateKey;
-				System.out.println("splitSign-->"+splitSign);
-				String sign = HttpUtil.getMD5Str(splitSign);
-				System.out.println("sign-->"+sign);
-				invitation_copy.put("authcode", authcode);
-				invitation_copy.put("sign",sign);
-				invitation_copy.put("subject", title);
-				invitation_copy.put("message", message.toString());
-				invitation_copy.put("tid",story.getTid());
-				invitation_copy.put("pid",story.getPid());
-				invitation_copy.put("fid",story.getFid());
-				System.out.println("tag-->>>>>"+invitation_copy.toString());
-				String responseData = HttpUtil.sendPost(url+"bbsapinew/fd_editthread.php", invitation_copy);
-				JSONObject responseJson = JSONObject.fromObject(responseData);
-				JSONObject rspInfo = responseJson.getJSONObject("rspInfo");
-				if(rspInfo.getInt("rspCode") == 1000){
-					json.put("status","success");
-					System.out.println("update story-->>>>success");
-					return Response.status(Response.Status.OK).entity(json).build();
-				}else{
-					json.put("status", rspInfo.getString("rspType"));
-					json.put("code", rspInfo.getString("rspCode"));
-					json.put("error_message", rspInfo.getString("rspDesc"));
-					return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
-				}
-			}else{
-				json.put("status","success");
-				return Response.status(Response.Status.OK).entity(json).build();
 			}
+		}
+		
+		message.put("elements", elementJsonList);
+		String authcode = fbToken;
+		invitation.remove("storyDraftModel");
+		invitation.put("reqTime", new Date().getTime());
+		invitation.put("serviceName", "fd_editthread");
+		invitation.put("authcode", authcode);
+		invitation.put("subject", title);
+		invitation.put("tid",storyModel.getInt("tid"));
+		invitation.put("pid",storyModel.getInt("pid"));
+		invitation.put("fid",storyModel.getInt("fid"));
+		JSONObject invitation_copy = JSONObject.fromObject(invitation.toString());
+		System.out.println("tag-->"+invitation);
+		String splitSign = HttpUtil.splitJSONCopy(invitation);
+		String privateKey = HttpUtil.getPrivateKey(new Date());
+		splitSign = splitSign + "&private_key=" +privateKey;
+		System.out.println("splitSign-->"+splitSign);
+		String sign = HttpUtil.getMD5Str(splitSign);
+		System.out.println("sign-->"+sign);
+//		invitation_copy.put("authcode", authcode);
+		invitation_copy.put("sign",sign);
+//		invitation_copy.put("subject", title);
+		invitation_copy.put("message", message.toString());
+//		invitation_copy.put("tid",storyModel.getInt("tid"));
+//		invitation_copy.put("pid",storyModel.getInt("pid"));
+//		invitation_copy.put("fid",storyModel.getInt("fid"));
+		System.out.println("tag-->>>>>"+invitation_copy.toString());
+		String responseData = HttpUtil.sendPostStr(url+"bbsapinew/fd_editthread.php", invitation_copy.toString());
+		JSONObject responseJson = JSONObject.fromObject(responseData);
+		JSONObject rspInfo = responseJson.getJSONObject("rspInfo");
+		if(rspInfo.getInt("rspCode") == 1000){
+			json.put("status","success");
+			System.out.println("update story-->>>>success");
+			return Response.status(Response.Status.OK).entity(json).build();
 		}else{
-			json.put("status", "invalid_request");
-			json.put("code", 10010);
-			json.put("error_message", "Invalid payload parameters");
+			json.put("status", rspInfo.getString("rspType"));
+			json.put("code", rspInfo.getString("rspCode"));
+			json.put("error_message", rspInfo.getString("rspDesc"));
 			return Response.status(Response.Status.BAD_REQUEST).entity(json).build();
 		}
+	
+	
 	}
 
 	@Override
@@ -4013,4 +4101,183 @@ public class StoryServiceImpl implements StoryService {
 		return result;
 	}
 
+	@Override
+	public Response getFbInvitation(Long loginUserid, String fbToken,JSONObject invitation) throws Exception {
+		//e族域名url
+		String content = getClass().getResource("/../../META-INF/fb.json").getPath();
+		JSONObject contentJson = ParseFile.parseJson(content);
+		String url = contentJson.getString("url");
+		
+		String authcode = fbToken;
+		Long tid = invitation.getLong("tid");
+		Long pid = invitation.getLong("pid");
+		invitation.put("authcode", authcode);
+		invitation.put("reqTime",new Date().getTime());
+		invitation.put("serviceName", "fd_viewthread");
+		JSONObject invitation_copy = JSONObject.fromObject(invitation.toString());
+		System.out.println("tag-->"+invitation);
+		String splitSign = HttpUtil.splitJSONCopy(invitation);
+		String privateKey = HttpUtil.getPrivateKey(new Date());
+		splitSign = splitSign + "&private_key=" +privateKey;
+		System.out.println("splitSign-->"+splitSign);
+		String sign = HttpUtil.getMD5Str(splitSign);
+		System.out.println("sign-->"+sign);
+		invitation_copy.put("sign", sign);
+		System.out.println("tag-->>>>>"+invitation_copy.toString());
+		String responseData = HttpUtil.sendPostStr(url+"bbsapinew/fd_viewthread.php", invitation_copy.toString());
+		JSONObject responseJson = JSONObject.fromObject(responseData);
+		JSONObject rspInfo = responseJson.getJSONObject("rspInfo");
+		
+		if(rspInfo.getInt("rspCode") == 1000){
+			JSONObject story = new JSONObject();
+			Story storyObj = storyDao.getStoryByTidAndPid(tid,pid);
+			JSONObject rspData = responseJson.getJSONObject("rspData");
+			JSONObject postinfo = rspData.getJSONObject("postinfo");
+			if(postinfo.containsKey("subject")){
+				String subject = postinfo.getString("subject");
+				if(!Strings.isNullOrEmpty(subject)){
+					story.put("title", subject);
+				}
+			}
+			if(postinfo.containsKey("new_message")){
+				Object obj = postinfo.get("new_message");
+				if(obj != null){
+					JSONObject elementJson = JSONObject.fromObject(obj);
+					JSONArray elementArr = JSONArray.fromObject(elementJson.get("elements"));
+					JSONObject cover = JSONObject.fromObject(storyObj.getCover_page());
+					if(cover.getString("type").equals("image")){
+						JSONObject coverJson = JSONObject.fromObject(elementArr.get(0));
+						story.put("cover_media", JSONObject.fromObject(coverJson.get("content")));
+						elementArr.remove(0);
+						story.put("elements", elementArr);
+					}else{
+						story.put("cover_media", JSONObject.fromObject(storyObj.getCover_page()));
+						story.put("elements", elementArr);
+					}
+					
+				}
+			}
+			
+			story.put("id", storyObj.getId());
+			story.put("tid", rspData.getInt("tid"));
+			story.put("pid", rspData.getInt("pid"));
+			story.put("fid", rspData.getInt("fid"));
+			return Response.status(Response.Status.OK).entity(story).build();
+		}else{
+			JSONObject jo = new JSONObject();
+			jo.put("status", rspInfo.getString("rspType"));
+			jo.put("code", rspInfo.getString("rspCode"));
+			jo.put("error_message", rspInfo.getString("rspDesc"));
+			return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+		}
+	}
+
+	@Override
+	public Response createLike(JSONObject json, HttpServletRequest request) {
+		if(json != null){
+			Long story_id = json.getLong("story_id");
+			int centre_id = json.getInt("user_id");
+			String recognition_type = json.getString("recognition_type");
+			UserCentre uc = userCentreDao.getUserCentreByCentreId(centre_id);
+			Long user_id = 0l;
+			if(uc == null){
+				User u = new User();
+				String chars = "abcde0f12g3hi4jk5l6m7n8o9pqrstuvwxyz";
+		    	StringBuffer sb = new StringBuffer();
+		    	for(int i=0;i<10;i++){
+		    		char c = chars.charAt((int)(Math.random() * 10));
+		    		sb.append(c);
+		    	}
+		    	u.setPassword(sb.toString());
+		    	u.setUsername("username");
+		    	u.setSalt(initSalt().toString());
+		    	u.setStatus("enabled");
+		    	u.setUser_type("normal");
+				
+		    	this.userDao.save(u);
+		    	user_id = u.getId();
+		    	UserCentre userc = new UserCentre();
+		    	userc.setCentre_id(centre_id);
+		    	userc.setUser_id(u.getId());
+				userCentreDao.save(userc);
+			}else{
+				user_id = uc.getUser_id();
+			}
+			
+			
+			if(recognition_type.equals("-1")){
+				likesDao.deleteLike(user_id, story_id);
+				JSONObject jo = new JSONObject();
+				jo.put("code", 10000);
+				jo.put("msg", "成功");
+				
+				return Response.status(Response.Status.OK).entity(jo).build();
+			}else if(recognition_type.equals("10")){
+				String path = getClass().getResource("/../../META-INF/getui.json").getPath();
+				JSONObject jsonObject = ParseFile.parseJson(path);
+				String appId = jsonObject.getString("appId");
+				String appKey = jsonObject.getString("appKey");
+				String masterSecret = jsonObject.getString("masterSecret");
+				User user = (User) this.userDao.get(user_id);
+				Story story = (Story) this.storyDao.get(story_id);
+				Likes likes = new Likes();
+				likes.setCreateTime(new Date());
+				likes.setLike_users(user);
+				likes.setLike_story(story);
+				this.likesDao.save(likes);
+				Notification notification = this.notificationDao.getNotificationByAction(story_id, user_id, 1, 2);
+				if (notification != null) {
+					notification.setCreate_at(new Date());
+					this.notificationDao.update(notification);
+				} else {
+					notification = new Notification();
+					notification.setSenderId(user_id);
+					notification.setRecipientId((Long) story.getUser().getId());
+					notification.setNotificationType(2);
+					notification.setObjectType(1);
+					notification.setObjectId(story_id);
+					notification.setRead_already(false);
+					notification.setStatus("enabled");
+					this.notificationDao.save(notification);
+				}
+				Configuration conf = this.configurationDao.getConfByUserId((Long) story.getUser().getId());
+				if (conf.isNew_favorite_from_following_push()) {
+					int counts = this.notificationDao.getNotificationByRecipientId((Long) story.getUser().getId());
+					List<PushNotification> list = this.pushNotificationDao
+							.getPushNotificationByUserid((Long) story.getUser().getId());
+					try {
+						String content = user.getUsername() + "喜欢了我的故事";
+						JSONObject json1 = new JSONObject();
+						json1.put("story_id", story.getId());
+						PushNotificationUtil.pushInfo(appId, appKey, masterSecret, list, counts, content, json1.toString());
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+
+				JSONObject jo = new JSONObject();
+				jo.put("code", 10000);
+				jo.put("msg", "成功");
+				
+				return Response.status(Response.Status.CREATED).entity(jo).build();
+			}else{
+				return null;
+			}
+		}else{
+			JSONObject jo = new JSONObject();
+			jo.put("code", 10003);
+			jo.put("msg", "参数错误");
+			return Response.status(Response.Status.BAD_REQUEST).entity(jo).build();
+		}
+		
+		
+	
+	}
+
+	public byte[] initSalt() {
+		byte[] b = new byte[8];
+		Random random = new Random();
+		random.nextBytes(b);
+		return b;
+	}
 }

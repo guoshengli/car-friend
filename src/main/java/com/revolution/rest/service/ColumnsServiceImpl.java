@@ -16,6 +16,7 @@ import com.revolution.rest.dao.ColumnsDao;
 import com.revolution.rest.dao.ColumnsStoryDao;
 import com.revolution.rest.dao.CommentDao;
 import com.revolution.rest.dao.UserDao;
+import com.revolution.rest.model.Collection;
 import com.revolution.rest.model.Columns;
 import com.revolution.rest.model.PublisherInfo;
 import com.revolution.rest.model.Story;
@@ -236,7 +237,7 @@ public class ColumnsServiceImpl implements ColumnsService {
 
 		JsonConfig configs = new JsonConfig();
 		List<String> delArray = new ArrayList<String>();
-		Set<Columns> colSet = story.getColumns();
+		/*Set<Columns> colSet = story.getColumns();
 		if (colSet != null && colSet.size() > 0) {
 			Iterator<Columns> iter = colSet.iterator();
 			Columns c = iter.next();
@@ -246,7 +247,24 @@ public class ColumnsServiceImpl implements ColumnsService {
 			storyModel.setColumns(columnsJson);
 		} else {
 			delArray.add("columns");
+		}*/
+		
+		Set<Collection> cSet = story.getCollections();
+		if(cSet != null && cSet.size() > 0){
+			Iterator<Collection> iter = cSet.iterator();
+			List<JSONObject> collections = new ArrayList<JSONObject>();
+			while(iter.hasNext()){
+				Collection c = iter.next();
+				JSONObject json = new JSONObject();
+				json.put("id",c.getId());
+				json.put("collection_name", c.getCollectionName());
+				collections.add(json);
+			}
+			storyModel.setCollections(collections);
+		}else{
+			delArray.add("collections");
 		}
+		
 		if (Strings.isNullOrEmpty(story.getTitle())) {
 			delArray.add("title");
 		}

@@ -87,7 +87,6 @@ import com.revolution.rest.service.model.CoverMedia;
 import com.revolution.rest.service.model.EventModel;
 import com.revolution.rest.service.model.GetuiModel;
 import com.revolution.rest.service.model.IframeCover;
-import com.revolution.rest.service.model.IframeMedia;
 import com.revolution.rest.service.model.ImageCover;
 import com.revolution.rest.service.model.LineCover;
 import com.revolution.rest.service.model.LinkAccountWebModel;
@@ -376,7 +375,7 @@ public class ShareServiceImpl implements ShareService {
 					collectionListJson.add(collectionJson);
 				}
 				
-				storyModel.setCollection(collectionListJson);
+				storyModel.setCollections(collectionListJson);
 			}
 
 			int count = this.commentDao.getCommentCountById((Long) story.getId());
@@ -1226,7 +1225,7 @@ public class ShareServiceImpl implements ShareService {
 					storyModel.setRecommend_date(story.getRecommend_date());
 					JsonConfig configs = new JsonConfig();
 					List<String> delArray = new ArrayList<String>();
-					Set<Columns> cSet = story.getColumns();
+					/*Set<Columns> cSet = story.getColumns();
 					if(cSet != null && cSet.size() > 0){
 						Iterator<Columns> iter = cSet.iterator();
 						if(iter.hasNext()){
@@ -1238,6 +1237,22 @@ public class ShareServiceImpl implements ShareService {
 						}
 					}else{
 						delArray.add("columns");
+					}*/
+					
+					Set<Collection> cSet = story.getCollections();
+					if(cSet != null && cSet.size() > 0){
+						Iterator<Collection> iter = cSet.iterator();
+						List<JSONObject> collections = new ArrayList<JSONObject>();
+						while(iter.hasNext()){
+							Collection c = iter.next();
+							JSONObject json = new JSONObject();
+							json.put("id",c.getId());
+							json.put("collection_name", c.getCollectionName());
+							collections.add(json);
+						}
+						storyModel.setCollections(collections);
+					}else{
+						delArray.add("collections");
 					}
 
 					
@@ -1445,7 +1460,7 @@ public class ShareServiceImpl implements ShareService {
 					JsonConfig configs = new JsonConfig();
 					List<String> delArray = new ArrayList<String>();
 					
-					Set<Columns> colSet = story.getColumns();
+					/*Set<Columns> colSet = story.getColumns();
 					if(colSet != null && colSet.size() > 0){
 						Iterator<Columns> iter = colSet.iterator();
 						if(iter.hasNext()){
@@ -1457,7 +1472,25 @@ public class ShareServiceImpl implements ShareService {
 						}
 					}else{
 						delArray.add("columns");
+					}*/
+					
+					Set<Collection> cSet = story.getCollections();
+					
+					if(cSet != null && cSet.size() > 0){
+						Iterator<Collection> iter = cSet.iterator();
+						List<JSONObject> collections = new ArrayList<JSONObject>();
+						while(iter.hasNext()){
+							Collection c = iter.next();
+							JSONObject json = new JSONObject();
+							json.put("id",c.getId());
+							json.put("collection_name", c.getCollectionName());
+							collections.add(json);
+						}
+						storyModel.setCollections(collections);
+					}else{
+						delArray.add("collections");
 					}
+					
 					if (Strings.isNullOrEmpty(story.getTitle())) {
 						delArray.add("title");
 					}
@@ -1593,7 +1626,7 @@ public class ShareServiceImpl implements ShareService {
 
 					JsonConfig configs = new JsonConfig();
 					List<String> delArray = new ArrayList<String>();
-					Set<Columns> colSet = story.getColumns();
+					/*Set<Columns> colSet = story.getColumns();
 					if(colSet != null && colSet.size() > 0){
 						Iterator<Columns> iter = colSet.iterator();
 						if(iter.hasNext()){
@@ -1605,7 +1638,24 @@ public class ShareServiceImpl implements ShareService {
 						}
 					}else{
 						delArray.add("columns");
+					}*/
+					
+					Set<Collection> cSet = story.getCollections();
+					if(cSet != null && cSet.size() > 0){
+						Iterator<Collection> iter = cSet.iterator();
+						List<JSONObject> collections = new ArrayList<JSONObject>();
+						while(iter.hasNext()){
+							Collection c = iter.next();
+							JSONObject json = new JSONObject();
+							json.put("id",c.getId());
+							json.put("collection_name", c.getCollectionName());
+							collections.add(json);
+						}
+						storyModel.setCollections(collections);
+					}else{
+						delArray.add("collections");
 					}
+					
 					if (Strings.isNullOrEmpty(story.getTitle())) {
 						delArray.add("title");
 					}
@@ -1965,7 +2015,7 @@ public class ShareServiceImpl implements ShareService {
 
 		JsonConfig configs = new JsonConfig();
 		List<String> delArray = new ArrayList<String>();
-		Set<Columns> colSet = story.getColumns();
+		/*Set<Columns> colSet = story.getColumns();
 		if (colSet != null && colSet.size() > 0) {
 			Iterator<Columns> iter = colSet.iterator();
 			Columns c = iter.next();
@@ -1975,7 +2025,24 @@ public class ShareServiceImpl implements ShareService {
 			storyModel.setColumns(columnsJson);
 		} else {
 			delArray.add("columns");
+		}*/
+		
+		Set<Collection> cSet = story.getCollections();
+		if(cSet != null && cSet.size() > 0){
+			Iterator<Collection> iter = cSet.iterator();
+			List<JSONObject> collections = new ArrayList<JSONObject>();
+			while(iter.hasNext()){
+				Collection c = iter.next();
+				JSONObject json = new JSONObject();
+				json.put("id",c.getId());
+				json.put("collection_name", c.getCollectionName());
+				collections.add(json);
+			}
+			storyModel.setCollections(collections);
+		}else{
+			delArray.add("collections");
 		}
+		
 		if (Strings.isNullOrEmpty(story.getTitle())) {
 			delArray.add("title");
 		}

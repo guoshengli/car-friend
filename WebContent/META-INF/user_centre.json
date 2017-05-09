@@ -1,5 +1,5 @@
 {
-	"url":"http://dev.u.api.fblife.com",
-	"token_url":"http://dev.u.api.fblife.com",
-	"fmap_url":"https://dev-map-api.fblife.com"
+	"url":"http://test.u.api.fblife.com",
+	"token_url":"http://test.u.api.fblife.com",
+	"fmap_url":"https://test-map-api.fblife.com"
 }

@@ -6,8 +6,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -116,6 +115,7 @@ public class HttpUtil {
 	 */
 	public static String sendPost(String url, JSONObject json) {
 		BufferedReader in = null;
+		DataOutputStream out = null;
 		String result = "";
 		try {
 			URL realUrl = new URL(url);
@@ -124,13 +124,16 @@ public class HttpUtil {
 			// 设置通用的请求属性
 			conn.setRequestProperty("accept", "*/*");
 			conn.setRequestProperty("connection", "Keep-Alive");
-			// conn.setRequestProperty("Content-Type","multipart/form-data");
+			conn.setRequestProperty("Content-Type","application/x-www-form-urlencoded");
 			conn.setRequestMethod("POST");
 			// 发送POST请求必须设置如下两行
 			conn.setDoOutput(true);
 			conn.setDoInput(true);
+			conn.setUseCaches(false);
+            conn.setInstanceFollowRedirects(true);
+			conn.connect();
 			// 获取URLConnection对象对应的输出流
-			DataOutputStream out = new DataOutputStream(conn.getOutputStream());
+			out = new DataOutputStream(conn.getOutputStream());
 			// 发送请求参数
 			out.writeBytes(json.toString());
 			// flush输出流的缓冲
@@ -141,6 +144,7 @@ public class HttpUtil {
 			while ((line = in.readLine()) != null) {
 				result += line;
 			}
+			conn.disconnect();
 		} catch (Exception e) {
 			System.out.println("发送 POST 请求出现异常！" + e);
 			e.printStackTrace();
@@ -148,7 +152,9 @@ public class HttpUtil {
 		// 使用finally块来关闭输出流、输入流
 		finally {
 			try {
-
+				if (out != null) {
+					out.close();
+				}
 				if (in != null) {
 					in.close();
 				}
@@ -215,6 +221,7 @@ public class HttpUtil {
 		}
 		return result;
 	}
+	
 
 	// HTTP GET request
 	public static String sendGet(String url) throws Exception {
@@ -353,6 +360,29 @@ public class HttpUtil {
 		return parentStr;
 
 	}
+	
+	public static String splitJSONCopy(JSONObject param) {
+		StringBuffer paramSB = new StringBuffer();
+		Iterator<String> pIte = param.keys();
+		Map<String, String> paramMap = new HashMap<String, String>();
+		while (pIte.hasNext()) {
+			String key = pIte.next();
+			String val = param.getString(key);
+//			String one = val.substring(0, 1);
+
+			paramMap.put(key, val);
+		}
+
+		List<Map.Entry<String, String>> paramSortList = sortMapCopy(paramMap);
+		for (Entry<String, String> par : paramSortList) {
+			String parKey = par.getKey();
+			paramSB.append(parKey + "=" + param.getString(parKey) + "&");
+		}
+		String parentStr = paramSB.toString();
+		parentStr = parentStr.substring(0, parentStr.length() - 1);
+		return parentStr;
+
+	}
 
 	public static String sign(String tag_info) {
 		String result = "";
@@ -429,6 +459,40 @@ public class HttpUtil {
 					i = k1.compareTo(k2);
 				}
 				return i;
+			}
+		});
+
+		return mappingList;
+	}
+	
+	// 按value进行排序 如果value相同 则按key进行排序
+	public static List<Map.Entry<String, String>> sortMapCopy(Map<String, String> map) {
+		List<Map.Entry<String, String>> mappingList = null;
+		mappingList = new ArrayList<Map.Entry<String, String>>(map.entrySet());
+		Collections.sort(mappingList, new Comparator<Map.Entry<String, String>>() {
+			@Override
+			public int compare(Entry<String, String> o1, Entry<String, String> o2) {
+				int j = o1.getValue().compareTo(o2.getValue());
+				if(o1.getValue().length() == o2.getValue().length()){
+					int len = o1.getValue().length();
+					for(int i=0;i<len;i++){
+						char c1 = o1.getValue().charAt(i);
+						char c2 = o2.getValue().charAt(i);
+						if(c1 > c2){
+							j=1;
+							break;
+						}else if(c1 < c2){
+							j=-1;
+							break;
+						}
+					}
+				}
+				if (j == 0) {
+					Integer k1 = tranASCII(o1.getKey().substring(0, 1));
+					Integer k2 = tranASCII(o2.getKey().substring(0, 1));
+					j = k1.compareTo(k2);
+				}
+				return j;
 			}
 		});
 

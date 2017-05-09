@@ -39,7 +39,7 @@ public class FMapDaoImpl extends BaseDaoImpl<FMap, Long> implements FMapDao {
 
 	@Override
 	public List<FMap> getFMapList(Long story_id) {
-		String hql = "from FMap where story_id = ?";
+		String hql = "from FMap where wiki_id = ?";
 		Session session = getSessionFactory().getCurrentSession();
 		Query query = session.createQuery(hql);
 		query.setLong(0,story_id);

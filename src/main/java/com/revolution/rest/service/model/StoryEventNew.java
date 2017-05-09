@@ -1,7 +1,9 @@
  package com.revolution.rest.service.model;
  
  import java.io.Serializable;
- import net.sf.json.JSONObject;
+import java.util.List;
+
+import net.sf.json.JSONObject;
  
  public class StoryEventNew
    implements Serializable
@@ -25,7 +27,7 @@
    
    private int like_count;
    
-   private JSONObject columns;
+   private List<JSONObject> collections;
  
    public Long getId()
    {
@@ -150,15 +152,13 @@ public String getSummary() {
 		this.like_count = like_count;
 	}
 
-	public JSONObject getColumns() {
-		return columns;
+	public List<JSONObject> getCollections() {
+		return collections;
 	}
 
-	public void setColumns(JSONObject columns) {
-		this.columns = columns;
+	public void setCollections(List<JSONObject> collections) {
+		this.collections = collections;
 	}
-   
-	
-	
+
    
  }

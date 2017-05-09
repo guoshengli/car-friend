@@ -1,7 +1,9 @@
  package com.revolution.rest.service.model;
  
  import java.io.Serializable;
- import net.sf.json.JSONObject;
+import java.util.List;
+
+import net.sf.json.JSONObject;
  
  public class StoryHomeCopy
    implements Serializable
@@ -22,7 +24,9 @@
    private boolean repost_by_current_user;
    private int like_count;
    
-   private JSONObject columns;
+  // private JSONObject columns;
+   
+   private List<JSONObject> collections;
  
    public Long getId()
    {
@@ -140,13 +144,22 @@ public String getSummary() {
 		this.like_count = like_count;
 	}
 
-	public JSONObject getColumns() {
+	public List<JSONObject> getCollections() {
+		return collections;
+	}
+
+	public void setCollections(List<JSONObject> collections) {
+		this.collections = collections;
+	}
+
+	
+	/*public JSONObject getColumns() {
 		return columns;
 	}
 
 	public void setColumns(JSONObject columns) {
 		this.columns = columns;
-	}
+	}*/
    
 	
 	

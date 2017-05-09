@@ -1261,25 +1261,30 @@ public class CollectionServiceImpl implements CollectionService {
 				ci.setCollection_name(co.getCollectionName());
 				ci.setCover_image(JSONObject.fromObject(co.getCover_image()));
 				ci.setInfo(co.getInfo());
-				Set<User> uSet = co.getUsers();
-				Iterator<User> it = uSet.iterator();
-				if (it.hasNext()) {
-					boolean flag = false;
-					while (it.hasNext()) {
-						User u = it.next();
-						if (u.getId().equals(loginUserid) && u.getId() == loginUserid) {
-							flag = true;
-							break;
+				int followers_count = 0;
+				if(loginUserid != null && loginUserid > 0){
+					Set<User> uSet = co.getUsers();
+					followers_count = uSet.size();
+					
+					if (uSet != null && uSet.size() > 0) {
+						Iterator<User> it = uSet.iterator();
+						boolean flag = false;
+						while (it.hasNext()) {
+							User u = it.next();
+							if (u.getId() == loginUserid) {
+								flag = true;
+								break;
+							}
 						}
+						ci.setIs_followed_by_current_user(flag);
 					}
-					ci.setIs_followed_by_current_user(flag);
 				} else {
 					ci.setIs_followed_by_current_user(false);
 				}
 
 				Set<Story> storySet = co.getStories();
 				int story_count = storySet.size();
-				int followers_count = uSet.size();
+				
 				ci.setStory_count(story_count);
 				ci.setFollowers_count(followers_count);
 				User u = co.getUser();
