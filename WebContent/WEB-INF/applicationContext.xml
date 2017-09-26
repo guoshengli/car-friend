@@ -11,13 +11,13 @@
 	http://www.springframework.org/schema/context
 	http://www.springframework.org/schema/context/spring-context-3.2.xsd
 	http://www.springframework.org/schema/task
-	http://www.springframework.org/schema/task/spring-task-3.2.xsd"> 
+	http://www.springframework.org/schema/task/spring-task-3.2.xsd">  
 
 	<!--Configures Hibernate Config -->
 	<!-- <import resource="applicationContext-hibernate.xml" /> -->
 
 	<!-- Scan classpath for annotations (eg: @Service, @Repository etc) /META-INF/database.properties-->
-	<context:component-scan base-package="com.revolution.rest" /> 
+	<context:component-scan base-package="com.friend.rest" /> 
 	<context:annotation-config />
 	 <context:property-placeholder location="/META-INF/database.properties" />
 	<!--Spring 的配置文件中一定要配置这一项 -->  
@@ -33,7 +33,7 @@
     </bean>-->
 	
 	<!-- Access  /META-INF/database.properties  file:E:\\workspace\\tella-webservice\\WebContent\\META-INF\\database.properties-->
-	<bean id="clientRequestFilter" class="com.revolution.rest.filter.ClientRequestFilter"
+	<bean id="clientRequestFilter" class="com.friend.rest.filter.ClientRequestFilter"
 		lazy-init="false">
 	</bean>
 	
@@ -59,7 +59,7 @@
 	<!-- Hibernate Session Factory -->
 	<bean id="sessionFactory"
 		class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
-		<property name="packagesToScan" value="com.revolution.rest.model" />
+		<property name="packagesToScan" value="com.friend.rest.model" />
 		<property name="dataSource" ref="dataSource" />
 		<property name="hibernateProperties">
 			<props>
@@ -99,7 +99,7 @@
 	<tx:annotation-driven transaction-manager="transactionManagerHibernate" />
 
      <!--<bean id="poolConfig" class="redis.clients.jedis.JedisPoolConfig">  
-        <property name="maxIdle" value="${redis.pool.maxIdle}" /> <property   
+        <property name="maxIdle" value="${redis.pool.maxIdle}" /> <property    
             name="maxActive" value="${redis.pool.maxActive}" /> <property name="maxWait"   
             value="${redis.pool.maxWait}" />  
         <property name="testOnBorrow" value="${redis.pool.testOnBorrow}" />  

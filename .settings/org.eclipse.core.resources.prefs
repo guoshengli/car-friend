@@ -1,5 +1,5 @@
 eclipse.preferences.version=1
-encoding//src/main/java/com/revolution/rest/common/FBEncryption.java=UTF-8
-encoding//src/main/java/com/revolution/rest/common/PushNotificationUtil.java=UTF-8
-encoding//src/main/java/com/revolution/rest/service/ShareServiceImpl.java=UTF-8
-encoding//src/main/java/com/revolution/rest/service/UserServiceImpl.java=UTF-8
+encoding//src/main/java/com/friend/rest/common/FBEncryption.java=UTF-8
+encoding//src/main/java/com/friend/rest/common/PushNotificationUtil.java=UTF-8
+encoding//src/main/java/com/friend/rest/service/ShareServiceImpl.java=UTF-8
+encoding//src/main/java/com/friend/rest/service/UserServiceImpl.java=UTF-8

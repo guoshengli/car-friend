@@ -1,7 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.revolution.rest</groupId>
+	<groupId>com.friend.rest</groupId>
 	<version>0.0.1-SNAPSHOT</version>
 
 	<build>
@@ -24,7 +24,7 @@
 		<hibernate.version>4.3.7.Final</hibernate.version>
 		<jersey-spring.version>2.14</jersey-spring.version>
 		<logback.version>1.1.1</logback.version>
- 		<jcloverslf4j.version>1.7.6</jcloverslf4j.version>
+		<jcloverslf4j.version>1.7.6</jcloverslf4j.version>
 	</properties>
 
 
@@ -63,21 +63,27 @@
 			<artifactId>jersey-media-json-jackson</artifactId>
 			<version>${jersey-spring.version}</version>
 		</dependency>
-		
+
 		<dependency>
-		    <groupId>org.glassfish.hk2</groupId>
-		    <artifactId>hk2-api</artifactId>
-		    <version>2.3.0-b10</version>
+			<groupId>org.glassfish.hk2</groupId>
+			<artifactId>hk2-api</artifactId>
+			<version>2.3.0-b10</version>
 		</dependency>
 		<dependency>
-		    <groupId>org.glassfish.hk2</groupId>
-		    <artifactId>hk2-locator</artifactId>
-		    <version>2.3.0-b10</version>
+			<groupId>org.glassfish.hk2</groupId>
+			<artifactId>hk2-locator</artifactId>
+			<version>2.3.0-b10</version>
 		</dependency>
 		<dependency>
-		    <groupId>org.glassfish.hk2</groupId>
-		    <artifactId>hk2-utils</artifactId>
-		    <version>2.3.0-b10</version>
+			<groupId>org.glassfish.hk2</groupId>
+			<artifactId>hk2-utils</artifactId>
+			<version>2.3.0-b10</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpasyncclient</artifactId>
+			<version>4.1.3</version>
 		</dependency>
 
 		<!-- Spring -->
@@ -96,11 +102,11 @@
 			<artifactId>spring-context</artifactId>
 			<version>${spring.version}</version>
 			<exclusions>
- 			   <exclusion>
- 			      <groupId>commons-logging</groupId>
- 			      <artifactId>commons-logging</artifactId>
- 			   </exclusion>
- 			</exclusions>
+				<exclusion>
+					<groupId>commons-logging</groupId>
+					<artifactId>commons-logging</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework</groupId>
@@ -137,13 +143,13 @@
 
 		<!-- dependency> <groupId>org.json</groupId> <artifactId>json</artifactId> 
 			<version>20090211</version> </dependency> -->
-			
+
 		<dependency>
-		    <groupId>org.jsoup</groupId>
-		    <artifactId>jsoup</artifactId>
-		    <version>1.7.2</version>
+			<groupId>org.jsoup</groupId>
+			<artifactId>jsoup</artifactId>
+			<version>1.7.2</version>
 		</dependency>
-		
+
 
 		<dependency>
 			<groupId>commons-logging</groupId>
@@ -163,7 +169,7 @@
 			<artifactId>hibernate-core</artifactId>
 			<version>${hibernate.version}</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>org.hibernate</groupId>
 			<artifactId>hibernate-ehcache</artifactId>
@@ -177,7 +183,7 @@
 			<version>2.4</version>
 			<classifier>jdk15</classifier>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>net.sf.ehcache</groupId>
 			<artifactId>ehcache-core</artifactId>
@@ -211,11 +217,11 @@
 			<version>3.2.1</version>
 		</dependency>
 
-		<dependency>
+		<!-- <dependency>
 			<groupId>mysql</groupId>
 			<artifactId>mysql-connector-java</artifactId>
 			<version>5.1.33</version>
-		</dependency>
+		</dependency> -->
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
@@ -241,90 +247,103 @@
 			<artifactId>sdk</artifactId>
 			<version>[6.1.7, 6.999]</version>
 		</dependency>
-		<!-- 
-			<dependency>
-			<groupId>com.qiniu</groupId>
-			<artifactId>qiniu-java-sdk</artifactId>
-			<version>[7.0.0, 7.0.99]</version>
-		</dependency>
-		 -->
+		<!-- <dependency> <groupId>com.qiniu</groupId> <artifactId>qiniu-java-sdk</artifactId> 
+			<version>[7.0.0, 7.0.99]</version> </dependency> -->
 		<dependency>
 			<groupId>javax.mail</groupId>
 			<artifactId>mail</artifactId>
 			<version>1.4.1</version>
 		</dependency>
-		
+
 		<!-- gson -->
 		<dependency>
 			<groupId>com.google.code.gson</groupId>
 			<artifactId>gson</artifactId>
 			<version>2.2.4</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>com.google.protobuf</groupId>
 			<artifactId>protobuf-java</artifactId>
 			<version>2.5.0</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>org.codehaus.jackson</groupId>
 			<artifactId>jackson-all</artifactId>
 			<version>1.8.5</version>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/WebContent/WEB-INF/lib/jackson-all-1.8.5.jar</systemPath>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>com.gexin.rp.sdk</groupId>
 			<artifactId>gexin-rp-sdk-base</artifactId>
 			<version>4.0.0.1</version>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/WebContent/WEB-INF/lib/gexin-rp-sdk-base-4.0.0.1.jar</systemPath>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>com.gexin.rp.sdk.http</groupId>
 			<artifactId>gexin-rp-sdk-http</artifactId>
 			<version>4.0.0.1</version>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/WebContent/WEB-INF/lib/gexin-rp-sdk-http-4.0.0.1.jar</systemPath>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>com.gexin.rp.sdk.template</groupId>
 			<artifactId>gexin-rp-sdk-template</artifactId>
 			<version>4.0.0.1</version>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/WebContent/WEB-INF/lib/gexin-rp-sdk-template-4.0.0.1.jar</systemPath>
 		</dependency>
-		<!-- LogBack dependencies --> 
+		<!-- LogBack dependencies -->
 		<dependency>
 			<groupId>ch.qos.logback</groupId>
 			<artifactId>logback-classic</artifactId>
 			<version>${logback.version}</version>
 		</dependency>
-		<dependency>                                    
-			<groupId>org.slf4j</groupId>                
-			<artifactId>jcl-over-slf4j</artifactId>     
-			<version>${jcloverslf4j.version}</version>  
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>jcl-over-slf4j</artifactId>
+			<version>${jcloverslf4j.version}</version>
 		</dependency>
-		
-		<!-- redis client--> 
-		
-		
+
+		<!-- redis client -->
+
+
 		<dependency>
 			<groupId>commons-pool</groupId>
 			<artifactId>commons-pool</artifactId>
 			<version>1.6</version>
-		</dependency> 
-		
+		</dependency>
+
 		<dependency>
 			<groupId>redis.clients</groupId>
 			<artifactId>jedis</artifactId>
 			<version>2.6.2</version>
 		</dependency>
-		
+
 		<dependency>
-		    <groupId>commons-codec</groupId>
-		    <artifactId>commons-codec</artifactId>
-		    <version>1.10</version>
+			<groupId>commons-codec</groupId>
+			<artifactId>commons-codec</artifactId>
+			<version>1.10</version>
 		</dependency>
-		
-		
-		
+
+		<dependency>
+			<groupId>org.mariadb.jdbc</groupId>
+			<artifactId>mariadb-java-client</artifactId>
+			<version>1.1.8</version>
+		</dependency>
+		<dependency>  
+	        <groupId>mysql</groupId>  
+	        <artifactId>mysql-connector-java</artifactId>  
+	        <version>5.1.9</version>  
+	</dependency> 
+
+
 	</dependencies>
-	<artifactId>revolution-fashion</artifactId>
+	<artifactId>car-friend</artifactId>
 </project>
